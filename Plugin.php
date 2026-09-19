@@ -12,14 +12,14 @@ class Plugin extends \MapasCulturais\Plugin
     public function _init(){
         $app = App::i();
 
-        $app->hook('panel.nav', function (&$nav) {
+        $app->hook('panel.nav', function (&$nav) use ($app) {
 
-            $nav['more']['condition'] = fn() => App::i()->user->is('saasSuperAdmin');
+            $nav['more']['condition'] = fn() => $app->user->is('saasSuperAdmin');
 
             if (isset($nav['admin']['items'])) {
                 $adminCondition = $nav['admin']['condition'] ?? fn() => true;
-                $nav['admin']['condition'] = function () use ($adminCondition) {
-                    if (App::i()->user->is('saasSuperAdmin')) {
+                $nav['admin']['condition'] = function () use ($app, $adminCondition) {
+                    if ($app->user->is('saasSuperAdmin')) {
                         return true;
                     }
 
@@ -30,14 +30,15 @@ class Plugin extends \MapasCulturais\Plugin
                     'route' => 'conectaEnte/federativeEntities',
                     'icon' => 'agent',
                     'label' => i::__('Entes Federados'),
-                    'condition' => fn() => App::i()->user->is('saasSuperAdmin'),
+                    'condition' => fn() => $app->user->is('saasSuperAdmin'),
                 ];
-
+                // @todo
+                // Precisa implementar na proxima issue
                 $nav['admin']['items'][] = [
-                    'route' => 'panel/opportunitiesSync',
+                    'route' => 'conectaEnte/#',
                     'icon' => 'sync',
                     'label' => i::__('Sincronização'),
-                    'condition' => fn() => App::i()->user->is('saasSuperAdmin'),
+                    'condition' => fn() => $app->user->is('saasSuperAdmin'),
                 ];
             }
         });

@@ -14,10 +14,11 @@ class ConectaEnteController extends \MapasCulturais\Controller
 
     function GET_federativeEntities()
     {
+        $app = App::i();
         $this->requireAuthentication();
 
-        if (!App::i()->user->is('saasSuperAdmin')) {
-            throw new PermissionDenied(App::i()->user);
+        if (!$app->user->is('saasSuperAdmin')) {
+            throw new PermissionDenied($app->user);
         }
 
         $this->render('federative-entities');
