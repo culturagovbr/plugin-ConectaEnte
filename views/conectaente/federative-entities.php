@@ -9,7 +9,7 @@ $this->import('panel--entity-tabs');
     <header class="panel-page__header">
         <div class="panel-page__header-title">
             <div class="title">
-                <div class="title__icon space__background"> <mc-icon name="space"></mc-icon> </div>
+                <div class="title__icon space__background"> <mc-icon name="agent"></mc-icon> </div>
                 <h1 class="title__title"> <?= i::_e('Entes Federados') ?> </h1>
             </div>
         </div>
