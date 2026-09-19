@@ -14,10 +14,8 @@ class Plugin extends \MapasCulturais\Plugin
 
         $canAccess = UserAccessService::canAccess();
 
-        // Configura o menu do painel: renomeia "Minhas Oportunidades" e move para "Ente Federado"
         $app->hook('panel.nav', function (&$nav) use ($canAccess) {
 
-            // "Meus aplicativos" visível apenas para saasSuperAdmin
             $nav['more']['condition'] = fn() => UserAccessService::isSaasSuperAdmin();
 
             if (isset($nav['admin']['items'])) {
@@ -45,7 +43,6 @@ class Plugin extends \MapasCulturais\Plugin
                 ];
             }
 
-            // Usuário sem canAccess não vê "Minhas Oportunidades" (apenas GestorCultBr pode criar/acessar a página)
             if (!$canAccess && isset($nav['opportunities']['items'])) {
                 foreach ($nav['opportunities']['items'] as $key => $item) {
                     if (isset($item['route']) && $item['route'] === 'panel/opportunities') {
@@ -72,7 +69,6 @@ class Plugin extends \MapasCulturais\Plugin
             }
             unset($group);
 
-            // Só manipula os menus para GestorCultBr, se não for, parar aqui
             if (!UserAccessService::isGestorCultBr()) {
                 return;
             }
@@ -81,17 +77,14 @@ class Plugin extends \MapasCulturais\Plugin
                 return;
             }
 
-            // Remove o menu "Admin" para GestorCultBr
             $nav['admin']['condition'] = fn() => false;
 
-            // Remove o menu "Minhas Oportunidades" do grupo original
             foreach ($nav['opportunities']['items'] as $key => $item) {
                 if (isset($item['route']) && $item['route'] === 'panel/opportunities') {
                     $nav['opportunities']['items'][$key]['condition'] = fn() => false;
                 }
             }
 
-            // Remove o menu "Minhas Validações" do grupo "Editais e Oportunidades" (opportunities)
             if (isset($nav['opportunities']['items'])) {
                 foreach ($nav['opportunities']['items'] as $key => $item) {
                     if (isset($item['route']) && $item['route'] === 'panel/validations') {
@@ -100,7 +93,6 @@ class Plugin extends \MapasCulturais\Plugin
                 }
             }
 
-            // Criando menus específicos para GestorCultBr
             $nav['federativeEntity'] = [
                 'condition' => fn() => true,
                 'label' => i::__('Ente Federado'),
@@ -128,9 +120,6 @@ class Plugin extends \MapasCulturais\Plugin
     function register(){
         $app = App::i();
 
-        /**
-         * Registra o papel de Gestor CultBR
-         */
         $def = new \MapasCulturais\Definitions\Role(
             'GestorCultBr',
             i::__('Gestor CultBR'),
