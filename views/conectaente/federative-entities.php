@@ -2,7 +2,7 @@
 
 use MapasCulturais\i;
 
-$this->import('panel--entity-tabs panel--entity-card mc-icon create-space');
+$this->import('panel--entity-tabs');
 ?>
 
 <div class="panel-page">

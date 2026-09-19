@@ -2,7 +2,6 @@
 
 namespace ConectaEnte;
 
-use AldirBlanc\Services\UserAccessService;
 use ConectaEnte\Controllers\ConectaEnteController;
 use MapasCulturais\i;
 use MapasCulturais\App;
@@ -15,12 +14,12 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->hook('panel.nav', function (&$nav) {
 
-            $nav['more']['condition'] = fn() => UserAccessService::isSaasSuperAdmin();
+            $nav['more']['condition'] = fn() => App::i()->user->is('saasSuperAdmin');
 
             if (isset($nav['admin']['items'])) {
                 $adminCondition = $nav['admin']['condition'] ?? fn() => true;
                 $nav['admin']['condition'] = function () use ($adminCondition) {
-                    if (UserAccessService::isSaasSuperAdmin()) {
+                    if (App::i()->user->is('saasSuperAdmin')) {
                         return true;
                     }
 
@@ -31,14 +30,14 @@ class Plugin extends \MapasCulturais\Plugin
                     'route' => 'conectaEnte/federativeEntities',
                     'icon' => 'agent',
                     'label' => i::__('Entes Federados'),
-                    'condition' => fn() => UserAccessService::isSaasSuperAdmin(),
+                    'condition' => fn() => App::i()->user->is('saasSuperAdmin'),
                 ];
 
                 $nav['admin']['items'][] = [
                     'route' => 'panel/opportunitiesSync',
                     'icon' => 'sync',
                     'label' => i::__('Sincronização'),
-                    'condition' => fn() => UserAccessService::isSaasSuperAdmin(),
+                    'condition' => fn() => App::i()->user->is('saasSuperAdmin'),
                 ];
             }
         });

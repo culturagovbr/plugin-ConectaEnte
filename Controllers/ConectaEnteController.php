@@ -2,7 +2,6 @@
 
 namespace ConectaEnte\Controllers;
 
-use AldirBlanc\Services\UserAccessService;
 use MapasCulturais\App;
 use MapasCulturais\Exceptions\PermissionDenied;
 
@@ -17,7 +16,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
     {
         $this->requireAuthentication();
 
-        if (!UserAccessService::isSaasSuperAdmin()) {
+        if (!App::i()->user->is('saasSuperAdmin')) {
             throw new PermissionDenied(App::i()->user);
         }
 
