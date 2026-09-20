@@ -1,12 +1,8 @@
 <?php
 
-// A chave substitui o array do core inteiro — omitir a lista base desativa os plugins dela.
+// A chave substitui a lista do core, não soma: na suíte só este plugin fica ativo.
 return [
     'plugins' => [
-        'MultipleLocalAuth',
-        'AdminLoginAsUser',
-        'RecreatePCacheOnLogin',
-        'SpamDetector',
         'ConectaEnte',
     ]
 ];
