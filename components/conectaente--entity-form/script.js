@@ -22,6 +22,7 @@ app.component('conectaente--entity-form', {
             name: '',
             seal: null,
             token: '',
+            errors: {},
         };
     },
 
@@ -36,10 +37,16 @@ app.component('conectaente--entity-form', {
             this.name = '';
             this.seal = null;
             this.token = '';
+            this.errors = {};
+        },
+
+        clearError(field) {
+            delete this.errors[field];
         },
 
         selectSeal(seal) {
             this.seal = seal;
+            this.clearError('seal');
         },
 
         async save(modal) {
@@ -51,7 +58,7 @@ app.component('conectaente--entity-form', {
                 location.reload();
             } else {
                 modal.loading(false);
-                this.messages.error(await this.firstMessage(response));
+                this.showErrors(await response.json().catch(() => null));
             }
         },
 
@@ -70,13 +77,29 @@ app.component('conectaente--entity-form', {
         },
 
         /**
-         * O controller responde {error: true, data: {campo: [mensagens]}}.
+         * O controller responde {error: true, data: {campo: [mensagens]}}: cada campo mostra o seu; o resto vai ao toast.
          */
-        async firstMessage(response) {
-            const body = await response.json().catch(() => null);
-            const fields = Object.values(body?.data ?? {});
+        showErrors(body) {
+            // o CNPJ vem do token, então erro de CNPJ aparece sob o token
+            const fieldOf = { name: 'name', seal: 'seal', token: 'token', document: 'token' };
+            const errors = {};
+            const loose = [];
 
-            return fields[0]?.[0] ?? this.text('Não foi possível salvar.');
+            for (const [key, messages] of Object.entries(body?.data ?? {})) {
+                const field = fieldOf[key];
+
+                if (field) {
+                    errors[field] = [...(errors[field] ?? []), ...messages];
+                } else {
+                    loose.push(...messages);
+                }
+            }
+
+            this.errors = errors;
+
+            if (loose.length || !Object.keys(errors).length) {
+                this.messages.error(loose[0] ?? this.text('Não foi possível salvar.'));
+            }
         },
     },
 });

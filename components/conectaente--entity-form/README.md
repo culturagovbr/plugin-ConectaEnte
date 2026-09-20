@@ -25,4 +25,4 @@ $this->import('conectaente--entity-form');
 
 O selo é escolhido pelo `conectaente--seal-picker` sobre a store `useConectaEnteSealCatalog`, que a listagem semeia com o catálogo que veio com a página — sem requisição, e já sem os selos que os cards vincularam desde então. O token só vai do navegador para o servidor — nunca volta preenchido. Na edição, campo vazio mantém o que está gravado, e é por isso que o rótulo diz "Novo token".
 
-O CNPJ não é digitado: vem da resposta de `validar-token`, e o servidor recusa o cadastro se o token não for aceito. As mensagens de erro vêm do controller, campo a campo.
+O CNPJ não é digitado: vem da resposta de `validar-token`, e o servidor recusa o cadastro se o token não for aceito. A validação é só do servidor: os campos do cadastro seguem o `entity-field` do core (`label.field__title` com `span.required`, `.field.error` e `small.field__error`), e cada mensagem que o controller devolve aparece sob o seu campo — erro de CNPJ sob o token, de onde o CNPJ vem; chave sem campo vira toast. Editar o campo limpa o erro dele.

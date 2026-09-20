@@ -44,6 +44,28 @@ class FederativeEntityFormTest extends TestCase
         $this->assertNotNull($this->app->repo(FederativeEntitySeal::class)->findOneBySeal($seal));
     }
 
+    function testEachMissingFieldIsReportedUnderItsOwnName()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $request = $this->requestFactory->POST('conectaente', 'federativeEntities', [], []);
+
+        $this->assertStatus400($request);
+        $this->assertSame(['name', 'seal', 'token'], array_keys(json_decode((string) $this->app->response->getBody(), true)['data']));
+        $this->assertCount(0, $this->app->repo(FederativeEntity::class)->findAll());
+    }
+
+    function testOnlyTheMissingFieldIsReported()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $seal = $this->createSeal();
+
+        $request = $this->requestFactory->POST('conectaente', 'federativeEntities', [], ['name' => 'Governo do Ceara', 'sealId' => $seal->id]);
+
+        $this->assertStatus400($request);
+        $this->assertSame(['token'], array_keys(json_decode((string) $this->app->response->getBody(), true)['data']));
+    }
+
     function testRejectedTokenRegistersNothing()
     {
         $this->loginAsSaasSuperAdmin();

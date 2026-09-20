@@ -93,8 +93,14 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $token = trim((string) ($this->postData['token'] ?? ''));
         $seal = $this->requestedSeal();
 
-        if (!$name || !$token || !$seal) {
-            $this->errorJson(['form' => [i::__('Informe nome, selo e token.')]], 400);
+        $missing = array_filter([
+            'name' => $name ? [] : [i::__('Informe o nome do Ente Federado.')],
+            'seal' => $seal ? [] : [i::__('Escolha um selo.')],
+            'token' => $token ? [] : [i::__('Informe o token.')],
+        ]);
+
+        if ($missing) {
+            $this->errorJson($missing, 400);
         }
 
         $this->refuseSealWithValidity($seal);

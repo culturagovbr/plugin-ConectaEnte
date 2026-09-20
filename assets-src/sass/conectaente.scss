@@ -35,3 +35,9 @@
         align-items: flex-start;
     }
 }
+
+// o core só marca input, textarea e select em .field.error; o selo é um botão
+.conectaente--entity-form .field.error .button {
+    border-color: var(--mc-error);
+    color: var(--mc-error);
+}
