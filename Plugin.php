@@ -13,9 +13,6 @@ class Plugin extends \MapasCulturais\Plugin
         $app = App::i();
 
         $app->hook('panel.nav', function (&$nav) use ($app) {
-
-            $nav['more']['condition'] = fn() => $app->user->is('saasSuperAdmin');
-
             if (isset($nav['admin']['items'])) {
                 $adminCondition = $nav['admin']['condition'] ?? fn() => true;
                 $nav['admin']['condition'] = function () use ($app, $adminCondition) {
