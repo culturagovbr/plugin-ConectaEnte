@@ -10,6 +10,10 @@ app.component('conectaente--entity-card', {
             type: Boolean,
             default: false,
         },
+        seals: {
+            type: Array,
+            default: () => [],
+        },
     },
 
     setup() {

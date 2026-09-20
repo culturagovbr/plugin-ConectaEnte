@@ -6,6 +6,10 @@ app.component('conectaente--entity-form', {
             type: Object,
             default: null,
         },
+        seals: {
+            type: Array,
+            default: () => [],
+        },
     },
 
     setup() {

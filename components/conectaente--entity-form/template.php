@@ -5,7 +5,7 @@ use MapasCulturais\i;
 $this->import('
     mc-icon
     mc-modal
-    select-entity
+    conectaente--seal-picker
 ');
 ?>
 
@@ -20,7 +20,7 @@ $this->import('
 
             <div v-if="!entity" class="field">
                 <label><?php i::_e('Selo') ?></label>
-                <select-entity type="seal" openside="down-right" @select="selectSeal($event)">
+                <conectaente--seal-picker :seals="seals" @select="selectSeal($event)">
                     <template #button="{ toggle }">
                         <button type="button" class="button button--primary-outline button--icon" @click="toggle()">
                             <mc-icon name="seal"></mc-icon>
@@ -28,7 +28,7 @@ $this->import('
                             <span v-else><?php i::_e('Selecionar selo') ?></span>
                         </button>
                     </template>
-                </select-entity>
+                </conectaente--seal-picker>
             </div>
 
             <div class="field">

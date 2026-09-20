@@ -31,7 +31,7 @@ $this->import('
             <?php i::_e('Nenhum Ente Federado corresponde à busca.') ?>
         </p>
 
-        <conectaente--entity-card v-for="entity in visibleEntities" :key="entity.id" :entity="entity"></conectaente--entity-card>
+        <conectaente--entity-card v-for="entity in visibleEntities" :key="entity.id" :entity="entity" :seals="seals"></conectaente--entity-card>
     </mc-tab>
 
     <mc-tab label="<?= i::esc_attr__('Lixeira') ?>" slug="trash">

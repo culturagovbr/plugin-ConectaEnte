@@ -10,7 +10,7 @@ $this->import('
     mc-modal
     mc-tag-list
     mc-title
-    select-entity
+    conectaente--seal-picker
 ');
 ?>
 
@@ -38,13 +38,13 @@ $this->import('
                     </div>
                 </div>
 
-                <select-entity v-if="!trashed && !entity.seals.length" type="seal" openside="down-right" @select="addSeal($event)">
+                <conectaente--seal-picker v-if="!trashed && !entity.seals.length" :seals="seals" @select="addSeal($event)">
                     <template #button="{ toggle }">
                         <div class="entity-seals__seals--addSeal" @click="toggle()" v-tooltip="'<?= i::esc_attr__('Cadastrar selo') ?>'">
                             <mc-icon name="add"></mc-icon>
                         </div>
                     </template>
-                </select-entity>
+                </conectaente--seal-picker>
 
                 <div v-if="trashed && !entity.seals.length" class="entity-seals__seals--seal">
                     <div class="seal-icon"><mc-icon name="seal"></mc-icon></div>

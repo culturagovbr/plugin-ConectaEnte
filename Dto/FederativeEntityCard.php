@@ -42,14 +42,12 @@ final class FederativeEntityCard implements JsonSerializable
 
     private function seal(FederativeEntitySeal $link): array
     {
-        $avatar = $link->seal->avatar?->transform('avatarMedium');
-
         return [
             'id' => $link->seal->id,
             'name' => $link->seal->name,
             'usable' => $link->isSealUsable(),
             'validity' => (int) $link->seal->validPeriod,
-            'files' => ['avatar' => $avatar ? ['transformations' => ['avatarMedium' => ['url' => $avatar->url]]] : null],
+            'files' => ['avatar' => SealOption::avatar($link->seal)],
         ];
     }
 }

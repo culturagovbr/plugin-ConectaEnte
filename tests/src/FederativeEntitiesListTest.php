@@ -72,6 +72,31 @@ class FederativeEntitiesListTest extends TestCase
         $this->assertSame(24, $this->panelProp('entities')[0]['seals'][0]['validity']);
     }
 
+    function testSendsTheCatalogOfEnabledSealsForThePicker()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $zeta = $this->createSeal();
+        $alfa = $this->createSeal();
+        $trashed = $this->createSeal();
+        $this->app->disableAccessControl();
+        $zeta->name = 'Zeta';
+        $zeta->save(true);
+        $alfa->name = 'Alfa';
+        $alfa->save(true);
+        $trashed->status = Seal::STATUS_TRASH;
+        $trashed->save(true);
+        $this->app->enableAccessControl();
+
+        $catalog = $this->panelProp('seals');
+        $ids = array_column($catalog, 'id');
+
+        $this->assertContains($zeta->id, $ids);
+        $this->assertContains($alfa->id, $ids);
+        $this->assertNotContains($trashed->id, $ids);
+        $this->assertLessThan(array_search($zeta->id, $ids), array_search($alfa->id, $ids));
+        $this->assertSame(['id' => $alfa->id, 'name' => 'Alfa', 'files' => ['avatar' => null]], $catalog[array_search($alfa->id, $ids)]);
+    }
+
     function testEntityWithoutSealComesWithAnEmptySealList()
     {
         $this->loginAsSaasSuperAdmin();

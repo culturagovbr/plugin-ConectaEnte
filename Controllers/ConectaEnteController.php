@@ -4,6 +4,7 @@ namespace ConectaEnte\Controllers;
 
 use ConectaEnte\Auth\PasswordCheck;
 use ConectaEnte\Dto\FederativeEntityCard;
+use ConectaEnte\Dto\SealOption;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Plugin;
@@ -26,6 +27,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->render('federative-entities', [
             'cards' => $this->cards(FederativeEntity::STATUS_ENABLED),
             'trashedCards' => $this->cards(FederativeEntity::STATUS_TRASH),
+            'seals' => $this->availableSeals(),
         ]);
     }
 
@@ -187,6 +189,14 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $federativeEntity->save(true);
 
         $this->json(true);
+    }
+
+    /** @return SealOption[] */
+    private function availableSeals(): array
+    {
+        $seals = App::i()->repo(Seal::class)->findBy(['status' => Seal::STATUS_ENABLED], ['name' => 'ASC']);
+
+        return array_map(fn($seal) => new SealOption($seal), $seals);
     }
 
     /** @return FederativeEntityCard[] */

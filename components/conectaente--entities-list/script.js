@@ -10,6 +10,10 @@ app.component('conectaente--entities-list', {
             type: Array,
             default: () => [],
         },
+        seals: {
+            type: Array,
+            default: () => [],
+        },
     },
 
     data() {
