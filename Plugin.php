@@ -4,6 +4,7 @@ namespace ConectaEnte;
 
 use ConectaEnte\Controllers\ConectaEnteController;
 use ConectaEnte\Entities\FederativeEntity;
+use ConectaEnte\Http\Client;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -13,6 +14,19 @@ use MapasCulturais\App;
 
 class Plugin extends \MapasCulturais\Plugin
 {
+    const DEFAULT_HOST = 'https://ente.conecta.hmg.cultbr.cultura.gov.br';
+
+    function __construct(array $config = [])
+    {
+        $config += ['host' => env('CONECTAENTE_HOST', self::DEFAULT_HOST)];
+
+        parent::__construct($config);
+    }
+
+    function client(): Client
+    {
+        return new Client($this->_config['host']);
+    }
 
     public function _init(){
         $app = App::i();
