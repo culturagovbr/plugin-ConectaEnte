@@ -13,6 +13,7 @@ return [
                 name VARCHAR(255) NOT NULL,
                 document VARCHAR(14) NOT NULL,
                 token TEXT NOT NULL,
+                status SMALLINT NOT NULL DEFAULT 1,
                 create_timestamp TIMESTAMP(0) NOT NULL,
                 update_timestamp TIMESTAMP(0) NULL,
                 PRIMARY KEY(id)
@@ -49,5 +50,9 @@ return [
     'conectaente: um selo por ente federado' => function () {
         __try("DROP INDEX IF EXISTS idx_conectaente_fe_seal_entity_id");
         __try("CREATE UNIQUE INDEX IF NOT EXISTS unq_conectaente_fe_seal_entity_id ON conectaente_federative_entity_seal (federative_entity_id)");
+    },
+
+    'conectaente: lixeira do Ente Federado' => function () {
+        __try("ALTER TABLE conectaente_federative_entity ADD COLUMN IF NOT EXISTS status SMALLINT NOT NULL DEFAULT 1");
     },
 ];

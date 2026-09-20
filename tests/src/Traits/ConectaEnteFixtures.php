@@ -93,6 +93,27 @@ trait ConectaEnteFixtures
         return $opportunity;
     }
 
+    protected function renderPanel(): string
+    {
+        $this->app->reset();
+        $this->app->run($this->requestFactory->GET('conectaente', 'federativeEntities'), false);
+
+        $body = $this->app->response->getBody();
+        $body->rewind();
+
+        return (string) $body;
+    }
+
+    /**
+     * Os entes chegam ao componente por prop, então é o JSON da prop que carrega o contrato da tela.
+     */
+    protected function panelProp(string $prop): array
+    {
+        preg_match("/:{$prop}='([^']*)'/", $this->renderPanel(), $matches);
+
+        return json_decode($matches[1] ?? '[]', true) ?? [];
+    }
+
     /**
      * Ente resolvido a partir dos selos concedidos da oportunidade, relendo do banco.
      */

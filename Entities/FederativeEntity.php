@@ -3,6 +3,7 @@
 namespace ConectaEnte\Entities;
 
 use Doctrine\ORM\Mapping as ORM;
+use MapasCulturais\Traits;
 
 /**
  * Ente Federado integrado ao CultBR.
@@ -11,6 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @property string $name
  * @property string $document
  * @property string $token
+ * @property int $status
  * @property \DateTime $createTimestamp
  * @property \DateTime|null $updateTimestamp
  * @property FederativeEntitySeal[] $seals
@@ -20,6 +22,8 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class FederativeEntity extends \MapasCulturais\Entity
 {
+    use Traits\EntitySoftDelete;
+
     /**
      * @var integer
      *
@@ -50,6 +54,13 @@ class FederativeEntity extends \MapasCulturais\Entity
      * @ORM\Column(name="token", type="text", nullable=false)
      */
     protected $token;
+
+    /**
+     * @var integer
+     *
+     * @ORM\Column(name="status", type="smallint", nullable=false)
+     */
+    protected $status = self::STATUS_ENABLED;
 
     /**
      * @var \DateTime
@@ -97,6 +108,11 @@ class FederativeEntity extends \MapasCulturais\Entity
     }
 
     protected function canUserRemove($user)
+    {
+        return $user->is('saasSuperAdmin');
+    }
+
+    protected function canUserUndelete($user)
     {
         return $user->is('saasSuperAdmin');
     }

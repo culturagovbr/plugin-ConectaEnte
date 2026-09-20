@@ -10,9 +10,17 @@ use MapasCulturais\Entities\Seal;
 class FederativeEntitySealRepository extends \MapasCulturais\Repository
 {
     /**
-     * Vínculo correspondente a um dos selos concedidos da oportunidade, ou nulo.
+     * Vínculo de um Ente Federado ativo com um dos selos concedidos da oportunidade, ou nulo.
      */
     function findOneByOpportunity(Opportunity $opportunity): ?FederativeEntitySeal
+    {
+        $link = $this->findAnyByOpportunity($opportunity);
+
+        return $link && (int) $link->federativeEntity->status === FederativeEntity::STATUS_ENABLED ? $link : null;
+    }
+
+    // inclui ente na lixeira: o selo dele segue ocupado até restaurar ou destruir
+    private function findAnyByOpportunity(Opportunity $opportunity): ?FederativeEntitySeal
     {
         $seals = array_map(fn($relation) => $relation->seal, $opportunity->getSealRelations());
 
@@ -59,7 +67,7 @@ class FederativeEntitySealRepository extends \MapasCulturais\Repository
             return null;
         }
 
-        $sealLink = $this->findOneByOpportunity($opportunity);
+        $sealLink = $this->findAnyByOpportunity($opportunity);
 
         return $sealLink && $sealLink->seal->id !== $seal->id ? $sealLink->federativeEntity : null;
     }

@@ -78,13 +78,25 @@ class FederativeEntityTest extends TestCase
         );
     }
 
-    function testDeletingFederativeEntityDeletesItsSealLinks()
+    function testDeletingFederativeEntitySendsItToTrashAndKeepsItsSealLink()
     {
         $this->loginAsSaasSuperAdmin();
         $federativeEntity = $this->createFederativeEntity();
         $this->linkSeal($federativeEntity, $this->createSeal());
 
         $federativeEntity->delete(true);
+
+        $this->assertSame(FederativeEntity::STATUS_TRASH, $federativeEntity->status);
+        $this->assertCount(1, $this->storedSealLinksOf($federativeEntity));
+    }
+
+    function testDestroyingFederativeEntityDeletesItsSealLinks()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $federativeEntity = $this->createFederativeEntity();
+        $this->linkSeal($federativeEntity, $this->createSeal());
+
+        $federativeEntity->destroy(true);
 
         $this->assertCount(0, $this->storedSealLinksOf($federativeEntity));
     }

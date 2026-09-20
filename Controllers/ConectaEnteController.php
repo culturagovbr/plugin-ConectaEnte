@@ -21,18 +21,51 @@ class ConectaEnteController extends \MapasCulturais\Controller
 
     function GET_federativeEntities()
     {
-        $app = App::i();
         $this->requireSaasSuperAdmin();
 
-        $federativeEntities = $app->repo(FederativeEntity::class)->findBy([], ['name' => 'ASC']);
-        $sealsByEntity = $app->repo(FederativeEntitySeal::class)->findGroupedByEntity($federativeEntities);
-
         $this->render('federative-entities', [
-            'cards' => array_map(
-                fn($federativeEntity) => new FederativeEntityCard($federativeEntity, $sealsByEntity[$federativeEntity->id] ?? []),
-                $federativeEntities
-            ),
+            'cards' => $this->cards(FederativeEntity::STATUS_ENABLED),
+            'trashedCards' => $this->cards(FederativeEntity::STATUS_TRASH),
         ]);
+    }
+
+    /**
+     * Manda o Ente Federado para a lixeira: some da listagem e deixa de integrar, mas segue ocupando CNPJ e selo.
+     */
+    function DELETE_federativeEntity()
+    {
+        $this->requireSaasSuperAdmin();
+        $this->requirePassword($this->deleteData);
+
+        $this->requestedFederativeEntity()->delete(true);
+
+        $this->json(true);
+    }
+
+    /**
+     * Recupera o Ente Federado da lixeira.
+     */
+    function POST_federativeEntityUndelete()
+    {
+        $this->requireSaasSuperAdmin();
+        $this->requirePassword($this->postData);
+
+        $this->requestedFederativeEntity()->undelete(true);
+
+        $this->json(true);
+    }
+
+    /**
+     * Apaga de vez o Ente Federado, o vínculo com o selo e o token.
+     */
+    function DELETE_federativeEntityDestroy()
+    {
+        $this->requireSaasSuperAdmin();
+        $this->requirePassword($this->deleteData);
+
+        $this->requestedFederativeEntity()->destroy(true);
+
+        $this->json(true);
     }
 
     /**
@@ -40,21 +73,10 @@ class ConectaEnteController extends \MapasCulturais\Controller
      */
     function POST_federativeEntityToken()
     {
-        $app = App::i();
         $this->requireSaasSuperAdmin();
+        $this->requirePassword($this->postData);
 
-        $federativeEntity = $this->requestedFederativeEntity();
-        $passwordCheck = new PasswordCheck;
-
-        if (!$passwordCheck->hasPassword($app->user)) {
-            $this->errorJson(['password' => [i::__('Sua conta não tem senha local. Defina uma em Conta e Privacidade para revelar tokens.')]], 400);
-        }
-
-        if (!$passwordCheck->verify($app->user, (string) ($this->postData['password'] ?? ''))) {
-            $this->errorJson(['password' => [i::__('Senha incorreta.')]], 403);
-        }
-
-        $this->json(['token' => $federativeEntity->token]);
+        $this->json(['token' => $this->requestedFederativeEntity()->token]);
     }
 
     /**
@@ -163,6 +185,36 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $federativeEntity->save(true);
 
         $this->json(true);
+    }
+
+    /** @return FederativeEntityCard[] */
+    private function cards(int $status): array
+    {
+        $app = App::i();
+        $federativeEntities = $app->repo(FederativeEntity::class)->findBy(['status' => $status], ['name' => 'ASC']);
+        $sealsByEntity = $app->repo(FederativeEntitySeal::class)->findGroupedByEntity($federativeEntities);
+
+        return array_map(
+            fn($federativeEntity) => new FederativeEntityCard($federativeEntity, $sealsByEntity[$federativeEntity->id] ?? []),
+            $federativeEntities
+        );
+    }
+
+    /**
+     * Toda ação sensível é assinada com a senha do próprio administrador.
+     */
+    private function requirePassword(array $data): void
+    {
+        $app = App::i();
+        $passwordCheck = new PasswordCheck;
+
+        if (!$passwordCheck->hasPassword($app->user)) {
+            $this->errorJson(['password' => [i::__('Sua conta não tem senha local. Defina uma em Conta e Privacidade.')]], 400);
+        }
+
+        if (!$passwordCheck->verify($app->user, (string) ($data['password'] ?? ''))) {
+            $this->errorJson(['password' => [i::__('Senha incorreta.')]], 403);
+        }
     }
 
     private function requireSaasSuperAdmin(): void

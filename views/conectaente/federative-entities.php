@@ -29,5 +29,5 @@ $json = fn(array $data) => json_encode(array_values($data), JSON_HEX_TAG | JSON_
         </div>
     </header>
 
-    <conectaente--entities-list :entities='<?= $json($cards) ?>'></conectaente--entities-list>
+    <conectaente--entities-list :entities='<?= $json($cards) ?>' :trashed='<?= $json($trashedCards) ?>'></conectaente--entities-list>
 </div>
