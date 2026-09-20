@@ -9,42 +9,42 @@ class PanelNavTest extends TestCase
 {
     use UserDirector;
 
-    function testAcrescentaEntesFederadosAoGrupoAdmin()
+    function testAddsFederativeEntitiesToTheAdminGroup()
     {
-        $nav = $this->aplicarHook();
+        $nav = $this->applyPanelNavHook();
 
         $this->assertContains('conectaente/federativeEntities', array_column($nav['admin']['items'], 'route'));
     }
 
-    function testNaoAcrescentaItemSemDestino()
+    function testDoesNotAddItemWithoutDestination()
     {
-        $nav = $this->aplicarHook();
+        $nav = $this->applyPanelNavHook();
 
         foreach ($nav['admin']['items'] as $item) {
             $this->assertStringNotContainsString('#', $item['route']);
         }
     }
 
-    function testNaoAlteraOGrupoMore()
+    function testDoesNotChangeTheMoreGroup()
     {
-        $nav = $this->aplicarHook();
+        $nav = $this->applyPanelNavHook();
 
         $this->assertArrayNotHasKey('condition', $nav['more']);
         $this->assertContains('panel/my-account', array_column($nav['more']['items'], 'route'));
     }
 
-    function testEntesFederadosSoApareceParaSaasSuperAdmin()
+    function testFederativeEntitiesIsVisibleOnlyToSaasSuperAdmin()
     {
         $this->login($this->userDirector->createUser());
-        $condicao = $this->itemEntesFederados($this->aplicarHook())['condition'];
-        $this->assertFalse($condicao());
+        $condition = $this->federativeEntitiesItem($this->applyPanelNavHook())['condition'];
+        $this->assertFalse($condition());
 
         $this->login($this->userDirector->createUser(['saasSuperAdmin']));
-        $condicao = $this->itemEntesFederados($this->aplicarHook())['condition'];
-        $this->assertTrue($condicao());
+        $condition = $this->federativeEntitiesItem($this->applyPanelNavHook())['condition'];
+        $this->assertTrue($condition());
     }
 
-    private function aplicarHook(): array
+    private function applyPanelNavHook(): array
     {
         $nav = [
             'more' => ['items' => [['route' => 'panel/my-account']]],
@@ -56,7 +56,7 @@ class PanelNavTest extends TestCase
         return $nav;
     }
 
-    private function itemEntesFederados(array $nav): array
+    private function federativeEntitiesItem(array $nav): array
     {
         foreach ($nav['admin']['items'] as $item) {
             if ($item['route'] === 'conectaente/federativeEntities') {

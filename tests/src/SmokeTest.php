@@ -7,7 +7,7 @@ use Tests\Abstract\TestCase;
 
 class SmokeTest extends TestCase
 {
-    function testPluginEstaAtivo()
+    function testPluginIsEnabled()
     {
         $this->assertArrayHasKey('ConectaEnte', $this->app->plugins);
         $this->assertInstanceOf(Plugin::class, $this->app->plugins['ConectaEnte']);

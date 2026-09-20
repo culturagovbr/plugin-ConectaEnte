@@ -11,19 +11,19 @@ class FederativeEntitiesRouteTest extends TestCase
     use RequestFactory;
     use UserDirector;
 
-    function testVisitanteNaoAcessa()
+    function testGuestCannotAccess()
     {
         $this->assertStatus401($this->requestFactory->GET('conectaente', 'federativeEntities'));
     }
 
-    function testUsuarioComumNaoAcessa()
+    function testRegularUserCannotAccess()
     {
         $this->login($this->userDirector->createUser());
 
         $this->assertStatus403($this->requestFactory->GET('conectaente', 'federativeEntities'));
     }
 
-    function testSaasSuperAdminAcessa()
+    function testSaasSuperAdminCanAccess()
     {
         $this->login($this->userDirector->createUser(['saasSuperAdmin']));
 
