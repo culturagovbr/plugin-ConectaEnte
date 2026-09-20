@@ -3,6 +3,9 @@
 namespace ConectaEnte;
 
 use ConectaEnte\Controllers\ConectaEnteController;
+use ConectaEnte\Entities\FederativeEntity;
+use ConectaEnte\Entities\FederativeEntitySeal;
+use MapasCulturais\Exceptions\BadRequest;
 use MapasCulturais\i;
 use MapasCulturais\App;
 
@@ -22,6 +25,19 @@ class Plugin extends \MapasCulturais\Plugin
                 ];
             }
         });
+
+        $app->hook('entity(OpportunitySealRelation).save:before', function () use ($app) {
+            $federativeEntity = $app->repo(FederativeEntitySeal::class)->findConflictingEntity($this->owner, $this->seal);
+
+            if ($federativeEntity) {
+                throw new BadRequest(Plugin::sealConflictMessage($federativeEntity));
+            }
+        });
+    }
+
+    static function sealConflictMessage(FederativeEntity $federativeEntity): string
+    {
+        return sprintf(i::__('Esta oportunidade já usa o selo do ente federado %s.'), $federativeEntity->name);
     }
 
     function register(){
