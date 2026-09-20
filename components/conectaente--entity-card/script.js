@@ -1,0 +1,170 @@
+app.component('conectaente--entity-card', {
+    template: $TEMPLATES['conectaente--entity-card'],
+
+    props: {
+        entity: {
+            type: Object,
+            required: true,
+        },
+        trashed: {
+            type: Boolean,
+            default: false,
+        },
+    },
+
+    setup() {
+        const messages = useMessages();
+        const text = Utils.getTexts('conectaente--entity-card');
+        const api = new API('conectaente');
+
+        return { messages, text, api };
+    },
+
+    data() {
+        return {
+            revealedToken: null,
+            password: '',
+            pendingAction: null,
+        };
+    },
+
+    computed: {
+        shownToken() {
+            return this.revealedToken ?? this.entity.token;
+        },
+
+        unusableSeals() {
+            return this.entity.seals.filter((seal) => !seal.usable).map((seal) => seal.name);
+        },
+
+        passwordPrompt() {
+            const prompts = {
+                delete: 'Excluir manda o Ente Federado para a lixeira: ele deixa de integrar, e CNPJ, selo e token ficam reservados até recuperar ou excluir de vez.',
+                undelete: 'Recuperar devolve o Ente Federado à listagem e à integração.',
+                destroy: 'Excluir permanentemente apaga o Ente Federado, o vínculo com o selo e o token. Não dá para desfazer.',
+            };
+
+            return this.text(prompts[this.pendingAction] ?? 'O token só é revelado ao administrador que confirmar a própria senha.');
+        },
+    },
+
+    methods: {
+        url(action) {
+            return Utils.createUrl('conectaente', action, [this.entity.id]);
+        },
+
+        addSeal(seal) {
+            return this.submit(this.api.POST(this.url('federativeEntitySeal'), { sealId: seal.id }), this.text('Não foi possível alterar o selo.'));
+        },
+
+        removeSeal() {
+            return this.submit(this.api.DELETE(this.url('federativeEntitySeal')), this.text('Não foi possível alterar o selo.'));
+        },
+
+        async submit(request, fallback) {
+            const response = await request;
+
+            if (response.ok) {
+                location.reload();
+            } else {
+                this.messages.error(await this.firstMessage(response, fallback));
+            }
+        },
+
+        toggleToken() {
+            if (this.revealedToken) {
+                this.revealedToken = null;
+                return;
+            }
+
+            this.askPassword('reveal');
+        },
+
+        copyToken() {
+            this.askPassword('copy');
+        },
+
+        askPassword(action) {
+            this.pendingAction = action;
+            this.password = '';
+            this.$refs.passwordModal.open();
+        },
+
+        async confirmPassword() {
+            const modal = this.$refs.passwordModal;
+
+            modal.loading(true);
+            const response = await this.signedRequest(this.pendingAction);
+            modal.loading(false);
+
+            if (!response.ok) {
+                this.messages.error(await this.firstMessage(response, this.text('Não foi possível confirmar a senha.')));
+                return;
+            }
+
+            if (this.pendingAction !== 'reveal' && this.pendingAction !== 'copy') {
+                location.reload();
+                return;
+            }
+
+            const { token } = await response.json();
+
+            if (this.pendingAction === 'copy') {
+                await this.copy(token);
+            } else {
+                this.revealedToken = token;
+            }
+
+            modal.close();
+        },
+
+        signedRequest(action) {
+            const body = { password: this.password };
+
+            switch (action) {
+                case 'delete': return this.api.DELETE(this.url('federativeEntity'), body);
+                case 'undelete': return this.api.POST(this.url('federativeEntityUndelete'), body);
+                case 'destroy': return this.api.DELETE(this.url('federativeEntityDestroy'), body);
+                default: return this.api.POST(this.url('federativeEntityToken'), body);
+            }
+        },
+
+        async copy(token) {
+            try {
+                await this.writeToClipboard(token);
+                this.messages.success(this.text('token copiado para a área de transferência'));
+            } catch {
+                this.messages.error(this.text('Não foi possível copiar o token.'));
+            }
+        },
+
+        // navigator.clipboard só existe em HTTPS; em HTTP resta o caminho antigo
+        writeToClipboard(text) {
+            if (navigator.clipboard) {
+                return navigator.clipboard.writeText(text);
+            }
+
+            // dentro do modal aberto, senão o focus-trap dele impede a seleção
+            const field = document.createElement('textarea');
+            field.value = text;
+            (document.activeElement?.closest('.modal-content') ?? document.body).append(field);
+            field.select();
+            const copied = document.execCommand('copy');
+            field.remove();
+
+            if (!copied) {
+                throw new Error('copy');
+            }
+        },
+
+        /**
+         * O controller responde {error: true, data: {campo: [mensagens]}}.
+         */
+        async firstMessage(response, fallback) {
+            const body = await response.json().catch(() => null);
+            const fields = Object.values(body?.data ?? {});
+
+            return fields[0]?.[0] ?? fallback;
+        },
+    },
+});
