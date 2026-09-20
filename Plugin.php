@@ -40,11 +40,6 @@ class Plugin extends \MapasCulturais\Plugin
     public function _init(){
         $app = App::i();
 
-        // BaseV1 imprime o grupo `app` e BaseV2 o `app-v2`: registrar nos dois é o que faz o
-        // estilo aparecer em qualquer tema.
-        $app->view->enqueueStyle('app', 'conectaente', 'css/conectaente.css');
-        $app->view->enqueueStyle('app-v2', 'conectaente', 'css/conectaente.css');
-
         $app->hook('panel.nav', function (&$nav) use ($app) {
             if (isset($nav['admin']['items'])) {
                 $nav['admin']['items'][] = [

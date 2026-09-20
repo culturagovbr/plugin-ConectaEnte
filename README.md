@@ -5,14 +5,8 @@ instalação do Ministério da Cultura.
 
 # Instalação
 
-O plugin traz o SASS em `assets-src/` e **não versiona o CSS gerado**: instalar exige o build, a partir de `src/` do repositório principal.
+O plugin não tem build. Os componentes ficam em `components/`, e o único estilo próprio é o `style.css` ao lado do componente, que o core carrega sozinho. O diretório `assets/` precisa existir — vem versionado com um `.gitkeep` — porque é a raiz que o core usa para resolver `../components/…`.
 
-```bash
-pnpm install --filter @mapas/plugin-conectaente
-cd plugins/ConectaEnte && pnpm run build
-```
-
-Sem isso o plugin funciona, mas a tela de entes federados aparece sem estilo. O estilo é registrado nos grupos `app` e `app-v2`, porque BaseV1 imprime um e BaseV2 o outro.
 
 # Testes
 
