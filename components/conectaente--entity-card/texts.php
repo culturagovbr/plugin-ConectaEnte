@@ -3,6 +3,7 @@ use MapasCulturais\i;
 
 return [
     'Não foi possível alterar o selo.' => i::__('Não foi possível alterar o selo.'),
+    'Selo com validade de {meses} meses: edite o selo e remova a validade' => i::__('Selo com validade de {meses} meses: edite o selo e remova a validade'),
     'Não foi possível confirmar a senha.' => i::__('Não foi possível confirmar a senha.'),
     'Não foi possível copiar o token.' => i::__('Não foi possível copiar o token.'),
     'token copiado para a área de transferência' => i::__('token copiado para a área de transferência'),

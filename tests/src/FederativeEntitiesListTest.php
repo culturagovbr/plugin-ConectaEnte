@@ -36,6 +36,7 @@ class FederativeEntitiesListTest extends TestCase
             'id' => $seal->id,
             'name' => $seal->name,
             'usable' => true,
+            'validity' => 0,
             'files' => ['avatar' => null],
         ]], $entity['seals']);
     }
@@ -58,6 +59,17 @@ class FederativeEntitiesListTest extends TestCase
         $seal->save(true);
 
         $this->assertFalse($this->panelProp('entities')[0]['seals'][0]['usable']);
+    }
+
+    function testReportsTheValidityASealGainedAfterBeingLinked()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $seal = $this->createSeal();
+        $this->createFederativeEntityWithSeal($seal);
+
+        $this->setSealValidity($seal, 24);
+
+        $this->assertSame(24, $this->panelProp('entities')[0]['seals'][0]['validity']);
     }
 
     function testEntityWithoutSealComesWithAnEmptySealList()

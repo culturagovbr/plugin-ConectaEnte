@@ -42,9 +42,25 @@ trait ConectaEnteFixtures
         return $user;
     }
 
+    // o director sorteia uma validade; selo de Ente Federado não tem
     protected function createSeal(): Seal
     {
-        return $this->sealDirector->createSeal(disable_access_control: true);
+        return $this->setSealValidity($this->sealDirector->createSeal(disable_access_control: true), 0);
+    }
+
+    protected function createSealWithValidity(int $months): Seal
+    {
+        return $this->setSealValidity($this->createSeal(), $months);
+    }
+
+    protected function setSealValidity(Seal $seal, int $months): Seal
+    {
+        $this->app->disableAccessControl();
+        $seal->validPeriod = $months;
+        $seal->save(true);
+        $this->app->enableAccessControl();
+
+        return $seal;
     }
 
     protected function createFederativeEntity(string $name = 'Governo de Santa Catarina', string $document = '12345678000190', ?string $token = null): FederativeEntity

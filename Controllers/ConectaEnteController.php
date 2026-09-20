@@ -95,6 +95,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
             $this->errorJson(['form' => [i::__('Informe nome, selo e token.')]], 400);
         }
 
+        $this->refuseSealWithValidity($seal);
         $this->refuseSealAlreadyInUse($seal);
 
         $validation = Plugin::instance()->client()->validateToken($token);
@@ -133,6 +134,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
 
         $this->refuseEntityThatAlreadyHasSeal($federativeEntity);
+        $this->refuseSealWithValidity($seal);
         $this->refuseSealAlreadyInUse($seal);
         $this->linkSeal($federativeEntity, $seal);
 
@@ -243,6 +245,17 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $sealId = $this->data['sealId'] ?? null;
 
         return $sealId ? App::i()->repo(Seal::class)->find($sealId) : null;
+    }
+
+    // a relação de selo com validade expira, e a integração expiraria junto, sem aviso
+    private function refuseSealWithValidity(Seal $seal): void
+    {
+        if ($seal->validPeriod > 0) {
+            $this->errorJson(['seal' => [sprintf(
+                i::__('Este selo tem validade de %d meses. Edite o selo e remova a validade antes de cadastrá-lo no Ente Federado.'),
+                $seal->validPeriod
+            )]], 400);
+        }
     }
 
     private function refuseSealAlreadyInUse(Seal $seal): void

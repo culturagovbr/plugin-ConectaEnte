@@ -37,6 +37,14 @@ app.component('conectaente--entity-card', {
             return this.entity.seals.filter((seal) => !seal.usable).map((seal) => seal.name);
         },
 
+        sealWithValidity() {
+            return this.entity.seals.find((seal) => seal.validity > 0) ?? null;
+        },
+
+        sealValidityWarning() {
+            return this.text('Selo com validade de {meses} meses: edite o selo e remova a validade').replace('{meses}', this.sealWithValidity?.validity);
+        },
+
         passwordPrompt() {
             const prompts = {
                 delete: 'Excluir manda o Ente Federado para a lixeira: ele deixa de integrar, e CNPJ, selo e token ficam reservados até recuperar ou excluir de vez.',

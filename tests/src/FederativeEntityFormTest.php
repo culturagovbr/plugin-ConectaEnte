@@ -106,6 +106,34 @@ class FederativeEntityFormTest extends TestCase
         $this->assertStatus400($request);
     }
 
+    function testSealWithValidityIsRefusedOnRegistration()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $this->apiAccepts();
+
+        $request = $this->requestFactory->POST('conectaente', 'federativeEntities', [], [
+            'name' => 'Municipio de Arapiraca',
+            'sealId' => $this->createSealWithValidity(12)->id,
+            'token' => 'um-token',
+        ]);
+
+        $this->assertStatus400($request);
+        $this->assertStringContainsString('12 meses', json_decode((string) $this->app->response->getBody(), true)['data']['seal'][0]);
+        $this->assertCount(0, $this->app->repo(FederativeEntity::class)->findAll());
+    }
+
+    function testSealWithValidityIsRefusedWhenRegisteringTheSeal()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $federativeEntity = $this->createFederativeEntity();
+        $seal = $this->createSealWithValidity(6);
+
+        $request = $this->requestFactory->POST('conectaente', 'federativeEntitySeal', [$federativeEntity->id], ['sealId' => $seal->id]);
+
+        $this->assertStatus400($request);
+        $this->assertNull($this->app->repo(FederativeEntitySeal::class)->findOneBySeal($seal));
+    }
+
     function testRegistersTheSealOfAnEntityThatHasNone()
     {
         $this->loginAsSaasSuperAdmin();

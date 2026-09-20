@@ -48,6 +48,7 @@ final class FederativeEntityCard implements JsonSerializable
             'id' => $link->seal->id,
             'name' => $link->seal->name,
             'usable' => $link->isSealUsable(),
+            'validity' => (int) $link->seal->validPeriod,
             'files' => ['avatar' => $avatar ? ['transformations' => ['avatarMedium' => ['url' => $avatar->url]]] : null],
         ];
     }
