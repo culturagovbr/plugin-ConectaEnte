@@ -5,6 +5,7 @@ namespace ConectaEnte;
 use ConectaEnte\Controllers\ConectaEnteController;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\Client;
+use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -23,9 +24,17 @@ class Plugin extends \MapasCulturais\Plugin
         parent::__construct($config);
     }
 
+    static function instance(): self
+    {
+        return App::i()->plugins['ConectaEnte'];
+    }
+
+    /** Transporte alternativo, para os testes exercitarem as rotas sem chamar a API. */
+    public ?TransportInterface $transport = null;
+
     function client(): Client
     {
-        return new Client($this->_config['host']);
+        return new Client($this->_config['host'], $this->transport);
     }
 
     public function _init(){
