@@ -15,7 +15,7 @@ class Plugin extends \MapasCulturais\Plugin
         $app->hook('panel.nav', function (&$nav) use ($app) {
             if (isset($nav['admin']['items'])) {
                 $nav['admin']['items'][] = [
-                    'route' => 'conectaEnte/federativeEntities',
+                    'route' => 'conectaente/federativeEntities',
                     'icon' => 'agent',
                     'label' => i::__('Entes Federados'),
                     'condition' => fn() => $app->user->is('saasSuperAdmin'),
@@ -27,6 +27,6 @@ class Plugin extends \MapasCulturais\Plugin
     function register(){
         $app = App::i();
 
-        $app->registerController('conectaEnte', ConectaEnteController::class);
+        $app->registerController('conectaente', ConectaEnteController::class);
     }
 }
