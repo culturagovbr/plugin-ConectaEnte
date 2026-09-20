@@ -7,6 +7,7 @@ instalação do Ministério da Cultura.
 
 O plugin não tem build. Os componentes ficam em `components/`, e o único estilo próprio é o `style.css` ao lado do componente, que o core carrega sozinho. O diretório `assets/` precisa existir — vem versionado com um `.gitkeep` — porque é a raiz que o core usa para resolver `../components/…`.
 
+Revelar o token de um ente pede a **senha local** do administrador — o hash `localAuthenticationPassword`, o mesmo do MultipleLocalAuth. Conta sem senha local recebe a orientação de definir uma em Conta e Privacidade.
 
 # Testes
 

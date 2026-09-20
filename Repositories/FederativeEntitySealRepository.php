@@ -19,12 +19,14 @@ class FederativeEntitySealRepository extends \MapasCulturais\Repository
         return $seals ? $this->findOneBy(['seal' => $seals]) : null;
     }
 
-    /**
-     * Vínculo de um selo, ou nulo se o selo não pertence a nenhum ente.
-     */
     function findOneBySeal(Seal $seal): ?FederativeEntitySeal
     {
         return $this->findOneBy(['seal' => $seal]);
+    }
+
+    function findOneByFederativeEntity(FederativeEntity $federativeEntity): ?FederativeEntitySeal
+    {
+        return $this->findOneBy(['federativeEntity' => $federativeEntity]);
     }
 
     /**

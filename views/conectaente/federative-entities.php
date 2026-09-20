@@ -4,19 +4,11 @@ use MapasCulturais\i;
 
 $this->import('
     conectaente--entities-list
+    conectaente--entity-form
     mc-icon
 ');
 
-$listedEntities = array_map(fn($federativeEntity) => [
-    'id' => $federativeEntity->id,
-    'name' => $federativeEntity->name,
-    'document' => $federativeEntity->formattedDocument,
-    'seals' => array_map(fn($link) => [
-        'id' => $link->seal->id,
-        'name' => $link->seal->name,
-        'usable' => $link->isSealUsable(),
-    ], $sealsByEntity[$federativeEntity->id] ?? []),
-], $federativeEntities);
+$json = fn(array $data) => json_encode(array_values($data), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 ?>
 
 <div class="panel-page">
@@ -30,9 +22,12 @@ $listedEntities = array_map(fn($federativeEntity) => [
             </div>
         </div>
         <p class="panel-page__header-subtitle">
-            <?= i::_e('Cada ente federado é reconhecido pelo selo aplicado às oportunidades, e envia ao CultBR com o seu token.') ?>
+            <?= i::_e('Cada Ente Federado é reconhecido pelo selo aplicado às oportunidades, e envia ao CultBR com o seu token.') ?>
         </p>
+        <div class="panel-page__header-actions">
+            <conectaente--entity-form></conectaente--entity-form>
+        </div>
     </header>
 
-    <conectaente--entities-list :entities='<?= json_encode(array_values($listedEntities), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>'></conectaente--entities-list>
+    <conectaente--entities-list :entities='<?= $json($cards) ?>'></conectaente--entities-list>
 </div>

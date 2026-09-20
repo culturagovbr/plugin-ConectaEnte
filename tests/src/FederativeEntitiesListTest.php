@@ -32,7 +32,12 @@ class FederativeEntitiesListTest extends TestCase
 
         [$entity] = $this->listedEntities();
 
-        $this->assertSame([['id' => $seal->id, 'name' => $seal->name, 'usable' => true]], $entity['seals']);
+        $this->assertSame([[
+            'id' => $seal->id,
+            'name' => $seal->name,
+            'usable' => true,
+            'files' => ['avatar' => null],
+        ]], $entity['seals']);
     }
 
     function testFormatsTheDocument()
@@ -63,13 +68,13 @@ class FederativeEntitiesListTest extends TestCase
         $this->assertSame([], $this->listedEntities()[0]['seals']);
     }
 
-    function testNeverSendsTheToken()
+    function testSendsTheTokenMaskedByTheServer()
     {
         $this->loginAsSaasSuperAdmin();
         $this->createFederativeEntity('Governo de Santa Catarina', '12345678000190', 'token-que-nao-pode-vazar');
 
         $this->assertStringNotContainsString('token-que-nao-pode-vazar', $this->renderList());
-        $this->assertArrayNotHasKey('token', $this->listedEntities()[0]);
+        $this->assertSame('token-' . str_repeat('*', strlen('que-nao-pode-vazar')), $this->listedEntities()[0]['token']);
     }
 
     function testSendsAnEmptyListWhenThereIsNothingRegistered()

@@ -2,10 +2,13 @@
 
 namespace Tests\ConectaEnte\Traits;
 
+use ConectaEnte\Auth\PasswordCheck;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Definitions\Metadata;
 use MapasCulturais\Entities\Seal;
+use MapasCulturais\Entities\User;
 use Tests\Traits\OpportunityBuilder;
 use Tests\Traits\SealDirector;
 use Tests\Traits\UserDirector;
@@ -19,6 +22,24 @@ trait ConectaEnteFixtures
     protected function loginAsSaasSuperAdmin(): void
     {
         $this->login($this->userDirector->createUser(['saasSuperAdmin']));
+    }
+
+    protected function loginAsSaasSuperAdminWithPassword(string $password): User
+    {
+        $user = $this->userDirector->createUser(['saasSuperAdmin']);
+
+        if (!$this->app->getRegisteredMetadataByMetakey(PasswordCheck::PASSWORD_METADATA, User::class)) {
+            $this->app->registerMetadata(new Metadata(PasswordCheck::PASSWORD_METADATA, ['label' => 'Senha']), User::class);
+        }
+
+        $this->app->disableAccessControl();
+        $user->setMetadata(PasswordCheck::PASSWORD_METADATA, password_hash($password, PASSWORD_DEFAULT));
+        $user->save(true);
+        $this->app->enableAccessControl();
+
+        $this->login($user);
+
+        return $user;
     }
 
     protected function createSeal(): Seal
