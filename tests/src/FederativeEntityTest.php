@@ -4,48 +4,44 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Entities\FederativeEntity;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use ConectaEnte\Entities\FederativeEntitySeal;
-use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\PermissionDenied;
 use Tests\Abstract\TestCase;
-use Tests\Traits\SealDirector;
-use Tests\Traits\UserDirector;
+use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
 
 class FederativeEntityTest extends TestCase
 {
-    use SealDirector;
-    use UserDirector;
+    use ConectaEnteFixtures;
 
-    function testEnteGuardaSeusSelos()
+    function testFederativeEntityKeepsItsSeals()
     {
-        $this->loginComoSuperAdmin();
-        $ente = $this->criarEnte();
+        $this->loginAsSaasSuperAdmin();
+        $federativeEntity = $this->createFederativeEntity();
 
-        $this->vincular($ente, $this->criarSelo());
-        $this->vincular($ente, $this->criarSelo());
+        $this->linkSeal($federativeEntity, $this->createSeal());
+        $this->linkSeal($federativeEntity, $this->createSeal());
 
-        $this->assertCount(2, $this->vinculosDe($ente));
+        $this->assertCount(2, $this->storedSealLinksOf($federativeEntity));
     }
 
-    function testSeloServeAUmEnteSo()
+    function testSealBelongsToASingleFederativeEntity()
     {
-        $this->loginComoSuperAdmin();
-        $selo = $this->criarSelo();
-        $this->vincular($this->criarEnte(), $selo);
-        $outro = $this->criarEnte(name: 'Outro ente', document: '98765432000199');
+        $this->loginAsSaasSuperAdmin();
+        $seal = $this->createSeal();
+        $this->linkSeal($this->createFederativeEntity(), $seal);
+        $otherFederativeEntity = $this->createFederativeEntity(name: 'Outro ente', document: '98765432000199');
 
         $this->expectException(UniqueConstraintViolationException::class);
 
         $this->app->em->getConnection()->executeStatement(
             'INSERT INTO conectaente_federative_entity_seal (federative_entity_id, seal_id, create_timestamp) VALUES (?, ?, now())',
-            [$outro->id, $selo->id]
+            [$otherFederativeEntity->id, $seal->id]
         );
     }
 
-    function testDocumentoNaoSeRepeteEntreEntes()
+    function testDocumentIsUniqueAcrossFederativeEntities()
     {
-        $this->loginComoSuperAdmin();
-        $this->criarEnte(document: '12345678000190');
+        $this->loginAsSaasSuperAdmin();
+        $this->createFederativeEntity(document: '12345678000190');
 
         $this->expectException(UniqueConstraintViolationException::class);
 
@@ -55,10 +51,10 @@ class FederativeEntityTest extends TestCase
         );
     }
 
-    function testTokenNaoSeRepeteEntreEntes()
+    function testTokenIsUniqueAcrossFederativeEntities()
     {
-        $this->loginComoSuperAdmin();
-        $this->criarEnte(token: 'token-repetido');
+        $this->loginAsSaasSuperAdmin();
+        $this->createFederativeEntity(token: 'token-repetido');
 
         $this->expectException(UniqueConstraintViolationException::class);
 
@@ -68,76 +64,44 @@ class FederativeEntityTest extends TestCase
         );
     }
 
-    function testExcluirOEnteLevaOsVinculos()
+    function testDeletingFederativeEntityDeletesItsSealLinks()
     {
-        $this->loginComoSuperAdmin();
-        $ente = $this->criarEnte();
-        $this->vincular($ente, $this->criarSelo());
+        $this->loginAsSaasSuperAdmin();
+        $federativeEntity = $this->createFederativeEntity();
+        $this->linkSeal($federativeEntity, $this->createSeal());
 
-        $ente->delete(true);
+        $federativeEntity->delete(true);
 
-        $this->assertCount(0, $this->vinculosDe($ente));
+        $this->assertCount(0, $this->storedSealLinksOf($federativeEntity));
     }
 
-    function testExcluirOSeloDeVezLevaOVinculo()
+    function testHardDeletingSealDeletesItsLink()
     {
-        $this->loginComoSuperAdmin();
-        $ente = $this->criarEnte();
-        $selo = $this->criarSelo();
-        $this->vincular($ente, $selo);
+        $this->loginAsSaasSuperAdmin();
+        $federativeEntity = $this->createFederativeEntity();
+        $seal = $this->createSeal();
+        $this->linkSeal($federativeEntity, $seal);
 
-        $this->app->em->getConnection()->executeStatement('DELETE FROM seal WHERE id = ?', [$selo->id]);
+        $this->app->em->getConnection()->executeStatement('DELETE FROM seal WHERE id = ?', [$seal->id]);
 
-        $this->assertCount(0, $this->vinculosDe($ente));
+        $this->assertCount(0, $this->storedSealLinksOf($federativeEntity));
     }
 
-    function testQuemNaoESuperAdminNaoCadastra()
+    function testNonSaasSuperAdminCannotRegisterFederativeEntity()
     {
         $this->login($this->userDirector->createUser());
 
         $this->expectException(PermissionDenied::class);
 
-        $this->criarEnte();
+        $this->createFederativeEntity();
     }
-
-    private function loginComoSuperAdmin(): void
-    {
-        $this->login($this->userDirector->createUser(['saasSuperAdmin']));
-    }
-
-    private function criarEnte(string $name = 'Governo de Santa Catarina', string $document = '12345678000190', ?string $token = null): FederativeEntity
-    {
-        $ente = new FederativeEntity;
-        $ente->name = $name;
-        $ente->document = $document;
-        $ente->token = $token ?? uniqid('token-');
-        $ente->save(true);
-
-        return $ente;
-    }
-
-    private function criarSelo(): Seal
-    {
-        return $this->sealDirector->createSeal(disable_access_control: true);
-    }
-
-    private function vincular(FederativeEntity $ente, Seal $selo): FederativeEntitySeal
-    {
-        $vinculo = new FederativeEntitySeal;
-        $vinculo->federativeEntity = $ente;
-        $vinculo->seal = $selo;
-        $vinculo->save(true);
-
-        return $vinculo;
-    }
-
-    private function vinculosDe(FederativeEntity $ente): array
+    private function storedSealLinksOf(FederativeEntity $federativeEntity): array
     {
         $this->app->em->clear();
 
         return $this->app->em->getConnection()->fetchAllAssociative(
             'SELECT id FROM conectaente_federative_entity_seal WHERE federative_entity_id = ?',
-            [$ente->id]
+            [$federativeEntity->id]
         );
     }
 }
