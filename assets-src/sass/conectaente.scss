@@ -1,13 +1,37 @@
 .entities-list {
-    .cardKey__public--content {
-        padding-top: 8px;
+    .panel-entity-card__header {
+        .left {
+            align-items: center;
+        }
+
+        .right {
+            align-items: center;
+            display: flex;
+            gap: 16px;
+
+            // o core só pinta o lixo de vermelho no rodapé do card
+            .button.delete {
+                color: var(--mc-low-500);
+
+                .iconify {
+                    color: var(--mc-error);
+                }
+            }
+        }
     }
 
-    .entity-seals__seals {
-        align-items: center;
+    .panel-entity-card__header--info {
+        gap: 4px;
+    }
 
-        &--seal {
-            align-items: flex-start;
-        }
+    .panel-entity-card__main {
+        display: grid;
+        gap: 8px;
+        min-height: 0;
+        padding: 8px 0 0;
+    }
+
+    .entity-seals__seals--seal {
+        align-items: flex-start;
     }
 }
