@@ -21,6 +21,7 @@ app.component('conectaente--entities-list', {
     computed: {
         visibleEntities() {
             const keyword = this.keyword.trim().toLocaleLowerCase();
+            const digits = keyword.replace(/\D/g, '');
 
             if (!keyword) {
                 return this.entities;
@@ -28,9 +29,11 @@ app.component('conectaente--entities-list', {
 
             return this.entities.filter((entity) => {
                 const name = `${entity.name || ''}`.toLocaleLowerCase();
-                const document = `${entity.document || ''}`.toLocaleLowerCase();
+                const document = `${entity.document || ''}`;
 
-                return name.includes(keyword) || document.includes(keyword);
+                return name.includes(keyword)
+                    || document.includes(keyword)
+                    || (digits.length > 0 && document.replace(/\D/g, '').includes(digits));
             });
         },
     },
