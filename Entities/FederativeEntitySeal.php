@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @property \DateTime $createTimestamp
  *
  * @ORM\Table(name="conectaente_federative_entity_seal")
- * @ORM\Entity(repositoryClass="MapasCulturais\Repository")
+ * @ORM\Entity(repositoryClass="ConectaEnte\Repositories\FederativeEntitySealRepository")
  */
 class FederativeEntitySeal extends \MapasCulturais\Entity
 {

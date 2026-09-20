@@ -1,0 +1,43 @@
+<?php
+
+namespace ConectaEnte\Repositories;
+
+use ConectaEnte\Entities\FederativeEntity;
+use ConectaEnte\Entities\FederativeEntitySeal;
+use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\Seal;
+
+class FederativeEntitySealRepository extends \MapasCulturais\Repository
+{
+    /**
+     * Vínculo correspondente a um dos selos concedidos da oportunidade, ou nulo.
+     */
+    function findOneByOpportunity(Opportunity $opportunity): ?FederativeEntitySeal
+    {
+        $seals = array_map(fn($relation) => $relation->seal, $opportunity->getSealRelations());
+
+        return $seals ? $this->findOneBy(['seal' => $seals]) : null;
+    }
+
+    /**
+     * Vínculo de um selo, ou nulo se o selo não pertence a nenhum ente.
+     */
+    function findOneBySeal(Seal $seal): ?FederativeEntitySeal
+    {
+        return $this->findOneBy(['seal' => $seal]);
+    }
+
+    /**
+     * Ente que impede este selo de ser aplicado à oportunidade, ou nulo se pode.
+     */
+    function findConflictingEntity(Opportunity $opportunity, Seal $seal): ?FederativeEntity
+    {
+        if (!$this->findOneBySeal($seal)) {
+            return null;
+        }
+
+        $sealLink = $this->findOneByOpportunity($opportunity);
+
+        return $sealLink && $sealLink->seal->id !== $seal->id ? $sealLink->federativeEntity : null;
+    }
+}
