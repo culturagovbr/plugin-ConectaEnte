@@ -203,20 +203,32 @@ class ConectaEnteController extends \MapasCulturais\Controller
     }
 
     /**
-     * Toda ação sensível é assinada com a senha do próprio administrador.
+     * Toda ação sensível é assinada com a senha do próprio administrador; a senha vale por uma janela.
      */
     private function requirePassword(array $data): void
     {
         $app = App::i();
+        $window = Plugin::instance()->passwordWindow();
+
+        if (!array_key_exists('password', $data)) {
+            if ($window->isOpen()) {
+                return;
+            }
+
+            $this->errorJson(['password' => [i::__('Confirme sua senha.')]], 401);
+        }
+
         $passwordCheck = new PasswordCheck;
 
         if (!$passwordCheck->hasPassword($app->user)) {
             $this->errorJson(['password' => [i::__('Sua conta não tem senha local. Defina uma em Conta e Privacidade.')]], 400);
         }
 
-        if (!$passwordCheck->verify($app->user, (string) ($data['password'] ?? ''))) {
+        if (!$passwordCheck->verify($app->user, (string) $data['password'])) {
             $this->errorJson(['password' => [i::__('Senha incorreta.')]], 403);
         }
+
+        $window->open();
     }
 
     private function requireSaasSuperAdmin(): void

@@ -14,7 +14,7 @@ cd plugins/ConectaEnte && pnpm run build
 
 Sem o build a tela de Entes Federados não abre: `assets/` é a raiz que o core usa para resolver os componentes. O estilo é registrado nos grupos `app` e `app-v2`, porque BaseV1 imprime um e BaseV2 o outro.
 
-Revelar o token de um ente pede a **senha local** do administrador — o hash `localAuthenticationPassword`, o mesmo do MultipleLocalAuth. Conta sem senha local recebe a orientação de definir uma em Conta e Privacidade.
+Revelar ou copiar o token, excluir, recuperar e excluir permanentemente pedem a **senha local** do administrador — o hash `localAuthenticationPassword`, o mesmo do MultipleLocalAuth. Conta sem senha local recebe a orientação de definir uma em Conta e Privacidade. A senha confirmada vale por uma **janela de 2 minutos** (fixa, contada da última digitação, presa à sessão e fechada no logout); `CONECTAENTE_PASSWORD_WINDOW` muda a duração em segundos, e `0` volta a pedir a senha a cada ação.
 
 # Selo do Ente Federado
 

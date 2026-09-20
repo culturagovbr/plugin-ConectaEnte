@@ -2,6 +2,7 @@
 
 namespace ConectaEnte;
 
+use ConectaEnte\Auth\PasswordWindow;
 use ConectaEnte\Controllers\ConectaEnteController;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\Client;
@@ -16,10 +17,14 @@ use MapasCulturais\App;
 class Plugin extends \MapasCulturais\Plugin
 {
     const DEFAULT_HOST = 'https://ente.conecta.hmg.cultbr.cultura.gov.br';
+    const DEFAULT_PASSWORD_WINDOW = 120;
 
     function __construct(array $config = [])
     {
-        $config += ['host' => env('CONECTAENTE_HOST', self::DEFAULT_HOST)];
+        $config += [
+            'host' => env('CONECTAENTE_HOST', self::DEFAULT_HOST),
+            'passwordWindow' => (int) env('CONECTAENTE_PASSWORD_WINDOW', self::DEFAULT_PASSWORD_WINDOW),
+        ];
 
         parent::__construct($config);
     }
@@ -37,12 +42,23 @@ class Plugin extends \MapasCulturais\Plugin
         return new Client($this->_config['host'], $this->transport);
     }
 
+    /** Janela alternativa, para os testes controlarem a duração. */
+    public ?PasswordWindow $passwordWindow = null;
+
+    function passwordWindow(): PasswordWindow
+    {
+        return $this->passwordWindow ?? new PasswordWindow($this->_config['passwordWindow']);
+    }
+
     public function _init(){
         $app = App::i();
 
         // BaseV1 imprime o grupo `app`, BaseV2 o `app-v2`
         $app->view->enqueueStyle('app', 'conectaente', 'css/conectaente.css');
         $app->view->enqueueStyle('app-v2', 'conectaente', 'css/conectaente.css');
+
+        // o core religa o $this dos hooks ao objeto que os dispara
+        $app->hook('auth.logout:before', fn() => Plugin::instance()->passwordWindow()->close());
 
         $app->hook('panel.nav', function (&$nav) use ($app) {
             if (isset($nav['admin']['items'])) {
