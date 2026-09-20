@@ -24,7 +24,7 @@ $this->import('conectaente--entities-list');
 
 ### Observações
 
-Cada ente tem um selo só: a caixinha `+` aparece apenas no ente sem selo, e o servidor recusa o segundo. O quadro do selo segue o `entity-seals` do core; a única regra própria, em `style.css`, alinha o quadro à esquerda, junto do nome.
+Cada ente tem um selo só: a caixinha `+` aparece apenas no ente sem selo, e o servidor recusa o segundo. O corpo do card é o `cardKey` do card de aplicativos do core em duas colunas (`grid-12`/`col-6`): selo à esquerda, token à direita. O quadro do selo segue o `entity-seals`; as poucas regras próprias de alinhamento ficam em `assets-src/sass/conectaente.scss`, compilado pelo mix.
 
 Os avisos — ente sem selo, selo na lixeira ou arquivado (`usable` falso) — são badges vermelhos, `mc-tag-list` com `danger__background`, como as demais tags do core.
 
