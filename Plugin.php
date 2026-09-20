@@ -5,6 +5,8 @@ namespace ConectaEnte;
 use ConectaEnte\Controllers\ConectaEnteController;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\BadRequest;
 use MapasCulturais\i;
 use MapasCulturais\App;
@@ -31,6 +33,30 @@ class Plugin extends \MapasCulturais\Plugin
 
             if ($federativeEntity) {
                 throw new BadRequest(Plugin::sealConflictMessage($federativeEntity));
+            }
+        });
+
+        // O hook da entidade barra qualquer caminho, mas vira 500 sem mensagem: aqui a recusa volta como 400.
+        $app->hook('POST(opportunity.createSealRelation):before', function () use ($app) {
+            $opportunityId = $this->urlData['id'] ?? null;
+            // O core lê o selo de `data`, onde a query string tem precedência sobre o corpo.
+            $sealId = $this->data['sealId'] ?? null;
+
+            if (!$opportunityId || !$sealId) {
+                return;
+            }
+
+            $opportunity = $app->repo(Opportunity::class)->find($opportunityId);
+            $seal = $app->repo(Seal::class)->find($sealId);
+
+            if (!$opportunity || !$seal) {
+                return;
+            }
+
+            $federativeEntity = $app->repo(FederativeEntitySeal::class)->findConflictingEntity($opportunity, $seal);
+
+            if ($federativeEntity) {
+                $this->errorJson(['sealId' => [Plugin::sealConflictMessage($federativeEntity)]], 400);
             }
         });
     }
