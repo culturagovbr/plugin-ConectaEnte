@@ -34,7 +34,7 @@ return [
             )");
 
             __try("CREATE UNIQUE INDEX unq_conectaente_fe_seal_seal_id ON conectaente_federative_entity_seal (seal_id)");
-            __try("CREATE INDEX idx_conectaente_fe_seal_entity_id ON conectaente_federative_entity_seal (federative_entity_id)");
+            __try("CREATE UNIQUE INDEX unq_conectaente_fe_seal_entity_id ON conectaente_federative_entity_seal (federative_entity_id)");
 
             __try("ALTER TABLE conectaente_federative_entity_seal
                 ADD CONSTRAINT fk_conectaente_fe_seal_entity
@@ -44,5 +44,10 @@ return [
                 ADD CONSTRAINT fk_conectaente_fe_seal_seal
                 FOREIGN KEY (seal_id) REFERENCES seal(id) ON DELETE CASCADE");
         }
+    },
+
+    'conectaente: um selo por ente federado' => function () {
+        __try("DROP INDEX IF EXISTS idx_conectaente_fe_seal_entity_id");
+        __try("CREATE UNIQUE INDEX IF NOT EXISTS unq_conectaente_fe_seal_entity_id ON conectaente_federative_entity_seal (federative_entity_id)");
     },
 ];

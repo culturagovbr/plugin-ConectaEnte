@@ -85,20 +85,6 @@ class OneSealPerOpportunityTest extends TestCase
         $this->assertStatus200($request);
     }
 
-    function testSecondSealOfTheSameFederativeEntityIsAlsoRejected()
-    {
-        $this->loginAsSaasSuperAdmin();
-        $firstSeal = $this->createSeal();
-        $secondSeal = $this->createSeal();
-        $federativeEntity = $this->createFederativeEntityWithSeal($firstSeal);
-        $this->linkSeal($federativeEntity, $secondSeal);
-        $opportunity = $this->createOpportunityWithSeal($firstSeal);
-
-        $this->expectException(BadRequest::class);
-
-        $opportunity->createSealRelation($secondSeal);
-    }
-
     function testExistingSealRelationCanStillBeSaved()
     {
         $this->loginAsSaasSuperAdmin();

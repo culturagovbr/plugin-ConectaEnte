@@ -12,15 +12,14 @@ class FederativeEntityTest extends TestCase
 {
     use ConectaEnteFixtures;
 
-    function testFederativeEntityKeepsItsSeals()
+    function testFederativeEntityKeepsItsSeal()
     {
         $this->loginAsSaasSuperAdmin();
         $federativeEntity = $this->createFederativeEntity();
 
         $this->linkSeal($federativeEntity, $this->createSeal());
-        $this->linkSeal($federativeEntity, $this->createSeal());
 
-        $this->assertCount(2, $this->storedSealLinksOf($federativeEntity));
+        $this->assertCount(1, $this->storedSealLinksOf($federativeEntity));
     }
 
     function testSealBelongsToASingleFederativeEntity()
@@ -35,6 +34,21 @@ class FederativeEntityTest extends TestCase
         $this->app->em->getConnection()->executeStatement(
             'INSERT INTO conectaente_federative_entity_seal (federative_entity_id, seal_id, create_timestamp) VALUES (?, ?, now())',
             [$otherFederativeEntity->id, $seal->id]
+        );
+    }
+
+    function testFederativeEntityHasASingleSeal()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $federativeEntity = $this->createFederativeEntity();
+        $this->linkSeal($federativeEntity, $this->createSeal());
+        $anotherSeal = $this->createSeal();
+
+        $this->expectException(UniqueConstraintViolationException::class);
+
+        $this->app->em->getConnection()->executeStatement(
+            'INSERT INTO conectaente_federative_entity_seal (federative_entity_id, seal_id, create_timestamp) VALUES (?, ?, now())',
+            [$federativeEntity->id, $anotherSeal->id]
         );
     }
 
