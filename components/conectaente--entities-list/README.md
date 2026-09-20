@@ -26,4 +26,4 @@ $this->import('conectaente--entities-list');
 
 ### Observações
 
-As abas seguem o `panel--entity-tabs` do core (`mc-tabs` com `sync-hash`, ícone de lixeira no cabeçalho da aba). A busca só age na aba de ativos e aceita o CNPJ com ou sem pontuação. As poucas regras próprias do card (corpo sem o `padding` e o `min-height` do core, quadro do selo alinhado à esquerda) ficam em `assets-src/sass/conectaente.scss`, compilado pelo mix.
+As abas seguem o `panel--entity-tabs` do core (`mc-tabs` com `sync-hash`, ícone de lixeira no cabeçalho da aba). A busca só age na aba de ativos: compara o termo com o nome e, quando o termo é um CNPJ (só dígitos e pontuação), também com o CNPJ, com ou sem pontuação — termo com letra nunca casa pelos dígitos. As poucas regras próprias do card (corpo sem o `padding` e o `min-height` do core, quadro do selo alinhado à esquerda) ficam em `assets-src/sass/conectaente.scss`, compilado pelo mix.
