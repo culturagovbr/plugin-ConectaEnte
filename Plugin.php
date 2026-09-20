@@ -20,14 +20,6 @@ class Plugin extends \MapasCulturais\Plugin
                     'label' => i::__('Entes Federados'),
                     'condition' => fn() => $app->user->is('saasSuperAdmin'),
                 ];
-                // @todo
-                // Precisa implementar na proxima issue
-                $nav['admin']['items'][] = [
-                    'route' => 'conectaEnte/#',
-                    'icon' => 'sync',
-                    'label' => i::__('Sincronização'),
-                    'condition' => fn() => $app->user->is('saasSuperAdmin'),
-                ];
             }
         });
     }
