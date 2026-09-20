@@ -2,7 +2,7 @@
 
 Lista os Entes Federados cadastrados em duas abas — ativos, com busca por nome ou CNPJ, e Lixeira — renderizando um `conectaente--entity-card` por ente.
 
-Os entes vêm prontos do servidor, já separados por situação; o componente só filtra e distribui. Toda ação sobre um ente vive no card.
+Os entes vêm prontos do servidor, já separados por situação; o componente filtra, distribui e mantém o estado da página: copia `entities` para `cards`, semeia a store `useConectaEnteSealCatalog` com `seals` e, quando um card emite `seal-linked` ou `seal-unlinked`, troca o selo do card e tira ou devolve o selo ao catálogo — nada disso recarrega a página. As demais ações vivem no card.
 
 ### Propriedades
 

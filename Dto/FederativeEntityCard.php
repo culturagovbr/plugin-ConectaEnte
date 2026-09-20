@@ -25,7 +25,7 @@ final class FederativeEntityCard implements JsonSerializable
             'name' => $this->federativeEntity->name,
             'document' => $this->federativeEntity->formattedDocument,
             'token' => self::mask($this->federativeEntity->token),
-            'seals' => array_map([$this, 'seal'], array_values($this->sealLinks)),
+            'seals' => array_map([self::class, 'seal'], array_values($this->sealLinks)),
         ];
     }
 
@@ -40,7 +40,8 @@ final class FederativeEntityCard implements JsonSerializable
         return mb_substr($token, 0, self::VISIBLE_PREFIX) . str_repeat('*', $length - self::VISIBLE_PREFIX);
     }
 
-    private function seal(FederativeEntitySeal $link): array
+    /** O selo como o card o mostra: id, nome, se ainda vale, validade em meses e avatar. */
+    static function seal(FederativeEntitySeal $link): array
     {
         return [
             'id' => $link->seal->id,

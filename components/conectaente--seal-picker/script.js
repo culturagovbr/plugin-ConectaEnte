@@ -1,3 +1,21 @@
+globalThis.useConectaEnteSealCatalog = Pinia.defineStore('conectaente.sealCatalog', {
+    state: () => ({ seals: [] }),
+
+    actions: {
+        fill(seals) {
+            this.seals = seals;
+        },
+
+        take(seal) {
+            this.seals = this.seals.filter((item) => item.id !== seal.id);
+        },
+
+        give(seal) {
+            this.seals = [...this.seals, seal].sort((a, b) => a.name.localeCompare(b.name));
+        },
+    },
+});
+
 app.component('conectaente--seal-picker', {
     template: $TEMPLATES['conectaente--seal-picker'],
     emits: ['select'],

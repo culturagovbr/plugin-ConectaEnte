@@ -6,18 +6,15 @@ app.component('conectaente--entity-form', {
             type: Object,
             default: null,
         },
-        seals: {
-            type: Array,
-            default: () => [],
-        },
     },
 
     setup() {
         const messages = useMessages();
         const text = Utils.getTexts('conectaente--entity-form');
         const api = new API('conectaente');
+        const catalog = useConectaEnteSealCatalog();
 
-        return { messages, text, api };
+        return { messages, text, api, catalog };
     },
 
     data() {

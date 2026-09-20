@@ -4,7 +4,6 @@ Modal de cadastro e edição de Ente Federado. Sem `entity`, cadastra: nome, sel
 
 ### Propriedades
 
-- *seals **Array*** : catálogo de selos habilitados (`SealOption`) para o seletor do cadastro.
 - *entity **Object*** : o ente a editar. Quando ausente, o modal é de cadastro.
 
 ### Importando componente
@@ -24,6 +23,6 @@ $this->import('conectaente--entity-form');
 
 ### Observações
 
-O selo é escolhido pelo `conectaente--seal-picker` — o popover do `select-entity` do core sobre o catálogo que veio com a página, sem requisição. O token só vai do navegador para o servidor — nunca volta preenchido. Na edição, campo vazio mantém o que está gravado, e é por isso que o rótulo diz "Novo token".
+O selo é escolhido pelo `conectaente--seal-picker` sobre a store `useConectaEnteSealCatalog`, que a listagem semeia com o catálogo que veio com a página — sem requisição, e já sem os selos que os cards vincularam desde então. O token só vai do navegador para o servidor — nunca volta preenchido. Na edição, campo vazio mantém o que está gravado, e é por isso que o rótulo diz "Novo token".
 
 O CNPJ não é digitado: vem da resposta de `validar-token`, e o servidor recusa o cadastro se o token não for aceito. As mensagens de erro vêm do controller, campo a campo.

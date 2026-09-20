@@ -122,6 +122,25 @@ class FederativeEntityFormTest extends TestCase
         $this->assertCount(0, $this->app->repo(FederativeEntity::class)->findAll());
     }
 
+    function testRegisteringTheSealRespondsWithTheSealAsTheCardShowsIt()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $federativeEntity = $this->createFederativeEntity();
+        $seal = $this->createSeal();
+        $this->app->disableAccessControl();
+        $seal->name = 'Selo Alfa';
+        $seal->save(true);
+        $this->app->enableAccessControl();
+
+        $request = $this->requestFactory->POST('conectaente', 'federativeEntitySeal', [$federativeEntity->id], ['sealId' => $seal->id]);
+
+        $this->assertStatus200($request);
+        $this->assertSame(
+            ['id' => $seal->id, 'name' => 'Selo Alfa', 'usable' => true, 'validity' => 0, 'files' => ['avatar' => null]],
+            json_decode((string) $this->app->response->getBody(), true)
+        );
+    }
+
     function testSealWithValidityIsRefusedWhenRegisteringTheSeal()
     {
         $this->loginAsSaasSuperAdmin();

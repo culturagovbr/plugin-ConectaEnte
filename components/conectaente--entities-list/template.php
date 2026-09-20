@@ -24,14 +24,15 @@ $this->import('
                 v-model="keyword">
         </form>
 
-        <p v-if="!entities.length" class="panel__row entities-list__empty">
+        <p v-if="!cards.length" class="panel__row entities-list__empty">
             <?php i::_e('Nenhum Ente Federado cadastrado.') ?>
         </p>
         <p v-else-if="!visibleEntities.length" class="panel__row entities-list__empty">
             <?php i::_e('Nenhum Ente Federado corresponde à busca.') ?>
         </p>
 
-        <conectaente--entity-card v-for="entity in visibleEntities" :key="entity.id" :entity="entity" :seals="seals"></conectaente--entity-card>
+        <conectaente--entity-card v-for="entity in visibleEntities" :key="entity.id" :entity="entity" :seals="catalog.seals"
+            @seal-linked="linkSeal(entity, $event)" @seal-unlinked="unlinkSeal(entity)"></conectaente--entity-card>
     </mc-tab>
 
     <mc-tab label="<?= i::esc_attr__('Lixeira') ?>" slug="trash">

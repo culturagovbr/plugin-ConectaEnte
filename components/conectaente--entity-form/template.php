@@ -20,7 +20,7 @@ $this->import('
 
             <div v-if="!entity" class="field">
                 <label><?php i::_e('Selo') ?></label>
-                <conectaente--seal-picker :seals="seals" @select="selectSeal($event)">
+                <conectaente--seal-picker :seals="catalog.seals" @select="selectSeal($event)">
                     <template #button="{ toggle }">
                         <button type="button" class="button button--primary-outline button--icon" @click="toggle()">
                             <mc-icon name="seal"></mc-icon>

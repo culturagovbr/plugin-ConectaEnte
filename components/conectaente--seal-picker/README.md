@@ -14,6 +14,10 @@ Seletor de selo sobre uma lista que já veio com a página. É o popover do `sel
 
 - **button** `{ toggle }` : o que abre o popover — a caixinha `+` do card ou o botão do formulário.
 
+### Store `useConectaEnteSealCatalog`
+
+Definida neste `script.js` (Pinia, id `conectaente.sealCatalog`): `seals` é o catálogo vivo da página. `fill(seals)` é chamado uma vez pela listagem, com o que veio do servidor; `take(seal)` tira um selo vinculado; `give(seal)` devolve um selo removido, na ordem por nome. A listagem escreve, o formulário de cadastro lê — por isso vincular um selo num card some com ele do cadastro sem recarregar a página.
+
 ### Importando componente
 
 ```php

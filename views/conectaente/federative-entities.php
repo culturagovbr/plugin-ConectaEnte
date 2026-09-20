@@ -25,7 +25,7 @@ $json = fn(array $data) => json_encode(array_values($data), JSON_HEX_TAG | JSON_
             <?= i::_e('Cada Ente Federado é reconhecido pelo selo aplicado às oportunidades, e envia ao CultBR com o seu token.') ?>
         </p>
         <div class="panel-page__header-actions">
-            <conectaente--entity-form :seals='<?= $json($seals) ?>'></conectaente--entity-form>
+            <conectaente--entity-form></conectaente--entity-form>
         </div>
     </header>
 

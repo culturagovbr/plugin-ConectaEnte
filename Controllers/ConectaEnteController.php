@@ -138,9 +138,8 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->refuseEntityThatAlreadyHasSeal($federativeEntity);
         $this->refuseSealWithValidity($seal);
         $this->refuseSealAlreadyInUse($seal);
-        $this->linkSeal($federativeEntity, $seal);
 
-        $this->json(true);
+        $this->json(FederativeEntityCard::seal($this->linkSeal($federativeEntity, $seal)));
     }
 
     /**
@@ -309,11 +308,13 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
     }
 
-    private function linkSeal(FederativeEntity $federativeEntity, Seal $seal): void
+    private function linkSeal(FederativeEntity $federativeEntity, Seal $seal): FederativeEntitySeal
     {
         $link = new FederativeEntitySeal;
         $link->federativeEntity = $federativeEntity;
         $link->seal = $seal;
         $link->save(true);
+
+        return $link;
     }
 }

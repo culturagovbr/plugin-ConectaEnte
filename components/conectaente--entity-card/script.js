@@ -1,5 +1,6 @@
 app.component('conectaente--entity-card', {
     template: $TEMPLATES['conectaente--entity-card'],
+    emits: ['seal-linked', 'seal-unlinked'],
 
     props: {
         entity: {
@@ -66,20 +67,20 @@ app.component('conectaente--entity-card', {
         },
 
         addSeal(seal) {
-            return this.submit(this.api.POST(this.url('federativeEntitySeal'), { sealId: seal.id }), this.text('Não foi possível alterar o selo.'));
+            return this.submit(this.api.POST(this.url('federativeEntitySeal'), { sealId: seal.id }), (linked) => this.$emit('seal-linked', linked));
         },
 
         removeSeal() {
-            return this.submit(this.api.DELETE(this.url('federativeEntitySeal')), this.text('Não foi possível alterar o selo.'));
+            return this.submit(this.api.DELETE(this.url('federativeEntitySeal')), () => this.$emit('seal-unlinked'));
         },
 
-        async submit(request, fallback) {
+        async submit(request, onSuccess) {
             const response = await request;
 
             if (response.ok) {
-                location.reload();
+                onSuccess(await response.json());
             } else {
-                this.messages.error(await this.firstMessage(response, fallback));
+                this.messages.error(await this.firstMessage(response, this.text('Não foi possível alterar o selo.')));
             }
         },
 
