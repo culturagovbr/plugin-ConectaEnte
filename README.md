@@ -16,6 +16,18 @@ Sem o build a tela de Entes Federados não abre: `assets/` é a raiz que o core 
 
 Revelar o token de um ente pede a **senha local** do administrador — o hash `localAuthenticationPassword`, o mesmo do MultipleLocalAuth. Conta sem senha local recebe a orientação de definir uma em Conta e Privacidade.
 
+# Selo do Ente Federado
+
+O selo cadastrado no Ente Federado deve ser criado **sem período de validade**: o plugin ignora `validate_date` da relação, e um selo com prazo expiraria a integração sem aviso. Só relação de selo concedida traz a oportunidade para a integração.
+
+# Lixeira
+
+Excluir um Ente Federado manda-o para a lixeira, no padrão do core (`status`): ele some da listagem e deixa de integrar, mas continua ocupando CNPJ e selo, e o token continua no banco. Recuperar devolve tudo; excluir permanentemente apaga ente, vínculo e token.
+
+# Dumps
+
+A tabela `conectaente_federative_entity` guarda o token de cada Ente Federado em texto claro. **Nunca inclua essa tabela em dump compartilhado** — todo dump com ela é um vazamento de credencial.
+
 # Testes
 
 A partir de `tests/` do repositório principal:
