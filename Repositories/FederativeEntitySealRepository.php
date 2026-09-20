@@ -28,6 +28,27 @@ class FederativeEntitySealRepository extends \MapasCulturais\Repository
     }
 
     /**
+     * Vínculos dos entes informados, agrupados por ente — uma consulta só, montada em memória.
+     *
+     * @param FederativeEntity[] $federativeEntities
+     * @return array<int, FederativeEntitySeal[]>
+     */
+    function findGroupedByEntity(array $federativeEntities): array
+    {
+        if (!$federativeEntities) {
+            return [];
+        }
+
+        $grouped = [];
+
+        foreach ($this->findBy(['federativeEntity' => $federativeEntities]) as $link) {
+            $grouped[$link->federativeEntity->id][] = $link;
+        }
+
+        return $grouped;
+    }
+
+    /**
      * Ente que impede este selo de ser aplicado à oportunidade, ou nulo se pode.
      */
     function findConflictingEntity(Opportunity $opportunity, Seal $seal): ?FederativeEntity

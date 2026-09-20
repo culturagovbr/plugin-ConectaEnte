@@ -3,6 +3,7 @@
 namespace ConectaEnte\Entities;
 
 use Doctrine\ORM\Mapping as ORM;
+use MapasCulturais\Entities\Seal;
 
 /**
  * Vínculo entre um ente federado e um selo: é ele que traz a oportunidade para a integração.
@@ -53,6 +54,14 @@ class FederativeEntitySeal extends \MapasCulturais\Entity
      * @ORM\Column(name="create_timestamp", type="datetime", nullable=false)
      */
     protected $createTimestamp;
+
+    /**
+     * Mesmo critério do core em `getSealRelations()`: selo na lixeira ou arquivado não serve.
+     */
+    function isSealUsable(): bool
+    {
+        return in_array($this->seal->status, [Seal::STATUS_ENABLED, Seal::STATUS_RELATED]);
+    }
 
     protected function canUserCreate($user)
     {

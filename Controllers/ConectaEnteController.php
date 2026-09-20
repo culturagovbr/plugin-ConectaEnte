@@ -2,6 +2,8 @@
 
 namespace ConectaEnte\Controllers;
 
+use ConectaEnte\Entities\FederativeEntity;
+use ConectaEnte\Entities\FederativeEntitySeal;
 use MapasCulturais\App;
 use MapasCulturais\Exceptions\PermissionDenied;
 
@@ -21,6 +23,11 @@ class ConectaEnteController extends \MapasCulturais\Controller
             throw new PermissionDenied($app->user);
         }
 
-        $this->render('federative-entities');
+        $federativeEntities = $app->repo(FederativeEntity::class)->findBy([], ['name' => 'ASC']);
+
+        $this->render('federative-entities', [
+            'federativeEntities' => $federativeEntities,
+            'sealsByEntity' => $app->repo(FederativeEntitySeal::class)->findGroupedByEntity($federativeEntities),
+        ]);
     }
 }

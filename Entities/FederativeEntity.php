@@ -72,6 +72,20 @@ class FederativeEntity extends \MapasCulturais\Entity
      */
     protected $seals;
 
+    /**
+     * CNPJ com a pontuação que o administrador espera ler.
+     */
+    function getFormattedDocument(): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $this->document);
+
+        if (strlen($digits) !== 14) {
+            return (string) $this->document;
+        }
+
+        return preg_replace('/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/', '$1.$2.$3/$4-$5', $digits);
+    }
+
     protected function canUserCreate($user)
     {
         return $user->is('saasSuperAdmin');
