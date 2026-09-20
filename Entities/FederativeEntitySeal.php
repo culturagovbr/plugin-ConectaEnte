@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use MapasCulturais\Entities\Seal;
 
 /**
- * Vínculo entre um ente federado e um selo: é ele que traz a oportunidade para a integração.
+ * Vínculo entre um Ente Federado e um selo: é ele que traz a oportunidade para a integração.
  *
  * @property int $id
  * @property FederativeEntity $federativeEntity

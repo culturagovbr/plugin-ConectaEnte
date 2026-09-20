@@ -5,7 +5,7 @@ namespace ConectaEnte\Entities;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Ente federado integrado ao CultBR.
+ * Ente Federado integrado ao CultBR.
  *
  * @property int $id
  * @property string $name

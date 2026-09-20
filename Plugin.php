@@ -86,7 +86,7 @@ class Plugin extends \MapasCulturais\Plugin
 
     static function sealConflictMessage(FederativeEntity $federativeEntity): string
     {
-        return sprintf(i::__('Esta oportunidade já usa o selo do ente federado %s.'), $federativeEntity->name);
+        return sprintf(i::__('Esta oportunidade já usa o selo do Ente Federado %s.'), $federativeEntity->name);
     }
 
     function register(){
