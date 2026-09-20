@@ -77,7 +77,7 @@ class FederativeEntityFormTest extends TestCase
     {
         $this->loginAsSaasSuperAdmin();
         $this->apiAccepts();
-        $this->createFederativeEntity('Já cadastrado', self::DOCUMENT);
+        $this->createFederativeEntity('Cadastrado antes', self::DOCUMENT);
 
         $request = $this->requestFactory->POST('conectaente', 'federativeEntities', [], [
             'name' => 'Outro nome',
@@ -86,6 +86,7 @@ class FederativeEntityFormTest extends TestCase
         ]);
 
         $this->assertStatus400($request);
+        $this->assertStringNotContainsString('Cadastrado antes', (string) $this->app->response->getBody());
         $this->assertCount(1, $this->app->repo(FederativeEntity::class)->findAll());
     }
 

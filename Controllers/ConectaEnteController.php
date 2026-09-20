@@ -81,11 +81,8 @@ class ConectaEnteController extends \MapasCulturais\Controller
             $this->errorJson(['token' => [$validation->message]], $validation->unavailable ? 503 : 400);
         }
 
-        if ($existing = $app->repo(FederativeEntity::class)->findOneBy(['document' => $validation->document])) {
-            $this->errorJson(['document' => [sprintf(
-                i::__('Este CNPJ já está cadastrado no Ente Federado %s.'),
-                $existing->name
-            )]], 400);
+        if ($app->repo(FederativeEntity::class)->findOneBy(['document' => $validation->document])) {
+            $this->errorJson(['document' => [i::__('Este CNPJ já está cadastrado.')]], 400);
         }
 
         $federativeEntity = new FederativeEntity;
