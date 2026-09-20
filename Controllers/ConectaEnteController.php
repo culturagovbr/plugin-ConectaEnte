@@ -159,11 +159,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
 
         if ($validation->document !== $federativeEntity->document) {
-            $this->errorJson(['token' => [sprintf(
-                i::__('Este token é do CNPJ %s, e o Ente Federado cadastrado é o %s.'),
-                $validation->document,
-                $federativeEntity->formattedDocument
-            )]], 400);
+            $this->errorJson(['token' => [i::__('Este token não pertence a este Ente Federado.')]], 400);
         }
 
         $federativeEntity->token = $token;

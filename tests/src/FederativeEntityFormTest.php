@@ -295,6 +295,7 @@ class FederativeEntityFormTest extends TestCase
         ]);
 
         $this->assertStatus400($request);
+        $this->assertStringNotContainsString('99999999000199', (string) $this->app->response->getBody());
         $this->app->em->clear();
         $this->assertSame('token-antigo', $this->app->repo(FederativeEntity::class)->find($federativeEntity->id)->token);
     }
