@@ -85,11 +85,19 @@ app.component('conectaente--entity-card', {
                 return;
             }
 
-            this.askPassword('reveal');
+            this.run('reveal');
         },
 
-        copyToken() {
-            this.askPassword('copy');
+        // primeiro sem senha: dentro da janela o servidor aceita; fora dela responde 401 e o modal entra
+        async run(action) {
+            const response = await this.signedRequest(action);
+
+            if (response.status === 401) {
+                this.askPassword(action);
+                return;
+            }
+
+            await this.settle(action, response);
         },
 
         askPassword(action) {
@@ -102,7 +110,7 @@ app.component('conectaente--entity-card', {
             const modal = this.$refs.passwordModal;
 
             modal.loading(true);
-            const response = await this.signedRequest(this.pendingAction);
+            const response = await this.signedRequest(this.pendingAction, this.password);
             modal.loading(false);
 
             if (!response.ok) {
@@ -110,24 +118,32 @@ app.component('conectaente--entity-card', {
                 return;
             }
 
-            if (this.pendingAction !== 'reveal' && this.pendingAction !== 'copy') {
+            await this.settle(this.pendingAction, response);
+            modal.close();
+        },
+
+        async settle(action, response) {
+            if (!response.ok) {
+                this.messages.error(await this.firstMessage(response, this.text('Não foi possível concluir a ação.')));
+                return;
+            }
+
+            if (action !== 'reveal' && action !== 'copy') {
                 location.reload();
                 return;
             }
 
             const { token } = await response.json();
 
-            if (this.pendingAction === 'copy') {
+            if (action === 'copy') {
                 await this.copy(token);
             } else {
                 this.revealedToken = token;
             }
-
-            modal.close();
         },
 
-        signedRequest(action) {
-            const body = { password: this.password };
+        signedRequest(action, password = null) {
+            const body = password === null ? {} : { password };
 
             switch (action) {
                 case 'delete': return this.api.DELETE(this.url('federativeEntity'), body);

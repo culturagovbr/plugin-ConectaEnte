@@ -60,20 +60,32 @@ $this->import('
 
         <div class="right">
             <template v-if="trashed">
-                <button class="button button--primary button--icon" @click="askPassword('undelete')">
+                <mc-confirm-button @confirm="run('undelete')" button-class="button--primary button--icon" title="<?= i::esc_attr__('Recuperar Ente Federado') ?>" yes="<?= i::esc_attr__('Recuperar') ?>" no="<?= i::esc_attr__('Cancelar') ?>">
+                    <template #message>
+                        <p><?php i::_e('Você está recuperando') ?> <strong>{{ entity.name }}</strong> <?php i::_e('da lixeira.') ?></p>
+                        <p><?php i::_e('Ele volta à listagem e à integração com o CultBR.') ?></p>
+                    </template>
                     <?php i::_e('Recuperar') ?>
-                </button>
-                <button class="button button--text delete button--icon panel__entity-actions--trash" @click="askPassword('destroy')">
+                </mc-confirm-button>
+                <mc-confirm-button @confirm="run('destroy')" button-class="button--text delete button--icon panel__entity-actions--trash" title="<?= i::esc_attr__('Excluir permanentemente') ?>" yes="<?= i::esc_attr__('Excluir permanentemente') ?>" no="<?= i::esc_attr__('Cancelar') ?>">
+                    <template #message>
+                        <p><?php i::_e('Você está apagando de vez') ?> <strong>{{ entity.name }}</strong>.</p>
+                        <p><?php i::_e('Somem o vínculo com o selo e o token.') ?> <strong class="danger__color"><?php i::_e('Não dá para desfazer.') ?></strong></p>
+                    </template>
                     <mc-icon name="trash"></mc-icon>
                     <?php i::_e('Excluir permanentemente') ?>
-                </button>
+                </mc-confirm-button>
             </template>
             <template v-else>
                 <conectaente--entity-form :entity="entity"></conectaente--entity-form>
-                <button class="button button--text delete button--icon panel__entity-actions--trash" @click="askPassword('delete')">
+                <mc-confirm-button @confirm="run('delete')" button-class="button--text delete button--icon panel__entity-actions--trash" title="<?= i::esc_attr__('Excluir Ente Federado') ?>" yes="<?= i::esc_attr__('Excluir') ?>" no="<?= i::esc_attr__('Cancelar') ?>">
+                    <template #message>
+                        <p><?php i::_e('Você está excluindo') ?> <strong>{{ entity.name }}</strong>.</p>
+                        <p><?php i::_e('Ele vai para a lixeira e') ?> <strong class="danger__color"><?php i::_e('deixa de ser integrado com o CultBR') ?></strong>. <?php i::_e('CNPJ, selo e token ficam reservados até você recuperá-lo ou excluí-lo permanentemente.') ?></p>
+                    </template>
                     <mc-icon name="trash"></mc-icon>
                     <?php i::_e('Excluir') ?>
-                </button>
+                </mc-confirm-button>
             </template>
         </div>
     </header>
@@ -83,7 +95,7 @@ $this->import('
             <div class="cardKey__private--header">
                 <div class="label"><?= i::__('Token do CultBR:') ?></div>
                 <a v-if="!trashed" class="view" @click="toggleToken()"><mc-icon name="eye-view"></mc-icon></a>
-                <a v-if="!trashed" class="copy" @click="copyToken()"><mc-icon name="copy"></mc-icon></a>
+                <a v-if="!trashed" class="copy" @click="run('copy')"><mc-icon name="copy"></mc-icon></a>
             </div>
             <div class="cardKey__private--content"><span>{{ shownToken }}</span></div>
         </div>
