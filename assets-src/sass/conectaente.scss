@@ -1,0 +1,13 @@
+.entities-list {
+    .cardKey__public--content {
+        padding-top: 8px;
+    }
+
+    .entity-seals__seals {
+        align-items: center;
+
+        &--seal {
+            align-items: flex-start;
+        }
+    }
+}

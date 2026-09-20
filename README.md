@@ -5,7 +5,14 @@ instalação do Ministério da Cultura.
 
 # Instalação
 
-O plugin não tem build. Os componentes ficam em `components/`, e o único estilo próprio é o `style.css` ao lado do componente, que o core carrega sozinho. O diretório `assets/` precisa existir — vem versionado com um `.gitkeep` — porque é a raiz que o core usa para resolver `../components/…`.
+O estilo é SCSS em `assets-src/sass/`, compilado pelo `@mapas/scripts` como nos demais plugins, e o CSS gerado **não é versionado**: instalar exige o build, a partir de `src/` do repositório principal.
+
+```bash
+pnpm install --filter @mapas/plugin-conectaente
+cd plugins/ConectaEnte && pnpm run build
+```
+
+Sem o build a tela de Entes Federados não abre: `assets/` é a raiz que o core usa para resolver os componentes. O estilo é registrado nos grupos `app` e `app-v2`, porque BaseV1 imprime um e BaseV2 o outro.
 
 Revelar o token de um ente pede a **senha local** do administrador — o hash `localAuthenticationPassword`, o mesmo do MultipleLocalAuth. Conta sem senha local recebe a orientação de definir uma em Conta e Privacidade.
 

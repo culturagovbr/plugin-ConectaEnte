@@ -40,6 +40,10 @@ class Plugin extends \MapasCulturais\Plugin
     public function _init(){
         $app = App::i();
 
+        // BaseV1 imprime o grupo `app`, BaseV2 o `app-v2`
+        $app->view->enqueueStyle('app', 'conectaente', 'css/conectaente.css');
+        $app->view->enqueueStyle('app-v2', 'conectaente', 'css/conectaente.css');
+
         $app->hook('panel.nav', function (&$nav) use ($app) {
             if (isset($nav['admin']['items'])) {
                 $nav['admin']['items'][] = [
