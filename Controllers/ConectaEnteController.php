@@ -191,12 +191,16 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->json(true);
     }
 
-    /** @return SealOption[] */
+    /** @return SealOption[] selos habilitados que nenhum Ente Federado usa, nem na lixeira */
     private function availableSeals(): array
     {
-        $seals = App::i()->repo(Seal::class)->findBy(['status' => Seal::STATUS_ENABLED], ['name' => 'ASC']);
+        $app = App::i();
+        $seals = $app->repo(Seal::class)->findBy(['status' => Seal::STATUS_ENABLED], ['name' => 'ASC']);
+        $linkedSeals = array_map(fn($link) => $link->seal, $app->repo(FederativeEntitySeal::class)->findAll());
+        // comparação estrita de instância: o Doctrine garante uma por id, e ler ->id inicializaria cada proxy
+        $freeSeals = array_filter($seals, fn($seal) => !in_array($seal, $linkedSeals, true));
 
-        return array_map(fn($seal) => new SealOption($seal), $seals);
+        return array_map(fn($seal) => new SealOption($seal), array_values($freeSeals));
     }
 
     /** @return FederativeEntityCard[] */

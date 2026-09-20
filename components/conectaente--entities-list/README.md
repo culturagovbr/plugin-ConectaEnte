@@ -8,7 +8,7 @@ Os entes vêm prontos do servidor, já separados por situação; o componente s�
 
 - *entities **Array*** : entes ativos, no formato do DTO `FederativeEntityCard`.
 - *trashed **Array*** : entes na lixeira, no mesmo formato.
-- *seals **Array*** : catálogo de selos habilitados (`SealOption`), repassado aos cards para a caixinha `+`.
+- *seals **Array*** : catálogo de selos habilitados e ainda livres (`SealOption`), repassado aos cards para a caixinha `+`.
 
 ### Importando componente
 

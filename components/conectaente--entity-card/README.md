@@ -5,7 +5,7 @@ Card de um Ente Federado no painel, no `panel-entity-card` do core: o quadro do 
 ### Propriedades
 
 - *entity **Object*** : o ente, no formato do DTO `FederativeEntityCard` — `id`, `name`, `document` (formatado), `token` (só a máscara) e `seals` (`id`, `name`, `usable`, `validity` em meses, `files.avatar`).
-- *seals **Array*** : catálogo de selos para a caixinha `+`, no formato do DTO `SealOption`.
+- *seals **Array*** : catálogo de selos ainda livres para a caixinha `+`, no formato do DTO `SealOption`.
 - *trashed **Boolean*** = false : quando verdadeiro, é o card da lixeira — sem Editar, sem `+`, sem X, sem olho/copiar; as ações passam a ser Recuperar e Excluir permanentemente.
 
 ### Importando componente

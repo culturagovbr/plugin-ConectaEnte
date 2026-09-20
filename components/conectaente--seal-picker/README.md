@@ -8,7 +8,7 @@ Seletor de selo sobre uma lista que já veio com a página. É o popover do `sel
 
 ### Propriedades
 
-- *seals **Array*** : selos disponíveis, no formato do DTO `SealOption` (`id`, `name`, `files.avatar`).
+- *seals **Array*** : selos disponíveis, no formato do DTO `SealOption` (`id`, `name`, `files.avatar`). O servidor manda só os habilitados que nenhum Ente Federado usa (nem na lixeira); selo com validade vem, e é recusado no vínculo com a mensagem que diz como resolver.
 
 ### Slots
 

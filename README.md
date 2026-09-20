@@ -18,7 +18,7 @@ Revelar ou copiar o token, excluir, recuperar e excluir permanentemente pedem a 
 
 # Selo do Ente Federado
 
-O selo cadastrado no Ente Federado deve ser criado **sem período de validade**: um selo com prazo expiraria a integração sem aviso. O plugin recusa o vínculo de selo com validade — a mensagem manda editar o selo e remover a validade — e, se um selo já vinculado ganhar validade depois, a listagem avisa. Só relação de selo concedida traz a oportunidade para a integração.
+O selo cadastrado no Ente Federado deve ser criado **sem período de validade**: um selo com prazo expiraria a integração sem aviso. O plugin recusa o vínculo de selo com validade — a mensagem manda editar o selo e remover a validade — e, se um selo já vinculado ganhar validade depois, a listagem avisa. Só relação de selo concedida traz a oportunidade para a integração. A caixinha `+` e o cadastro só oferecem selos que nenhum Ente Federado usa — inclusive na lixeira, que continua ocupando o selo.
 
 # Lixeira
 

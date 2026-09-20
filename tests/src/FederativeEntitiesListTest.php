@@ -97,6 +97,30 @@ class FederativeEntitiesListTest extends TestCase
         $this->assertSame(['id' => $alfa->id, 'name' => 'Alfa', 'files' => ['avatar' => null]], $catalog[array_search($alfa->id, $ids)]);
     }
 
+    function testCatalogLeavesOutSealsLinkedToAFederativeEntityEvenInTheTrash()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $linked = $this->createSeal();
+        $linkedToTrashed = $this->createSeal();
+        $free = $this->createSeal();
+        $this->createFederativeEntityWithSeal($linked, 'Governo de Santa Catarina', '11111111000191');
+        $this->createFederativeEntityWithSeal($linkedToTrashed, 'Governo do Parana', '22222222000192')->delete(true);
+
+        $ids = array_column($this->panelProp('seals'), 'id');
+
+        $this->assertContains($free->id, $ids);
+        $this->assertNotContains($linked->id, $ids);
+        $this->assertNotContains($linkedToTrashed->id, $ids);
+    }
+
+    function testCatalogKeepsSealsWithValidity()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $withValidity = $this->createSealWithValidity(12);
+
+        $this->assertContains($withValidity->id, array_column($this->panelProp('seals'), 'id'));
+    }
+
     function testEntityWithoutSealComesWithAnEmptySealList()
     {
         $this->loginAsSaasSuperAdmin();
