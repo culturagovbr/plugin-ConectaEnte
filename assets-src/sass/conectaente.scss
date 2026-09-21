@@ -1,0 +1,43 @@
+.entities-list {
+    .panel-entity-card__header {
+        .left {
+            align-items: center;
+        }
+
+        .right {
+            align-items: center;
+            display: flex;
+            gap: 16px;
+
+            // o core só pinta o lixo de vermelho no rodapé do card
+            .button.delete {
+                color: var(--mc-low-500);
+
+                .iconify {
+                    color: var(--mc-error);
+                }
+            }
+        }
+    }
+
+    .panel-entity-card__header--info {
+        gap: 4px;
+    }
+
+    .panel-entity-card__main {
+        display: grid;
+        gap: 8px;
+        min-height: 0;
+        padding: 8px 0 0;
+    }
+
+    .entity-seals__seals--seal {
+        align-items: flex-start;
+    }
+}
+
+// o core só marca input, textarea e select em .field.error; o selo é um botão
+.conectaente--entity-form .field.error .button {
+    border-color: var(--mc-error);
+    color: var(--mc-error);
+}
