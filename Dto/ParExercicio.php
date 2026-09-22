@@ -6,6 +6,8 @@ use JsonSerializable;
 
 final class ParExercicio implements JsonSerializable
 {
+    use ParNodeFields;
+
     /** @param ParMeta[] $metas */
     public function __construct(
         public readonly string $id,
@@ -18,27 +20,17 @@ final class ParExercicio implements JsonSerializable
 
     public static function fromArray(array $data): self
     {
-        $metas = is_array($data['metas'] ?? null)
-            ? array_map([ParMeta::class, 'fromArray'], $data['metas'])
-            : [];
-
         return new self(
-            id: (string) ($data['id'] ?? ''),
-            nome: isset($data['nome']) ? (string) $data['nome'] : null,
-            ano: isset($data['ano']) ? (string) $data['ano'] : null,
-            valor: isset($data['valor']) ? (string) $data['valor'] : null,
-            metas: $metas,
+            id: self::id($data),
+            nome: self::scalar($data, 'nome'),
+            ano: self::scalar($data, 'ano'),
+            valor: self::scalar($data, 'valor'),
+            metas: self::children($data, 'metas', [ParMeta::class, 'fromArray']),
         );
     }
 
     public function jsonSerialize(): array
     {
-        return [
-            'id' => $this->id,
-            'nome' => $this->nome,
-            'ano' => $this->ano,
-            'valor' => $this->valor,
-            'metas' => array_values($this->metas),
-        ];
+        return [...$this->scalarFields(), 'metas' => array_values($this->metas)];
     }
 }

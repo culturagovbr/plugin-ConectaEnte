@@ -11,6 +11,8 @@ use JsonSerializable;
  */
 final class ParInformation implements JsonSerializable
 {
+    use ParNodeFields;
+
     /** @param ParExercicio[] $exercicios */
     public function __construct(public readonly array $exercicios)
     {
@@ -18,9 +20,7 @@ final class ParInformation implements JsonSerializable
 
     public static function fromApiResponse(array $body): self
     {
-        $exercicios = array_map([ParExercicio::class, 'fromArray'], self::listOf($body, 'exercicios'));
-
-        return new self($exercicios);
+        return new self(self::children($body, 'exercicios', [ParExercicio::class, 'fromArray']));
     }
 
     public static function empty(): self
@@ -58,13 +58,5 @@ final class ParInformation implements JsonSerializable
     public function jsonSerialize(): array
     {
         return ['exercicios' => array_values($this->exercicios)];
-    }
-
-    /** @return array<array-key,mixed> */
-    private static function listOf(array $body, string $key): array
-    {
-        $value = $body[$key] ?? [];
-
-        return is_array($value) ? $value : [];
     }
 }

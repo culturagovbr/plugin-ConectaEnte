@@ -6,6 +6,8 @@ use JsonSerializable;
 
 final class ParAtividade implements JsonSerializable
 {
+    use ParNodeFields;
+
     public function __construct(
         public readonly string $id,
         public readonly ?string $nome,
@@ -17,15 +19,15 @@ final class ParAtividade implements JsonSerializable
     public static function fromArray(array $data): self
     {
         return new self(
-            id: (string) ($data['id'] ?? ''),
-            nome: isset($data['nome']) ? (string) $data['nome'] : null,
-            ano: isset($data['ano']) ? (string) $data['ano'] : null,
-            valor: isset($data['valor']) ? (string) $data['valor'] : null,
+            id: self::id($data),
+            nome: self::scalar($data, 'nome'),
+            ano: self::scalar($data, 'ano'),
+            valor: self::scalar($data, 'valor'),
         );
     }
 
     public function jsonSerialize(): array
     {
-        return ['id' => $this->id, 'nome' => $this->nome, 'ano' => $this->ano, 'valor' => $this->valor];
+        return $this->scalarFields();
     }
 }
