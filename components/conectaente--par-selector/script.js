@@ -35,6 +35,10 @@ app.component('conectaente--par-selector', {
             return this.exercicios.length > 0;
         },
 
+        hasPar() {
+            return !!(this.exercicioId || this.metaId || this.acaoId || this.atividadeId);
+        },
+
         selectedExercicio() {
             return this.exercicios.find((item) => item.id === this.exercicioId) || null;
         },
