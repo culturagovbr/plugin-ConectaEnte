@@ -49,8 +49,8 @@ class ParInformationService
         $result = Plugin::instance()->client()->getParInformation($federativeEntity->token);
 
         // só o desfecho de sucesso (ou "não existe aqui") vale a pena guardar;
-        // falha de rede/token não deve grudar no cache e mascarar uma correção.
-        if (!$result->unreachable) {
+        // falha de rede ou token rejeitado não pode grudar no cache e mascarar uma correção.
+        if ($result->tree || $result->notFound) {
             $app->cache->save($key, $result, $this->cacheTtl);
         }
 
