@@ -2,6 +2,7 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Dto\ParInformation;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\ParInformationService;
 use Tests\Abstract\TestCase;
@@ -12,7 +13,7 @@ class ParInformationServiceTest extends TestCase
 {
     use ConectaEnteFixtures;
 
-    private array $treeBody = ['exercicios' => [
+    private array $exercicios = [
         ['id' => '1', 'nome' => '2024', 'metas' => [
             ['id' => '10', 'nome' => 'Meta', 'acoes' => [
                 ['id' => '100', 'nome' => 'Ação', 'atividades' => [
@@ -20,7 +21,7 @@ class ParInformationServiceTest extends TestCase
                 ]],
             ]],
         ]],
-    ]];
+    ];
 
     function setUp(): void
     {
@@ -36,14 +37,17 @@ class ParInformationServiceTest extends TestCase
         $this->assertNull((new ParInformationService)->getForOpportunity($opportunity));
     }
 
-    function testOpportunityWithSealFetchesTheLinkedEntitysTree()
+    /**
+     * A requisição nunca chama a API: só lê o cache já populado pelo job.
+     */
+    function testOpportunityWithSealReadsTheLinkedEntitysTreeFromCache()
     {
         $this->loginAsSaasSuperAdmin();
         $seal = $this->createSeal();
         $federativeEntity = $this->createFederativeEntityWithSeal($seal);
         $opportunity = $this->createOpportunityWithSeal($seal);
 
-        Plugin::instance()->transport = FakeTransport::replying(200, $this->treeBody);
+        $this->primeParInformationCache($federativeEntity, $this->exercicios);
 
         $result = (new ParInformationService)->getForOpportunity($opportunity);
 
@@ -52,49 +56,35 @@ class ParInformationServiceTest extends TestCase
         $this->assertSame('1', $result->tree->exercicios[0]->id);
     }
 
-    function testFetchIsCachedPerFederativeEntity()
-    {
-        $this->loginAsSaasSuperAdmin();
-        $seal = $this->createSeal();
-        $federativeEntity = $this->createFederativeEntityWithSeal($seal);
-        $opportunity = $this->createOpportunityWithSeal($seal);
-
-        $transport = FakeTransport::replying(200, $this->treeBody);
-        Plugin::instance()->transport = $transport;
-
-        $service = new ParInformationService;
-        $service->getForFederativeEntity($federativeEntity);
-        $service->getForFederativeEntity($federativeEntity);
-
-        $this->assertCount(1, $transport->requestedUrls);
-    }
-
-    function testUnreachableResultIsNotCached()
+    function testCacheMissNeverCallsTheApiAndIsReportedAsUnavailable()
     {
         $this->loginAsSaasSuperAdmin();
         $seal = $this->createSeal();
         $federativeEntity = $this->createFederativeEntityWithSeal($seal);
 
+        // sem transporte configurado: qualquer chamada real quebraria o teste
         Plugin::instance()->transport = FakeTransport::unreachable();
 
-        $service = new ParInformationService;
-        $first = $service->getForFederativeEntity($federativeEntity);
-        $second = $service->getForFederativeEntity($federativeEntity);
+        $result = (new ParInformationService)->getForFederativeEntity($federativeEntity);
 
-        $this->assertTrue($first->unreachable);
-        $this->assertTrue($second->unreachable);
+        $this->assertTrue($result->unavailable);
+        $this->assertNull($result->tree);
     }
 
     function testConsistentPathIsAccepted()
     {
-        $tree = \ConectaEnte\Dto\ParInformation::fromApiResponse($this->treeBody);
+        $tree = ParInformation::fromApiListResponse([
+            'data' => [['cnpj' => '12345678000190', 'exercicios' => $this->exercicios]],
+        ], '12345678000190');
 
         $this->assertTrue($tree->isConsistentPath('1', '10', '100', '1000'));
     }
 
     function testInconsistentPathIsRejected()
     {
-        $tree = \ConectaEnte\Dto\ParInformation::fromApiResponse($this->treeBody);
+        $tree = ParInformation::fromApiListResponse([
+            'data' => [['cnpj' => '12345678000190', 'exercicios' => $this->exercicios]],
+        ], '12345678000190');
 
         $this->assertFalse($tree->isConsistentPath('1', '10', '100', '9999'));
         $this->assertFalse($tree->isConsistentPath('1', '99', '100', '1000'));

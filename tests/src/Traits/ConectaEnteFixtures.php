@@ -3,8 +3,12 @@
 namespace Tests\ConectaEnte\Traits;
 
 use ConectaEnte\Auth\PasswordCheck;
+use ConectaEnte\Dto\ParInformation;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Http\ParInformationResult;
+use ConectaEnte\Services\ParInformationService;
+use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Definitions\Metadata;
 use MapasCulturais\Entities\Seal;
@@ -128,6 +132,24 @@ trait ConectaEnteFixtures
         preg_match("/:{$prop}='([^']*)'/", $this->renderPanel(), $matches);
 
         return json_decode($matches[1] ?? '[]', true) ?? [];
+    }
+
+    /**
+     * Simula o `ParInformationSyncJob` já ter rodado com sucesso para este ente: grava a
+     * árvore direto no cache, no mesmo formato/chave que o job produz. `$exercicios` usa o
+     * formato de nível já achatado (sem `pagination`/`data`/`cnpj`) por conveniência do teste.
+     */
+    protected function primeParInformationCache(FederativeEntity $federativeEntity, array $exercicios): void
+    {
+        $tree = ParInformation::fromApiListResponse([
+            'data' => [['cnpj' => $federativeEntity->document, 'exercicios' => $exercicios]],
+        ], $federativeEntity->document);
+
+        App::i()->cache->save(
+            ParInformationService::cacheKey($federativeEntity),
+            ParInformationResult::ok($tree),
+            3600,
+        );
     }
 
     /**

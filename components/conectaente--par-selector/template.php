@@ -5,14 +5,18 @@ use MapasCulturais\i;
 $this->import('mc-alert');
 ?>
 
-<div v-if="!loading && hasData" class="conectaente--par-selector col-12">
+<div v-if="!loading && (hasData || !available)" class="conectaente--par-selector col-12">
     <label class="field__title"><?php i::_e('Dados do PAR') ?></label>
 
-    <mc-alert v-if="!hasPar" type="danger" class="col-12">
+    <mc-alert v-if="!available" type="warning" class="col-12">
+        <?php i::_e('As opções do PAR estão indisponíveis no momento. Tente novamente mais tarde.') ?>
+    </mc-alert>
+
+    <mc-alert v-else-if="!hasPar" type="danger" class="col-12">
         <?php i::_e('Os dados do PAR ainda não foram preenchidos. Selecione o exercício, a meta, a ação e a atividade abaixo.') ?>
     </mc-alert>
 
-    <div class="conectaente--par-selector__fields grid-12">
+    <div v-if="available" class="conectaente--par-selector__fields grid-12">
         <div class="col-3 sm:col-12">
             <label class="field__title"><?php i::_e('Exercício') ?></label>
             <select v-model="exercicioId">

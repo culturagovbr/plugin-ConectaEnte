@@ -3,6 +3,7 @@
 namespace ConectaEnte\Dto;
 
 use JsonSerializable;
+use MapasCulturais\App;
 
 /**
  * Árvore do PAR de um ente: Exercício -> Meta -> Ação -> Atividade. Só `id` é
@@ -18,14 +19,43 @@ final class ParInformation implements JsonSerializable
     {
     }
 
-    public static function fromApiResponse(array $body): self
+    /**
+     * `data` é uma lista de entes, não a árvore de um só: casa pelo `cnpj`
+     * (normalizado, sem pontuação) em vez de assumir `data[0]`. Mais de um
+     * item batendo o mesmo cnpj não deveria acontecer, mas o contrato não
+     * proíbe — usa o primeiro e registra no log, em vez de escolher em silêncio.
+     */
+    public static function fromApiListResponse(array $body, string $document): self
     {
-        return new self(self::children($body, 'exercicios', [ParExercicio::class, 'fromArray']));
+        $targetDocument = self::onlyDigits($document);
+        $matches = array_values(array_filter(
+            $body['data'] ?? [],
+            fn($item) => is_array($item) && self::onlyDigits((string) ($item['cnpj'] ?? '')) === $targetDocument,
+        ));
+
+        if (!$matches) {
+            return self::empty();
+        }
+
+        if (count($matches) > 1) {
+            App::i()->log->warning(sprintf(
+                'ParInformation: %d entes casaram o cnpj %s em par-information; usando o primeiro.',
+                count($matches),
+                $targetDocument,
+            ));
+        }
+
+        return new self(self::children($matches[0], 'exercicios', [ParExercicio::class, 'fromArray']));
     }
 
     public static function empty(): self
     {
         return new self([]);
+    }
+
+    private static function onlyDigits(string $value): string
+    {
+        return preg_replace('/\D/', '', $value);
     }
 
     /**

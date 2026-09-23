@@ -8,6 +8,7 @@ use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\Client;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Jobs\ParInformationSyncJob;
 use ConectaEnte\Services\ParInformationService;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -19,7 +20,8 @@ class Plugin extends \MapasCulturais\Plugin
 {
     const DEFAULT_HOST = 'https://ente.conecta.hmg.cultbr.cultura.gov.br';
     const DEFAULT_PASSWORD_WINDOW = 120;
-    const DEFAULT_PAR_INFORMATION_CACHE_TTL = 300;
+    // Maior que o intervalo do ParInformationSyncJob (30min), para nunca expirar entre execuções.
+    const DEFAULT_PAR_INFORMATION_CACHE_TTL = 2700;
 
     function __construct(array $config = [])
     {
@@ -63,6 +65,22 @@ class Plugin extends \MapasCulturais\Plugin
 
     public function _init(){
         $app = App::i();
+
+        $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
+
+        // id do job é determinístico (ParInformationSyncJob::_generateId): chamado sem
+        // condição a cada boot, mas vira só uma leitura por PK quando já está agendado.
+        try {
+            $app->enqueueJob(
+                ParInformationSyncJob::SLUG,
+                [],
+                'now',
+                ParInformationSyncJob::INTERVAL,
+                ParInformationSyncJob::ITERATIONS,
+            );
+        } catch (\Doctrine\DBAL\Exception\TableNotFoundException $e) {
+            // tabela job ainda não criada (migração em andamento)
+        }
 
         // BaseV1 imprime o grupo `app`, BaseV2 o `app-v2`
         $app->view->enqueueStyle('app', 'conectaente', 'css/conectaente.css');

@@ -18,6 +18,7 @@ app.component('conectaente--par-selector', {
     data() {
         return {
             loading: true,
+            available: true,
             tree: null,
             exercicioId: this.entity.parExercicioId || '',
             metaId: this.entity.parMetaId || '',
@@ -89,6 +90,7 @@ app.component('conectaente--par-selector', {
         const body = response.ok ? await response.json().catch(() => null) : null;
 
         this.tree = body;
+        this.available = body ? body.available !== false : false;
         this.loading = false;
     },
 

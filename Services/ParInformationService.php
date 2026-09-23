@@ -5,14 +5,14 @@ namespace ConectaEnte\Services;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Http\ParInformationResult;
-use ConectaEnte\Plugin;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 
 /**
- * Resolve a árvore do PAR do ente ligado a uma oportunidade pelo selo, com
- * cache por ente (não por oportunidade: entes com várias oportunidades
- * compartilham o mesmo fetch).
+ * Lê a árvore do PAR do ente ligado a uma oportunidade pelo selo, só do
+ * cache (por ente, não por oportunidade — entes com várias oportunidades
+ * compartilham o mesmo dado). Nunca chama a API: quem popula o cache é o
+ * `Jobs\ParInformationSyncJob`, fora do caminho da requisição do usuário.
  */
 class ParInformationService
 {
@@ -20,6 +20,16 @@ class ParInformationService
 
     public function __construct(private int $cacheTtl = 300)
     {
+    }
+
+    public function cacheTtl(): int
+    {
+        return $this->cacheTtl;
+    }
+
+    public static function cacheKey(FederativeEntity $federativeEntity): string
+    {
+        return self::CACHE_KEY_PREFIX . $federativeEntity->id;
     }
 
     /**
@@ -40,20 +50,12 @@ class ParInformationService
     public function getForFederativeEntity(FederativeEntity $federativeEntity): ParInformationResult
     {
         $app = App::i();
-        $key = self::CACHE_KEY_PREFIX . $federativeEntity->id;
+        $key = self::cacheKey($federativeEntity);
 
         if ($app->cache->contains($key)) {
             return $app->cache->fetch($key);
         }
 
-        $result = Plugin::instance()->client()->getParInformation($federativeEntity->token);
-
-        // só o desfecho de sucesso (ou "não existe aqui") vale a pena guardar;
-        // falha de rede ou token rejeitado não pode grudar no cache e mascarar uma correção.
-        if ($result->tree || $result->notFound) {
-            $app->cache->save($key, $result, $this->cacheTtl);
-        }
-
-        return $result;
+        return ParInformationResult::unavailable();
     }
 }

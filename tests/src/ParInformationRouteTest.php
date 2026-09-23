@@ -13,6 +13,10 @@ class ParInformationRouteTest extends TestCase
     use ConectaEnteFixtures;
     use RequestFactory;
 
+    private array $exercicios = [
+        ['id' => '1', 'metas' => [['id' => '10', 'acoes' => [['id' => '100', 'atividades' => [['id' => '1000']]]]]]],
+    ];
+
     function setUp(): void
     {
         parent::setUp();
@@ -46,7 +50,7 @@ class ParInformationRouteTest extends TestCase
         $this->assertStatus200($this->requestFactory->GET('conectaente', 'parInformation', [$opportunity->id]));
     }
 
-    function testOpportunityWithoutSealRespondsWithEmptyTree()
+    function testOpportunityWithoutSealRespondsAsAvailableWithEmptyTree()
     {
         $this->loginAsSaasSuperAdmin();
         $opportunity = $this->createOpportunity();
@@ -56,62 +60,59 @@ class ParInformationRouteTest extends TestCase
         $app->run($this->requestFactory->GET('conectaente', 'parInformation', [$opportunity->id]), false);
 
         $body = json_decode((string) $app->response->getBody(), true);
+        $this->assertTrue($body['available']);
         $this->assertSame([], $body['exercicios']);
     }
 
-    function testOpportunityWithSealRespondsWithTheEntitysTree()
+    function testOpportunityWithSealAndPopulatedCacheRespondsWithTheEntitysTree()
     {
         $this->loginAsSaasSuperAdmin();
         $seal = $this->createSeal();
-        $this->createFederativeEntityWithSeal($seal);
+        $federativeEntity = $this->createFederativeEntityWithSeal($seal);
         $opportunity = $this->createOpportunityWithSeal($seal);
 
-        Plugin::instance()->transport = FakeTransport::replying(200, ['exercicios' => [
-            ['id' => '1', 'nome' => '2024', 'metas' => []],
-        ]]);
+        $this->primeParInformationCache($federativeEntity, $this->exercicios);
 
         $app = $this->app;
         $app->reset();
         $app->run($this->requestFactory->GET('conectaente', 'parInformation', [$opportunity->id]), false);
 
         $body = json_decode((string) $app->response->getBody(), true);
+        $this->assertTrue($body['available']);
         $this->assertSame('1', $body['exercicios'][0]['id']);
     }
 
-    function testUnreachableApiRespondsWith503()
+    /**
+     * Cache nunca populado (job não rodou/não teve sucesso ainda para este ente):
+     * a requisição não tenta chamar a API, só reporta "indisponível".
+     */
+    function testOpportunityWithSealAndEmptyCacheRespondsAsUnavailable()
     {
         $this->loginAsSaasSuperAdmin();
         $seal = $this->createSeal();
         $this->createFederativeEntityWithSeal($seal);
         $opportunity = $this->createOpportunityWithSeal($seal);
 
+        // qualquer chamada real quebraria o teste
         Plugin::instance()->transport = FakeTransport::unreachable();
 
-        $this->assertHttpStatusCode($this->requestFactory->GET('conectaente', 'parInformation', [$opportunity->id]), 503);
-    }
+        $app = $this->app;
+        $app->reset();
+        $app->run($this->requestFactory->GET('conectaente', 'parInformation', [$opportunity->id]), false);
 
-    function testApiWithoutParInformationRespondsAsEmptyNotAsError()
-    {
-        $this->loginAsSaasSuperAdmin();
-        $seal = $this->createSeal();
-        $this->createFederativeEntityWithSeal($seal);
-        $opportunity = $this->createOpportunityWithSeal($seal);
-
-        Plugin::instance()->transport = FakeTransport::replying(404, ['detail' => 'Not Found']);
-
-        $this->assertStatus200($this->requestFactory->GET('conectaente', 'parInformation', [$opportunity->id]));
+        $body = json_decode((string) $app->response->getBody(), true);
+        $this->assertFalse($body['available']);
+        $this->assertSame([], $body['exercicios']);
     }
 
     function testSavingAnInconsistentParChainIsRejected()
     {
         $this->loginAsSaasSuperAdmin();
         $seal = $this->createSeal();
-        $this->createFederativeEntityWithSeal($seal);
+        $federativeEntity = $this->createFederativeEntityWithSeal($seal);
         $opportunity = $this->createOpportunityWithSeal($seal);
 
-        Plugin::instance()->transport = FakeTransport::replying(200, ['exercicios' => [
-            ['id' => '1', 'metas' => [['id' => '10', 'acoes' => [['id' => '100', 'atividades' => [['id' => '1000']]]]]]],
-        ]]);
+        $this->primeParInformationCache($federativeEntity, $this->exercicios);
 
         $opportunity->parExercicioId = '1';
         $opportunity->parMetaId = '10';
@@ -125,12 +126,10 @@ class ParInformationRouteTest extends TestCase
     {
         $this->loginAsSaasSuperAdmin();
         $seal = $this->createSeal();
-        $this->createFederativeEntityWithSeal($seal);
+        $federativeEntity = $this->createFederativeEntityWithSeal($seal);
         $opportunity = $this->createOpportunityWithSeal($seal);
 
-        Plugin::instance()->transport = FakeTransport::replying(200, ['exercicios' => [
-            ['id' => '1', 'metas' => [['id' => '10', 'acoes' => [['id' => '100', 'atividades' => [['id' => '1000']]]]]]],
-        ]]);
+        $this->primeParInformationCache($federativeEntity, $this->exercicios);
 
         $opportunity->parExercicioId = '1';
         $opportunity->parMetaId = '10';

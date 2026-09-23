@@ -51,10 +51,11 @@ class Client
     }
 
     /**
-     * Árvore do PAR (exercício -> meta -> ação -> atividade) do ente dono do token.
+     * Árvore do PAR (exercício -> meta -> ação -> atividade) do ente dono do token,
+     * casada por `$document` (cnpj) na lista de entes que a resposta paginada devolve.
      * `notFound()` cobre o contrato reduzido de produção, que pode não expor este caminho.
      */
-    public function getParInformation(string $token): ParInformationResult
+    public function getParInformation(string $token, string $document): ParInformationResult
     {
         $response = $this->transport->get($this->url('/api/v1/par-information'), ['token' => $token]);
 
@@ -63,7 +64,7 @@ class Client
         }
 
         if ($response->status === 200) {
-            return ParInformationResult::ok(ParInformation::fromApiResponse($response->json()));
+            return ParInformationResult::ok(ParInformation::fromApiListResponse($response->json(), $document));
         }
 
         if ($response->status === 404) {

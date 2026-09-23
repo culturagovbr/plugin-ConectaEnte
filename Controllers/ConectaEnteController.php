@@ -216,19 +216,16 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
 
         if (!$result || $result->notFound) {
-            $this->json(['federativeEntityId' => null, 'exercicios' => []]);
+            $this->json(['available' => true, 'exercicios' => []]);
         }
 
-        if ($result->unreachable) {
-            $this->errorJson([i::__('Não foi possível falar com a Plataforma CultBR agora. Tente de novo em alguns minutos.')], 503);
+        // cache ainda vazio: o job de sincronização não rodou (ou não teve sucesso ainda)
+        // para este ente. Distinto de "sem dado": aqui não se sabe se há dado ou não.
+        if ($result->unavailable) {
+            $this->json(['available' => false, 'exercicios' => []]);
         }
 
-        if (!$result->tree) {
-            // token rejeitado: problema de credencial do ente, não do usuário — não expõe detalhe/token
-            $this->errorJson([i::__('Não foi possível carregar os dados do PAR deste Ente Federado.')], 502);
-        }
-
-        $this->json($result->tree);
+        $this->json(['available' => true] + $result->tree->jsonSerialize());
     }
 
     private function requestedOpportunity(): Opportunity
