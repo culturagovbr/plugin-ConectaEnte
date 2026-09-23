@@ -50,10 +50,13 @@ class ParInformationService
     public function getForFederativeEntity(FederativeEntity $federativeEntity): ParInformationResult
     {
         $app = App::i();
-        $key = self::cacheKey($federativeEntity);
+        // uma leitura só: contains()+fetch() teria uma janela para o cache expirar entre as
+        // duas chamadas, e o tipo guardado também precisa ser conferido (uma classe antiga
+        // sobrevivendo no cache viraria __PHP_Incomplete_Class, não um ParInformationResult).
+        $cached = $app->cache->fetch(self::cacheKey($federativeEntity));
 
-        if ($app->cache->contains($key)) {
-            return $app->cache->fetch($key);
+        if ($cached instanceof ParInformationResult) {
+            return $cached;
         }
 
         return ParInformationResult::unavailable();

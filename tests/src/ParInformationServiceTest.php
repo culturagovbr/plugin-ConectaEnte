@@ -5,6 +5,7 @@ namespace Tests\ConectaEnte;
 use ConectaEnte\Dto\ParInformation;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\ParInformationService;
+use MapasCulturais\App;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
@@ -69,6 +70,23 @@ class ParInformationServiceTest extends TestCase
 
         $this->assertTrue($result->unavailable);
         $this->assertNull($result->tree);
+    }
+
+    /**
+     * CodeRabbit: um valor de outro tipo no cache (ex. classe antiga sobrevivendo de um
+     * deploy anterior) não pode explodir com TypeError — vira "indisponível".
+     */
+    function testGarbageInTheCacheIsReportedAsUnavailableInsteadOfThrowing()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $seal = $this->createSeal();
+        $federativeEntity = $this->createFederativeEntityWithSeal($seal);
+
+        App::i()->cache->save(ParInformationService::cacheKey($federativeEntity), 'lixo-de-outra-versao', 3600);
+
+        $result = (new ParInformationService)->getForFederativeEntity($federativeEntity);
+
+        $this->assertTrue($result->unavailable);
     }
 
     function testConsistentPathIsAccepted()
