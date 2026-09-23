@@ -9,6 +9,7 @@ use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Plugin;
 use MapasCulturais\App;
+use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\PermissionDenied;
 use MapasCulturais\i;
@@ -194,6 +195,48 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $federativeEntity->save(true);
 
         $this->json(true);
+    }
+
+    /**
+     * Árvore do PAR (exercício/meta/ação/atividade) do ente ligado à oportunidade pelo selo.
+     * Quem pode editar a oportunidade pode ver — não é ação restrita a saasSuperAdmin.
+     * Sem selo ligado, ou API sem este caminho no ambiente, responde 200 com árvore vazia:
+     * o front trata os dois casos como "sem PAR para mostrar", não como erro.
+     */
+    function GET_parInformation()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+
+        if (!$opportunity->canUser('modify')) {
+            throw new PermissionDenied(App::i()->user, $opportunity, 'modify');
+        }
+
+        $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
+
+        if (!$result || $result->notFound) {
+            $this->json(['available' => true, 'exercicios' => []]);
+        }
+
+        // cache ainda vazio: o job de sincronização não rodou (ou não teve sucesso ainda)
+        // para este ente. Distinto de "sem dado": aqui não se sabe se há dado ou não.
+        if ($result->unavailable) {
+            $this->json(['available' => false, 'exercicios' => []]);
+        }
+
+        $this->json(['available' => true] + $result->tree->jsonSerialize());
+    }
+
+    private function requestedOpportunity(): Opportunity
+    {
+        $opportunity = App::i()->repo(Opportunity::class)->find($this->urlData['id'] ?? 0);
+
+        if (!$opportunity) {
+            App::i()->pass();
+        }
+
+        return $opportunity;
     }
 
     /** @return SealOption[] selos habilitados que nenhum Ente Federado usa, nem na lixeira */
