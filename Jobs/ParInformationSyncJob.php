@@ -28,26 +28,47 @@ class ParInformationSyncJob extends JobType
         return self::SLUG;
     }
 
+    /**
+     * Sempre retorna true, mesmo em falha: o core só reagenda a próxima execução
+     * (`Job::execute()`) quando `_execute` "tem sucesso". Como `ITERATIONS` é grande,
+     * a limpeza de job travado (`App::enqueueJob`) não se aplica aqui — uma exceção
+     * não tratada deixaria o job preso em PROCESSING para sempre, sem nova sincronização.
+     */
     public function _execute(Job $job)
     {
         $app = App::i();
+
+        try {
+            $this->syncAll($app);
+        } catch (\Throwable $e) {
+            $app->log->error("ParInformationSyncJob falhou: {$e->getMessage()}");
+        }
+
+        return true;
+    }
+
+    private function syncAll(App $app): void
+    {
         $service = Plugin::instance()->parInformationService();
         $client = Plugin::instance()->client();
 
         $federativeEntities = $app->repo(FederativeEntity::class)->findBy(['status' => FederativeEntity::STATUS_ENABLED]);
 
         foreach ($federativeEntities as $federativeEntity) {
-            $result = $client->getParInformation($federativeEntity->token, $federativeEntity->document);
+            try {
+                $result = $client->getParInformation($federativeEntity->token, $federativeEntity->document);
 
-            // só o desfecho de sucesso (ou "não existe aqui") vale a pena guardar;
-            // falha de rede ou token rejeitado não pode grudar no cache e mascarar uma correção.
-            if ($result->tree || $result->notFound) {
-                $app->cache->save(ParInformationService::cacheKey($federativeEntity), $result, $service->cacheTtl());
-            } else {
-                $app->log->warning("ParInformationSyncJob: falha ao atualizar o ente {$federativeEntity->id}: {$result->message}");
+                // só o desfecho de sucesso (ou "não existe aqui") vale a pena guardar;
+                // falha de rede ou token rejeitado não pode grudar no cache e mascarar uma correção.
+                if ($result->tree || $result->notFound) {
+                    $app->cache->save(ParInformationService::cacheKey($federativeEntity), $result, $service->cacheTtl());
+                } else {
+                    $app->log->warning("ParInformationSyncJob: falha ao atualizar o ente {$federativeEntity->id}: {$result->message}");
+                }
+            } catch (\Throwable $e) {
+                // um ente com erro não pode interromper a sincronização dos demais
+                $app->log->error("ParInformationSyncJob: exceção ao atualizar o ente {$federativeEntity->id}: {$e->getMessage()}");
             }
         }
-
-        return true;
     }
 }
