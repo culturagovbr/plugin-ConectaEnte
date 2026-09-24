@@ -156,6 +156,11 @@ class Plugin extends \MapasCulturais\Plugin
                 Plugin::instance()->publicationContext()->enter($this->requestedEntity, (int) $this->postData['status']);
             }
         });
+        $app->hook('PATCH(opportunity.single):before', function () {
+            if ($this->requestedEntity) {
+                Plugin::instance()->publicationContext()->patching($this->requestedEntity);
+            }
+        });
         $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationContext()->leave());
 
         $app->hook('entity(Opportunity).validationErrors', function (&$errors) {
@@ -173,6 +178,29 @@ class Plugin extends \MapasCulturais\Plugin
         }
 
         $errors = array_merge_recursive($errors, $this->publicationRequirements()->missing($opportunity));
+
+        if ($errors && $this->publicationContext()->isPatching($opportunity)) {
+            $this->keepErrorsInPatch($errors);
+        }
+    }
+
+    // o PATCH do core só devolve erro de chave que veio no corpo, e publicar por ele não passa pelo publish
+    private function keepErrorsInPatch(array &$errors): void
+    {
+        $controller = App::i()->controller('opportunity');
+
+        if (isset($controller->postData['status'])) {
+            $pending = count($errors);
+            $errors['status'][] = sprintf(i::_n(
+                'A oportunidade não pode ser publicada: falta %d campo.',
+                'A oportunidade não pode ser publicada: faltam %d campos.',
+                $pending,
+            ), $pending);
+        }
+
+        foreach (array_keys($errors) as $key) {
+            $controller->postData[$key] ??= null;
+        }
     }
 
     static function sealConflictMessage(FederativeEntity $federativeEntity): string
