@@ -12,6 +12,8 @@ final class PublicationStamp
 {
     const INHERITED_KEY = 'publishedTimestamp';
 
+    private ?int $duplicationSourceId = null;
+
     public function __construct(private SealedOpportunity $sealedOpportunity)
     {
     }
@@ -21,6 +23,11 @@ final class PublicationStamp
      */
     public function stamp(Opportunity $opportunity): void
     {
+        if ($this->isCopyBeingDuplicated($opportunity)) {
+            $this->clearCopiedDates($opportunity);
+            return;
+        }
+
         if ($opportunity->getMetadata(CultBrMetadata::PUBLISHED_AT) || !$this->sealedOpportunity->isSealed($opportunity)) {
             return;
         }
@@ -31,6 +38,36 @@ final class PublicationStamp
             $opportunity->{CultBrMetadata::PUBLISHED_AT} = $inherited;
         } elseif ($this->isBeingPublished($opportunity)) {
             $opportunity->{CultBrMetadata::PUBLISHED_AT} = new DateTime();
+        }
+    }
+
+    /**
+     * Marca o início da duplicação da oportunidade informada.
+     */
+    public function duplicationStarted(Opportunity $source): void
+    {
+        $this->duplicationSourceId = $source->id;
+    }
+
+    /**
+     * Encerra a marca de duplicação, no fim da requisição.
+     */
+    public function duplicationFinished(): void
+    {
+        $this->duplicationSourceId = null;
+    }
+
+    private function isCopyBeingDuplicated(Opportunity $opportunity): bool
+    {
+        return $this->duplicationSourceId !== null && $opportunity->id !== $this->duplicationSourceId && !$opportunity->parent;
+    }
+
+    private function clearCopiedDates(Opportunity $copy): void
+    {
+        $copy->{CultBrMetadata::PUBLISHED_AT} = null;
+
+        if ($copy->getRegisteredMetadata(self::INHERITED_KEY, true)) {
+            $copy->setMetadata(self::INHERITED_KEY, null);
         }
     }
 

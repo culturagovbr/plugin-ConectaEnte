@@ -58,9 +58,12 @@ class Plugin extends \MapasCulturais\Plugin
         return new SealedOpportunity(App::i()->repo(FederativeEntitySeal::class));
     }
 
+    private ?PublicationStamp $publicationStamp = null;
+
+    // uma instância por requisição: ela guarda a marca da duplicação em curso
     function publicationStamp(): PublicationStamp
     {
-        return new PublicationStamp($this->sealedOpportunity());
+        return $this->publicationStamp ??= new PublicationStamp($this->sealedOpportunity());
     }
 
     public function _init(){
@@ -120,6 +123,12 @@ class Plugin extends \MapasCulturais\Plugin
         $app->hook('entity(Opportunity).save:before', function () {
             Plugin::instance()->publicationStamp()->stamp($this);
         });
+
+        // a cópia é salva antes e depois de receber os metadados: a marca dura a requisição inteira
+        $app->hook('ALL(opportunity.duplicate):before', function () {
+            Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
+        });
+        $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationStamp()->duplicationFinished());
     }
 
     static function sealConflictMessage(FederativeEntity $federativeEntity): string
