@@ -3,8 +3,11 @@
 namespace ConectaEnte\Services;
 
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\LegalEntityType;
 use ConectaEnte\Vocabulary\ProponentType;
+use ConectaEnte\Vocabulary\Segment;
+use ConectaEnte\Vocabulary\ThematicAgenda;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\i;
 
@@ -29,6 +32,9 @@ final class PublicationRequirements
             $this->rangeErrors($opportunity),
             $this->publishedAtErrors($opportunity),
             $this->registrationEndErrors($opportunity),
+            $this->executionTypeErrors($opportunity),
+            $this->targetingErrors($opportunity),
+            $this->otherSpecificationErrors($opportunity),
         );
     }
 
@@ -133,6 +139,55 @@ final class PublicationRequirements
         }
 
         return [];
+    }
+
+    private function executionTypeErrors(Opportunity $opportunity): array
+    {
+        $value = $opportunity->{CultBrMetadata::EXECUTION_TYPE};
+
+        return $this->registeredChoiceErrors($opportunity, CultBrMetadata::EXECUTION_TYPE, $value ? [$value] : []);
+    }
+
+    private function targetingErrors(Opportunity $opportunity): array
+    {
+        $errors = [];
+
+        foreach ([CultBrMetadata::SEGMENTS, CultBrMetadata::CULTURAL_STAGES, CultBrMetadata::THEMATIC_AGENDAS, CultBrMetadata::PRIORITY_TERRITORIES] as $key) {
+            $errors += $this->registeredChoiceErrors($opportunity, $key, $opportunity->$key);
+        }
+
+        return $errors;
+    }
+
+    private function otherSpecificationErrors(Opportunity $opportunity): array
+    {
+        $specifications = [
+            CultBrMetadata::SEGMENTS_OTHER => [CultBrMetadata::SEGMENTS, Segment::OTHER->value, i::__('O campo especificar segmento artístico-cultural é obrigatório quando "Outros (especificar)" é selecionado.')],
+            CultBrMetadata::CULTURAL_STAGES_OTHER => [CultBrMetadata::CULTURAL_STAGES, CulturalStage::OTHER->value, i::__('O campo especificar etapa do fazer cultural é obrigatório quando "Outra (especificar)" é selecionada.')],
+            CultBrMetadata::THEMATIC_AGENDAS_OTHER => [CultBrMetadata::THEMATIC_AGENDAS, ThematicAgenda::OTHER->value, i::__('O campo especificar pauta temática é obrigatório quando "Outra (especificar)" é selecionada.')],
+        ];
+        $errors = [];
+
+        foreach ($specifications as $otherKey => [$key, $otherValue, $message]) {
+            if (in_array($otherValue, $opportunity->$key, true) && (string) $opportunity->$otherKey === '') {
+                $errors[$otherKey] = [$message];
+            }
+        }
+
+        return $errors;
+    }
+
+    private function registeredChoiceErrors(Opportunity $opportunity, string $key, array $values): array
+    {
+        $definition = $opportunity->getRegisteredMetadata($key);
+        $label = mb_strtolower($definition->label);
+
+        return $this->keyed($key, $this->choiceMessages(
+            $values,
+            fn($value) => array_key_exists($value, $definition->options),
+            sprintf(i::__('O campo %s é obrigatório.'), $label),
+            fn($value) => sprintf(i::__('A opção "%s" de %s não tem correspondente no CultBR.'), $value, $label),
+        ));
     }
 
     // valor fora do vocabulário é nomeado e não conta como resposta
