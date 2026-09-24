@@ -92,18 +92,18 @@ trait ConectaEnteFixtures
         return $federativeEntity;
     }
 
-    protected function createOpportunity(): Opportunity
+    protected function createOpportunity(int $status = Opportunity::STATUS_ENABLED): Opportunity
     {
         $agent = $this->app->user->profile;
 
-        $this->opportunityBuilder->reset($agent, $agent)->fillRequiredProperties()->firstPhase()->save()->done();
+        $this->opportunityBuilder->reset($agent, $agent, $status)->fillRequiredProperties()->firstPhase()->save()->done();
 
         return $this->opportunityBuilder->getInstance();
     }
 
-    protected function createOpportunityWithSeal(Seal $seal): Opportunity
+    protected function createOpportunityWithSeal(Seal $seal, int $status = Opportunity::STATUS_ENABLED): Opportunity
     {
-        $opportunity = $this->createOpportunity();
+        $opportunity = $this->createOpportunity($status);
         $opportunity->createSealRelation($seal);
 
         return $opportunity;
