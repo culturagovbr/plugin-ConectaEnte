@@ -9,6 +9,7 @@ use ConectaEnte\Vocabulary\ExecutionType;
 use ConectaEnte\Vocabulary\FundingSource;
 use ConectaEnte\Vocabulary\LegalEntityType;
 use ConectaEnte\Vocabulary\LegalQuota;
+use ConectaEnte\Vocabulary\OpportunityStatus;
 use ConectaEnte\Vocabulary\PriorityTerritory;
 use ConectaEnte\Vocabulary\ProponentType;
 use ConectaEnte\Vocabulary\RegistrationChannel;
@@ -307,6 +308,21 @@ class VocabularyTest extends TestCase
             ['Pessoas negras (pretas e pardas)', 'Pessoas indígenas', 'Pessoas com deficiência', 'Ampla concorrência'],
             $this->values(LegalQuota::class)
         );
+    }
+
+    function testOpportunityStatusGoesToThePayloadAsIdAndName()
+    {
+        $payloads = array_map(fn(OpportunityStatus $status) => $status->toPayload(), OpportunityStatus::cases());
+
+        $this->assertSame([
+            ['id' => 1, 'nome' => 'Ativado'],
+            ['id' => 0, 'nome' => 'Rascunho'],
+            ['id' => -1, 'nome' => 'Fase'],
+            ['id' => -2, 'nome' => 'Arquivado'],
+            ['id' => -9, 'nome' => 'Desabilitado'],
+            ['id' => -10, 'nome' => 'Lixeira'],
+            ['id' => -20, 'nome' => 'Fase de recurso'],
+        ], $payloads);
     }
 
     function testStoredValueAndPayloadTextDoNotDependOnTheLanguage()
