@@ -9,6 +9,8 @@ use ConectaEnte\Http\Client;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Services\PublicationContext;
+use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\SealedOpportunity;
 use MapasCulturais\Entities\Opportunity;
@@ -64,6 +66,19 @@ class Plugin extends \MapasCulturais\Plugin
     function publicationStamp(): PublicationStamp
     {
         return $this->publicationStamp ??= new PublicationStamp($this->sealedOpportunity());
+    }
+
+    private ?PublicationContext $publicationContext = null;
+
+    // uma instância por requisição: ela guarda o status pedido pela requisição em curso
+    function publicationContext(): PublicationContext
+    {
+        return $this->publicationContext ??= new PublicationContext();
+    }
+
+    function publicationRequirements(): PublicationRequirements
+    {
+        return new PublicationRequirements($this->publicationStamp());
     }
 
     public function _init(){
@@ -129,6 +144,35 @@ class Plugin extends \MapasCulturais\Plugin
             Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
         });
         $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationStamp()->duplicationFinished());
+
+        // o publish e o PUT validam antes de mudar o status: a regra olha o status pedido
+        $app->hook('ALL(opportunity.publish):before', function () {
+            if ($this->requestedEntity) {
+                Plugin::instance()->publicationContext()->enter($this->requestedEntity);
+            }
+        });
+        $app->hook('PUT(opportunity.single):before', function () {
+            if ($this->requestedEntity && isset($this->postData['status'])) {
+                Plugin::instance()->publicationContext()->enter($this->requestedEntity, (int) $this->postData['status']);
+            }
+        });
+        $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationContext()->leave());
+
+        $app->hook('entity(Opportunity).validationErrors', function (&$errors) {
+            Plugin::instance()->requirePublicationFields($this, $errors);
+        });
+    }
+
+    /**
+     * Soma aos erros da oportunidade selada o que falta para ela sair publicada da requisição.
+     */
+    function requirePublicationFields(Opportunity $opportunity, array &$errors): void
+    {
+        if (!$this->publicationContext()->endsPublished($opportunity) || !$this->sealedOpportunity()->isSealed($opportunity)) {
+            return;
+        }
+
+        $errors = array_merge_recursive($errors, $this->publicationRequirements()->missing($opportunity));
     }
 
     static function sealConflictMessage(FederativeEntity $federativeEntity): string
