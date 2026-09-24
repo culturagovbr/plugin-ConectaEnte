@@ -4,6 +4,7 @@ namespace Tests\ConectaEnte\Traits;
 
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
+use ConectaEnte\Vocabulary\AffirmativeAction;
 use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\ExecutionType;
 use ConectaEnte\Vocabulary\Segment;
@@ -63,6 +64,7 @@ trait PublicationRequirementsFixtures
         $opportunity->conectaente_priorityTerritories = [TargetingOption::NOT_TARGETED->value];
         $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'nao'];
         $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'nao'];
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => [AffirmativeAction::NOT_PLANNED->value]];
     }
 
     private function attachRules(Opportunity $opportunity): void

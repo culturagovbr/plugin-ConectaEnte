@@ -188,4 +188,55 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
         $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'email', 'descricao' => 'editais@cultura.gov.br']]];
         $this->assertSame([], $this->missing($opportunity));
     }
+
+    function testAffirmativeActionsNeedAKnownOption()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => []];
+        $this->assertSame(['conectaente_affirmativeActions' => ['Selecione pelo menos uma opção.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => ['cotas_raciais']];
+        $this->assertSame(['conectaente_affirmativeActions' => [
+            'Selecione pelo menos uma opção.',
+            'A ação afirmativa "cotas_raciais" não tem correspondente no CultBR.',
+        ]], $this->missing($opportunity));
+    }
+
+    function testMalformedAffirmativeActionEntryIsIgnored()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => [['bonus_agentes']]];
+
+        $this->assertSame(['conectaente_affirmativeActions' => ['Selecione pelo menos uma opção.']], $this->missing($opportunity));
+    }
+
+    function testAffirmativeActionWithGroupsNeedsKnownGroups()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => ['bonus_agentes']];
+        $this->assertSame(['conectaente_affirmativeActions' => ['Por favor, selecione pelo menos uma subcategoria.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => ['bonus_agentes'], 'bonus_agentes' => ['pessoas_negras', 'quilombolas']];
+        $this->assertSame(['conectaente_affirmativeActions' => ['O grupo "quilombolas" não tem correspondente no CultBR.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => ['bonus_agentes'], 'bonus_agentes' => ['pessoas_negras']];
+        $this->assertSame([], $this->missing($opportunity));
+    }
+
+    function testOtherLegislationNeedsADescriptionUpTo140Characters()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => ['outra_legislacao'], 'outra_legislacao_descricao' => ''];
+        $this->assertSame(['conectaente_affirmativeActions' => ['Por favor, preencha a descrição.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => ['outra_legislacao'], 'outra_legislacao_descricao' => str_repeat('á', 141)];
+        $this->assertSame(['conectaente_affirmativeActions' => ['A descrição da outra ação afirmativa deve ter no máximo 140 caracteres.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_affirmativeActions = ['opcoes' => ['outra_legislacao'], 'outra_legislacao_descricao' => str_repeat('á', 140)];
+        $this->assertSame([], $this->missing($opportunity));
+    }
 }

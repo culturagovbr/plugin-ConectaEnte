@@ -3,6 +3,8 @@
 namespace ConectaEnte\Services;
 
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Vocabulary\AffirmativeAction;
+use ConectaEnte\Vocabulary\AffirmativeActionGroup;
 use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\FundingSource;
 use ConectaEnte\Vocabulary\LegalEntityType;
@@ -18,6 +20,7 @@ final class PublicationRequirements
 {
     const RANGE_VALUE_TOLERANCE = 0.009;
     const REGISTRATION_CHANNELS_EMAIL = CultBrMetadata::REGISTRATION_CHANNELS . 'Email';
+    const OTHER_LEGISLATION_MAX_LENGTH = 140;
     const YES = 'sim';
     const NO = 'nao';
 
@@ -43,6 +46,7 @@ final class PublicationRequirements
             $this->otherSpecificationErrors($opportunity),
             $this->fundingSourceErrors($opportunity),
             $this->registrationChannelErrors($opportunity),
+            $this->affirmativeActionErrors($opportunity),
         );
     }
 
@@ -255,6 +259,51 @@ final class PublicationRequirements
             + ($hasInvalidEmail ? [self::REGISTRATION_CHANNELS_EMAIL => [i::__('Informe um e-mail válido.')]] : []);
     }
 
+    private function affirmativeActionErrors(Opportunity $opportunity): array
+    {
+        $block = $this->jsonBlock($opportunity, CultBrMetadata::AFFIRMATIVE_ACTIONS);
+        $options = $this->strings($block['opcoes'] ?? []);
+
+        $messages = $this->choiceMessages(
+            $options,
+            AffirmativeAction::tryFrom(...),
+            i::__('Selecione pelo menos uma opção.'),
+            fn($option) => sprintf(i::__('A ação afirmativa "%s" não tem correspondente no CultBR.'), $option),
+        );
+
+        foreach (array_filter(array_map(AffirmativeAction::tryFrom(...), $options)) as $action) {
+            if ($action->hasGroups()) {
+                array_push($messages, ...$this->choiceMessages(
+                    $this->strings($block[$action->value] ?? []),
+                    AffirmativeActionGroup::tryFrom(...),
+                    i::__('Por favor, selecione pelo menos uma subcategoria.'),
+                    fn($group) => sprintf(i::__('O grupo "%s" não tem correspondente no CultBR.'), $group),
+                ));
+            }
+        }
+
+        if (in_array(AffirmativeAction::OTHER_LEGISLATION->value, $options, true)) {
+            array_push($messages, ...$this->otherLegislationMessages($block['outra_legislacao_descricao'] ?? null));
+        }
+
+        return $this->keyed(CultBrMetadata::AFFIRMATIVE_ACTIONS, $messages);
+    }
+
+    private function otherLegislationMessages(mixed $description): array
+    {
+        $description = is_string($description) ? trim($description) : '';
+
+        if ($description === '') {
+            return [i::__('Por favor, preencha a descrição.')];
+        }
+
+        if (mb_strlen($description) > self::OTHER_LEGISLATION_MAX_LENGTH) {
+            return [sprintf(i::__('A descrição da outra ação afirmativa deve ter no máximo %d caracteres.'), self::OTHER_LEGISLATION_MAX_LENGTH)];
+        }
+
+        return [];
+    }
+
     private function registeredChoiceErrors(Opportunity $opportunity, string $key, array $values): array
     {
         $definition = $opportunity->getRegisteredMetadata($key);
@@ -293,6 +342,11 @@ final class PublicationRequirements
         $block = json_decode(json_encode($opportunity->$key), true);
 
         return is_array($block) ? $block : [];
+    }
+
+    private function strings(mixed $values): array
+    {
+        return array_values(array_filter((array) $values, 'is_string'));
     }
 
     private function isPositiveNumber(mixed $value): bool
