@@ -7,6 +7,7 @@ use ConectaEnte\Controllers\ConectaEnteController;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\Client;
 use ConectaEnte\Http\Transport\TransportInterface;
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Services\SealedOpportunity;
 use MapasCulturais\Entities\Opportunity;
@@ -119,5 +120,7 @@ class Plugin extends \MapasCulturais\Plugin
         $app = App::i();
 
         $app->registerController('conectaente', ConectaEnteController::class);
+
+        CultBrMetadata::register($this);
     }
 }
