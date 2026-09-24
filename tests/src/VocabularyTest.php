@@ -6,6 +6,8 @@ use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\ExecutionType;
 use ConectaEnte\Vocabulary\PriorityTerritory;
 use ConectaEnte\Vocabulary\Segment;
+use ConectaEnte\Vocabulary\TargetingField;
+use ConectaEnte\Vocabulary\TargetingOption;
 use ConectaEnte\Vocabulary\ThematicAgenda;
 use POMO\Translations\EntryTranslations;
 use POMO\Translations\Translations;
@@ -142,6 +144,24 @@ class VocabularyTest extends TestCase
         ], $this->values(PriorityTerritory::class));
     }
 
+    function testTargetingOptionsKeepTheCultEditaisKeys()
+    {
+        $this->assertSame(['__edital_nao_se_direciona__', '__todas_opcoes__'], $this->values(TargetingOption::class));
+        $this->assertSame('Todas as opções', TargetingOption::ALL_OPTIONS->text(TargetingField::SEGMENT));
+    }
+
+    function testNotTargetedTextIsSpecificToEachField()
+    {
+        $texts = array_map(fn(TargetingField $field) => TargetingOption::NOT_TARGETED->text($field), TargetingField::cases());
+
+        $this->assertSame([
+            'Edital não se direciona a segmentos específicos',
+            'Edital não se direciona a etapa específica',
+            'Edital não se direciona a pautas específicas',
+            'Edital não se direciona a territórios específicos',
+        ], $texts);
+    }
+
     function testStoredValueAndPayloadTextDoNotDependOnTheLanguage()
     {
         global $i18n;
@@ -150,6 +170,7 @@ class VocabularyTest extends TestCase
         $translations = new Translations();
         foreach ([
             'Execução cultural' => 'Cultural execution',
+            'Edital não se direciona a pautas específicas' => 'Not aimed at specific agendas',
         ] as $text => $translation) {
             $translations->add_entry(new EntryTranslations(['singular' => $text, 'translations' => [$translation]]));
         }
@@ -159,6 +180,9 @@ class VocabularyTest extends TestCase
             $this->assertSame('Cultural execution', ExecutionType::CULTURAL_EXECUTION->label());
             $this->assertSame('Execução cultural', ExecutionType::CULTURAL_EXECUTION->value);
             $this->assertSame('Execução cultural', ExecutionType::CULTURAL_EXECUTION->text());
+
+            $this->assertSame('Not aimed at specific agendas', TargetingOption::NOT_TARGETED->label(TargetingField::THEMATIC_AGENDA));
+            $this->assertSame('Edital não se direciona a pautas específicas', TargetingOption::NOT_TARGETED->text(TargetingField::THEMATIC_AGENDA));
         } finally {
             $i18n['default'] = $original;
         }
