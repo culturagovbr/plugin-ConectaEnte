@@ -6,6 +6,7 @@ use ConectaEnte\Auth\PasswordCheck;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\OpportunityMeta;
 use MapasCulturais\Definitions\Metadata;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\User;
@@ -107,6 +108,18 @@ trait ConectaEnteFixtures
         $opportunity->createSealRelation($seal);
 
         return $opportunity;
+    }
+
+    /**
+     * Grava a linha do metadado direto, sem depender de ele estar registrado.
+     */
+    protected function writeRawMetadata(Opportunity $opportunity, string $key, ?string $value): void
+    {
+        $meta = new OpportunityMeta;
+        $meta->owner = $opportunity;
+        $meta->key = $key;
+        $meta->value = $value;
+        $meta->save(true);
     }
 
     protected function renderPanel(): string

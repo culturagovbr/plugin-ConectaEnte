@@ -6,7 +6,6 @@ use ConectaEnte\Plugin;
 use DateTime;
 use MapasCulturais\Definitions\Metadata;
 use MapasCulturais\Entities\Opportunity;
-use MapasCulturais\Entities\OpportunityMeta;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\User;
 use Tests\Abstract\TestCase;
@@ -201,15 +200,6 @@ class PublicationStampTest extends TestCase
     private function sealedDraft(?Seal $seal = null): Opportunity
     {
         return $this->createOpportunityWithSeal($seal ?? $this->federativeSeal(), Opportunity::STATUS_DRAFT);
-    }
-
-    private function writeRawMetadata(Opportunity $opportunity, string $key, ?string $value): void
-    {
-        $meta = new OpportunityMeta;
-        $meta->owner = $opportunity;
-        $meta->key = $key;
-        $meta->value = $value;
-        $meta->save(true);
     }
 
     private function registerPublishedTimestampLikeAldirBlanc(): void
