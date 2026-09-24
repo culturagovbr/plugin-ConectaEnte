@@ -141,6 +141,26 @@ class PublicationValidationTest extends TestCase
         $this->assertSame(['A oportunidade não pode ser publicada: faltam 2 campos.'], $errors['status'] ?? null);
     }
 
+    function testPatchKeepsTheErrorsOfHooksRegisteredAfterThePlugin()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
+        $isActive = true;
+        // como o de um tema: registrado depois do plugin; desligado no fim, porque hook não sai da App
+        $this->app->hook('entity(Opportunity).validationErrors', function (&$errors) use (&$isActive) {
+            if ($isActive) {
+                $errors['themeField'] = ['Campo exigido pelo tema.'];
+            }
+        });
+
+        try {
+            $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['shortDescription' => 'Nova descrição'])));
+        } finally {
+            $isActive = false;
+        }
+
+        $this->assertArrayHasKey('themeField', $this->responseErrors());
+    }
+
     function testForceSaveStillSavesThePublishedIncompleteSealedOpportunity()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
