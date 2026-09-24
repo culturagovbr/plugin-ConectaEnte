@@ -4,7 +4,9 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\ExecutionType;
+use ConectaEnte\Vocabulary\LegalEntityType;
 use ConectaEnte\Vocabulary\PriorityTerritory;
+use ConectaEnte\Vocabulary\ProponentType;
 use ConectaEnte\Vocabulary\Segment;
 use ConectaEnte\Vocabulary\TargetingField;
 use ConectaEnte\Vocabulary\TargetingOption;
@@ -15,6 +17,18 @@ use Tests\Abstract\TestCase;
 
 class VocabularyTest extends TestCase
 {
+    // a Conecta Ente exige estes valores sem publicá-los; vêm dos contratos de Gestão e Conecta MinC
+    const CONTRACT_PROPONENT_TYPES = [
+        'pessoa_fisica',
+        'mei_microempreendedor_individual',
+        'pessoa_juridica_com_fins_lucrativos_empresas',
+        'pessoa_juridica_sem_fins_lucrativos',
+        'coletivos_e_grupos_informais_sem_cnpj',
+        'pontos_de_cultura_com_constituicao_juridica',
+        'pontos_de_cultura_sem_constituicao_juridica',
+        'organizacoes_da_sociedade_civil_sem_fins_lucrativos',
+    ];
+
     function testExecutionTypeListIsTheCultEditaisOne()
     {
         $this->assertSame([
@@ -162,6 +176,38 @@ class VocabularyTest extends TestCase
         ], $texts);
     }
 
+    function testDefaultProponentLabelsTranslateToTheContract()
+    {
+        $this->assertSame(['Pessoa Física', 'MEI', 'Coletivo', 'Pessoa Jurídica'], $this->app->config['registration.proponentTypes']);
+
+        $this->assertSame(ProponentType::INDIVIDUAL, ProponentType::tryFromLabel('Pessoa Física'));
+        $this->assertSame(ProponentType::MEI, ProponentType::tryFromLabel('MEI'));
+        $this->assertSame(ProponentType::COLLECTIVE, ProponentType::tryFromLabel('Coletivo'));
+        $this->assertSame(ProponentType::MEI, ProponentType::tryFromLabel(' MEI '));
+        $this->assertNull(ProponentType::tryFromLabel('Pessoa Jurídica'));
+        $this->assertNull(ProponentType::tryFromLabel('Associação'));
+    }
+
+    function testLegalEntityLabelIsRecognizedApartFromUnknownLabels()
+    {
+        $this->assertTrue(ProponentType::isLegalEntityLabel('Pessoa Jurídica'));
+        $this->assertTrue(ProponentType::isLegalEntityLabel(' Pessoa Jurídica '));
+        $this->assertFalse(ProponentType::isLegalEntityLabel('MEI'));
+        $this->assertFalse(ProponentType::isLegalEntityLabel('Associação'));
+    }
+
+    function testLegalEntityTypesCompleteTheLegalEntityProponent()
+    {
+        $this->assertSame(['Com fins lucrativos', 'Sem fins lucrativos'], $this->values(LegalEntityType::class));
+        $this->assertSame(ProponentType::FOR_PROFIT_LEGAL_ENTITY, LegalEntityType::FOR_PROFIT->proponentType());
+        $this->assertSame(ProponentType::NON_PROFIT_LEGAL_ENTITY, LegalEntityType::NON_PROFIT->proponentType());
+    }
+
+    function testEveryProponentTypeIsAContractValue()
+    {
+        $this->assertSame([], array_diff($this->values(ProponentType::class), self::CONTRACT_PROPONENT_TYPES));
+    }
+
     function testStoredValueAndPayloadTextDoNotDependOnTheLanguage()
     {
         global $i18n;
@@ -170,6 +216,7 @@ class VocabularyTest extends TestCase
         $translations = new Translations();
         foreach ([
             'Execução cultural' => 'Cultural execution',
+            'Com fins lucrativos' => 'For profit',
             'Edital não se direciona a pautas específicas' => 'Not aimed at specific agendas',
         ] as $text => $translation) {
             $translations->add_entry(new EntryTranslations(['singular' => $text, 'translations' => [$translation]]));
@@ -180,6 +227,9 @@ class VocabularyTest extends TestCase
             $this->assertSame('Cultural execution', ExecutionType::CULTURAL_EXECUTION->label());
             $this->assertSame('Execução cultural', ExecutionType::CULTURAL_EXECUTION->value);
             $this->assertSame('Execução cultural', ExecutionType::CULTURAL_EXECUTION->text());
+
+            $this->assertSame('For profit', LegalEntityType::FOR_PROFIT->label());
+            $this->assertSame('Com fins lucrativos', LegalEntityType::FOR_PROFIT->value);
 
             $this->assertSame('Not aimed at specific agendas', TargetingOption::NOT_TARGETED->label(TargetingField::THEMATIC_AGENDA));
             $this->assertSame('Edital não se direciona a pautas específicas', TargetingOption::NOT_TARGETED->text(TargetingField::THEMATIC_AGENDA));
