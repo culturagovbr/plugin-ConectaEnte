@@ -49,45 +49,26 @@ final class PublicationRequirements
 
     private function proponentTypeErrors(Opportunity $opportunity): array
     {
-        $proponentTypes = $opportunity->registrationProponentTypes;
-
-        if (!$proponentTypes) {
-            return ['registrationProponentTypes' => [i::__('O campo "Tipos do proponente" é obrigatório.')]];
-        }
-
-        $messages = [];
-
-        foreach ($proponentTypes as $label) {
-            if (!ProponentType::tryFromLabel($label) && !ProponentType::isLegalEntityLabel($label)) {
-                $messages[] = sprintf(i::__('O tipo de proponente "%s" não tem correspondente no CultBR.'), $label);
-            }
-        }
-
-        return $messages ? ['registrationProponentTypes' => $messages] : [];
+        return $this->keyed('registrationProponentTypes', $this->choiceMessages(
+            $opportunity->registrationProponentTypes,
+            fn($label) => ProponentType::tryFromLabel($label) || ProponentType::isLegalEntityLabel($label),
+            i::__('O campo "Tipos do proponente" é obrigatório.'),
+            fn($label) => sprintf(i::__('O tipo de proponente "%s" não tem correspondente no CultBR.'), $label),
+        ));
     }
 
     private function legalEntityErrors(Opportunity $opportunity): array
     {
-        $hasLegalEntity = array_filter($opportunity->registrationProponentTypes, ProponentType::isLegalEntityLabel(...));
-
-        if (!$hasLegalEntity) {
+        if (!array_filter($opportunity->registrationProponentTypes, ProponentType::isLegalEntityLabel(...))) {
             return [];
         }
 
-        $values = $opportunity->{CultBrMetadata::LEGAL_ENTITY_TYPES};
-        $messages = [];
-
-        if (!array_filter($values, LegalEntityType::tryFrom(...))) {
-            $messages[] = i::__('O campo "Tipo de pessoa jurídica" é obrigatório.');
-        }
-
-        foreach ($values as $value) {
-            if (!LegalEntityType::tryFrom($value)) {
-                $messages[] = sprintf(i::__('O tipo de pessoa jurídica "%s" não tem correspondente no CultBR.'), $value);
-            }
-        }
-
-        return $messages ? [CultBrMetadata::LEGAL_ENTITY_TYPES => $messages] : [];
+        return $this->keyed(CultBrMetadata::LEGAL_ENTITY_TYPES, $this->choiceMessages(
+            $opportunity->{CultBrMetadata::LEGAL_ENTITY_TYPES},
+            LegalEntityType::tryFrom(...),
+            i::__('O campo "Tipo de pessoa jurídica" é obrigatório.'),
+            fn($value) => sprintf(i::__('O tipo de pessoa jurídica "%s" não tem correspondente no CultBR.'), $value),
+        ));
     }
 
     private function rulesErrors(Opportunity $opportunity): array
@@ -152,6 +133,25 @@ final class PublicationRequirements
         }
 
         return [];
+    }
+
+    // valor fora do vocabulário é nomeado e não conta como resposta
+    private function choiceMessages(array $values, callable $isKnown, string $requiredMessage, callable $unknownMessage): array
+    {
+        $messages = array_filter($values, $isKnown) ? [] : [$requiredMessage];
+
+        foreach ($values as $value) {
+            if (!$isKnown($value)) {
+                $messages[] = $unknownMessage($value);
+            }
+        }
+
+        return $messages;
+    }
+
+    private function keyed(string $key, array $messages): array
+    {
+        return $messages ? [$key => array_values(array_unique($messages))] : [];
     }
 
     private function isPositiveNumber(mixed $value): bool

@@ -61,11 +61,16 @@ class PublicationRequirementsCoreFieldsTest extends TestCase
         $opportunity = $this->completeOpportunity();
 
         $opportunity->registrationProponentTypes = ['Pessoa Física', 'Estrangeiro'];
-
         $this->assertSame(
             ['O tipo de proponente "Estrangeiro" não tem correspondente no CultBR.'],
             $this->missing($opportunity)['registrationProponentTypes'] ?? null,
         );
+
+        $opportunity->registrationProponentTypes = ['Estrangeiro'];
+        $this->assertSame([
+            'O campo "Tipos do proponente" é obrigatório.',
+            'O tipo de proponente "Estrangeiro" não tem correspondente no CultBR.',
+        ], $this->missing($opportunity)['registrationProponentTypes'] ?? null);
     }
 
     function testLegalEntityRequiresItsType()
