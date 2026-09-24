@@ -107,14 +107,15 @@ class PublicationValidationTest extends TestCase
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
         $opportunity->shortDescription = '';
+        $opportunity->vacancies = 0;
         $opportunity->conectaente_segments = [];
         $opportunity->save(true);
 
         $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['status' => Opportunity::STATUS_ENABLED])));
 
         $errors = $this->responseErrors();
-        $this->assertSame(['A oportunidade não pode ser publicada: faltam 2 campos.'], $errors['status'] ?? null);
-        $this->assertEqualsCanonicalizing(['shortDescription', 'conectaente_segments', 'status'], array_keys($errors));
+        $this->assertSame(['A oportunidade não pode ser publicada: faltam 3 campos.'], $errors['status'] ?? null);
+        $this->assertEqualsCanonicalizing(['shortDescription', 'vacancies', 'conectaente_segments', 'status'], array_keys($errors));
     }
 
     function testPatchKeepsTheErrorsAddedByTheCoreModules()
