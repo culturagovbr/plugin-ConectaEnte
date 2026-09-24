@@ -8,6 +8,7 @@ use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\Client;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Services\SealedOpportunity;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\BadRequest;
@@ -48,6 +49,11 @@ class Plugin extends \MapasCulturais\Plugin
     function passwordWindow(): PasswordWindow
     {
         return $this->passwordWindow ?? new PasswordWindow($this->_config['passwordWindow']);
+    }
+
+    function sealedOpportunity(): SealedOpportunity
+    {
+        return new SealedOpportunity(App::i()->repo(FederativeEntitySeal::class));
     }
 
     public function _init(){
