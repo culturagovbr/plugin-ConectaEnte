@@ -42,6 +42,16 @@ final class PublicationStamp
     }
 
     /**
+     * Se a oportunidade já estava publicada antes das alterações desta requisição.
+     */
+    public function wasPublished(Opportunity $opportunity): bool
+    {
+        $original = App::i()->em->getUnitOfWork()->getOriginalEntityData($opportunity);
+
+        return (int) ($original['status'] ?? Opportunity::STATUS_DRAFT) === Opportunity::STATUS_ENABLED;
+    }
+
+    /**
      * Marca o início da duplicação da oportunidade informada.
      */
     public function duplicationStarted(Opportunity $source): void
@@ -92,9 +102,6 @@ final class PublicationStamp
 
     private function isBeingPublished(Opportunity $opportunity): bool
     {
-        $original = App::i()->em->getUnitOfWork()->getOriginalEntityData($opportunity);
-
-        return (int) $opportunity->status === Opportunity::STATUS_ENABLED
-            && (int) ($original['status'] ?? Opportunity::STATUS_DRAFT) !== Opportunity::STATUS_ENABLED;
+        return (int) $opportunity->status === Opportunity::STATUS_ENABLED && !$this->wasPublished($opportunity);
     }
 }
