@@ -4,7 +4,6 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\SealedOpportunity;
-use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\SealRelation;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
@@ -86,12 +85,5 @@ class SealedOpportunityTest extends TestCase
     private function sealedOpportunity(): SealedOpportunity
     {
         return Plugin::instance()->sealedOpportunity();
-    }
-
-    private function reloaded(Opportunity $opportunity): Opportunity
-    {
-        $this->app->em->clear();
-
-        return $this->app->repo(Opportunity::class)->find($opportunity->id);
     }
 }

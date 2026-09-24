@@ -135,10 +135,16 @@ trait ConectaEnteFixtures
      */
     protected function resolveFederativeEntity(Opportunity $opportunity): ?FederativeEntity
     {
+        return $this->app->repo(FederativeEntitySeal::class)->findOneByOpportunity($this->reloaded($opportunity))?->federativeEntity;
+    }
+
+    /**
+     * Oportunidade relida do banco, sem o estado que ficou em memória.
+     */
+    protected function reloaded(Opportunity $opportunity): Opportunity
+    {
         $this->app->em->clear();
 
-        $opportunity = $this->app->repo(Opportunity::class)->find($opportunity->id);
-
-        return $this->app->repo(FederativeEntitySeal::class)->findOneByOpportunity($opportunity)?->federativeEntity;
+        return $this->app->repo(Opportunity::class)->find($opportunity->id);
     }
 }
