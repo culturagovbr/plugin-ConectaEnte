@@ -2,11 +2,16 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Vocabulary\AffirmativeAction;
+use ConectaEnte\Vocabulary\AffirmativeActionGroup;
 use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\ExecutionType;
+use ConectaEnte\Vocabulary\FundingSource;
 use ConectaEnte\Vocabulary\LegalEntityType;
+use ConectaEnte\Vocabulary\LegalQuota;
 use ConectaEnte\Vocabulary\PriorityTerritory;
 use ConectaEnte\Vocabulary\ProponentType;
+use ConectaEnte\Vocabulary\RegistrationChannel;
 use ConectaEnte\Vocabulary\Segment;
 use ConectaEnte\Vocabulary\TargetingField;
 use ConectaEnte\Vocabulary\TargetingOption;
@@ -28,6 +33,8 @@ class VocabularyTest extends TestCase
         'pontos_de_cultura_sem_constituicao_juridica',
         'organizacoes_da_sociedade_civil_sem_fins_lucrativos',
     ];
+
+    const CONTRACT_REGISTRATION_CHANNELS = ['presencial', 'correio', 'email', 'sistema', 'oral', 'outros'];
 
     function testExecutionTypeListIsTheCultEditaisOne()
     {
@@ -176,6 +183,15 @@ class VocabularyTest extends TestCase
         ], $texts);
     }
 
+    function testRegistrationChannelsAreExactlyTheContractValues()
+    {
+        $this->assertEqualsCanonicalizing(self::CONTRACT_REGISTRATION_CHANNELS, $this->values(RegistrationChannel::class));
+        $this->assertSame(
+            ['E-mail', 'Presencial', 'Correspondência', 'Oralidade', 'Sistema digital', 'Outros'],
+            $this->texts(RegistrationChannel::class)
+        );
+    }
+
     function testDefaultProponentLabelsTranslateToTheContract()
     {
         $this->assertSame(['Pessoa Física', 'MEI', 'Coletivo', 'Pessoa Jurídica'], $this->app->config['registration.proponentTypes']);
@@ -206,6 +222,91 @@ class VocabularyTest extends TestCase
     function testEveryProponentTypeIsAContractValue()
     {
         $this->assertSame([], array_diff($this->values(ProponentType::class), self::CONTRACT_PROPONENT_TYPES));
+    }
+
+    function testAffirmativeActionsKeepTheCultEditaisKeys()
+    {
+        $this->assertSame(
+            ['nao_previstas', 'bonus_agentes', 'bonus_tematicas', 'categoria_especifica', 'edital_especifico', 'outra_legislacao'],
+            $this->values(AffirmativeAction::class)
+        );
+        $this->assertSame([
+            'Não são previstas outras ações afirmativas',
+            'Bônus de pontuação para agentes culturais',
+            'Bônus de pontuação para projetos com temáticas específicas',
+            'Categoria específica',
+            'Edital específico',
+            'Outra ação afirmativa prevista em legislação local',
+        ], $this->texts(AffirmativeAction::class));
+    }
+
+    function testOnlyTheFourBonusAndSpecificActionsAskForGroups()
+    {
+        $withGroups = array_filter(AffirmativeAction::cases(), fn(AffirmativeAction $action) => $action->hasGroups());
+
+        $this->assertSame(
+            [AffirmativeAction::AGENT_BONUS, AffirmativeAction::THEME_BONUS, AffirmativeAction::SPECIFIC_CATEGORY, AffirmativeAction::SPECIFIC_CALL],
+            array_values($withGroups)
+        );
+    }
+
+    function testOnlyNotPlannedIsExclusive()
+    {
+        $exclusive = array_filter(AffirmativeAction::cases(), fn(AffirmativeAction $action) => $action->isExclusive());
+
+        $this->assertSame([AffirmativeAction::NOT_PLANNED], array_values($exclusive));
+    }
+
+    function testAffirmativeActionGroupsKeepTheCultEditaisKeys()
+    {
+        $this->assertSame([
+            'pessoas_negras',
+            'pessoas_indigenas',
+            'pessoas_deficiencia',
+            'mulheres',
+            'povos_tradicionais',
+            'lgbtqiapn',
+            'pessoas_idosas',
+            'situacao_rua',
+            'outros_vulnerabilizados',
+        ], $this->values(AffirmativeActionGroup::class));
+        $this->assertSame([
+            'Pessoas negras',
+            'Pessoas indígenas',
+            'Pessoas com deficiência',
+            'Mulheres',
+            'Povos e comunidades tradicionais',
+            'LGBTQIAPN+',
+            'Pessoas idosas',
+            'Pessoas em situação de rua',
+            'Outros grupos vulnerabilizados socialmente',
+        ], $this->texts(AffirmativeActionGroup::class));
+    }
+
+    function testFundingSourcesKeepTheCultEditaisKeys()
+    {
+        $this->assertSame(
+            ['recursosProprios', 'conveniosParcerias', 'emendasParlamentares', 'remanescentesCiclo1', 'outrasFontes'],
+            $this->values(FundingSource::class)
+        );
+        $this->assertSame(
+            [
+                'Recursos próprios',
+                'Convênios/parcerias com entes federativos',
+                'Emendas parlamentares',
+                'Recursos remanescentes do ciclo 1',
+                'Recursos de outras fontes',
+            ],
+            $this->texts(FundingSource::class)
+        );
+    }
+
+    function testLegalQuotasAreTheThreeFromTheLawPlusOpenCompetition()
+    {
+        $this->assertSame(
+            ['Pessoas negras (pretas e pardas)', 'Pessoas indígenas', 'Pessoas com deficiência', 'Ampla concorrência'],
+            $this->values(LegalQuota::class)
+        );
     }
 
     function testStoredValueAndPayloadTextDoNotDependOnTheLanguage()
@@ -241,5 +342,10 @@ class VocabularyTest extends TestCase
     private function values(string $vocabulary): array
     {
         return array_map(fn($case) => $case->value, $vocabulary::cases());
+    }
+
+    private function texts(string $vocabulary): array
+    {
+        return array_map(fn($case) => $case->text(), $vocabulary::cases());
     }
 }
