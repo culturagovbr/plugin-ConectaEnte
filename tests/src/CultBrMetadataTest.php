@@ -15,20 +15,20 @@ class CultBrMetadataTest extends TestCase
     use ConectaEnteFixtures;
 
     const TYPES = [
-        'conectaenteExecutionType' => 'select',
-        'conectaenteSegments' => 'multiselect',
-        'conectaenteSegmentsOther' => 'string',
-        'conectaenteCulturalStages' => 'multiselect',
-        'conectaenteCulturalStagesOther' => 'string',
-        'conectaenteThematicAgendas' => 'multiselect',
-        'conectaenteThematicAgendasOther' => 'string',
-        'conectaentePriorityTerritories' => 'multiselect',
-        'conectaenteFundingSources' => 'json',
-        'conectaenteQuotaReservation' => 'json',
-        'conectaenteRegistrationChannels' => 'json',
-        'conectaenteAffirmativeActions' => 'json',
-        'conectaenteLegalEntityTypes' => 'multiselect',
-        'conectaentePublishedAt' => 'DateTime',
+        'conectaente_executionType' => 'select',
+        'conectaente_segments' => 'multiselect',
+        'conectaente_segmentsOther' => 'string',
+        'conectaente_culturalStages' => 'multiselect',
+        'conectaente_culturalStagesOther' => 'string',
+        'conectaente_thematicAgendas' => 'multiselect',
+        'conectaente_thematicAgendasOther' => 'string',
+        'conectaente_priorityTerritories' => 'multiselect',
+        'conectaente_fundingSources' => 'json',
+        'conectaente_quotaReservation' => 'json',
+        'conectaente_registrationChannels' => 'json',
+        'conectaente_affirmativeActions' => 'json',
+        'conectaente_legalEntityTypes' => 'multiselect',
+        'conectaente_publishedAt' => 'DateTime',
     ];
 
     function testEveryKeyIsRegisteredOnOpportunityWithItsType()
@@ -45,7 +45,7 @@ class CultBrMetadataTest extends TestCase
         foreach (array_keys(self::TYPES) as $key) {
             $this->assertArrayHasKey($key, $description);
         }
-        $this->assertSame('Tipo de Edital', $description['conectaenteExecutionType']['label']);
+        $this->assertSame('Tipo de Edital', $description['conectaente_executionType']['label']);
     }
 
     function testLabelsAreTheCultEditaisOnes()
@@ -72,12 +72,12 @@ class CultBrMetadataTest extends TestCase
 
     function testPublishedAtRendersAsADateTimeField()
     {
-        $this->assertSame('datetime', $this->definition('conectaentePublishedAt')->field_type);
+        $this->assertSame('datetime', $this->definition('conectaente_publishedAt')->field_type);
     }
 
     function testExecutionTypeOptionsKeepTheFixedValueAsKey()
     {
-        $options = $this->definition('conectaenteExecutionType')->options;
+        $options = $this->definition('conectaente_executionType')->options;
 
         $this->assertSame('Execução cultural', array_key_first($options));
         $this->assertSame('Execução cultural', $options['Execução cultural']);
@@ -86,7 +86,7 @@ class CultBrMetadataTest extends TestCase
 
     function testSegmentOptionsStartWithBothSyntheticOptions()
     {
-        $options = $this->definition('conectaenteSegments')->options;
+        $options = $this->definition('conectaente_segments')->options;
 
         $this->assertSame(
             ['__edital_nao_se_direciona__', '__todas_opcoes__', ...array_column(Segment::cases(), 'value')],
@@ -100,9 +100,9 @@ class CultBrMetadataTest extends TestCase
     function testOtherMultiselectsOfferOnlyTheirOwnNotTargetedOption()
     {
         $expected = [
-            'conectaenteCulturalStages' => [CulturalStage::cases(), 'Edital não se direciona a etapa específica'],
-            'conectaenteThematicAgendas' => [ThematicAgenda::cases(), 'Edital não se direciona a pautas específicas'],
-            'conectaentePriorityTerritories' => [PriorityTerritory::cases(), 'Edital não se direciona a territórios específicos'],
+            'conectaente_culturalStages' => [CulturalStage::cases(), 'Edital não se direciona a etapa específica'],
+            'conectaente_thematicAgendas' => [ThematicAgenda::cases(), 'Edital não se direciona a pautas específicas'],
+            'conectaente_priorityTerritories' => [PriorityTerritory::cases(), 'Edital não se direciona a territórios específicos'],
         ];
 
         foreach ($expected as $key => [$cases, $notTargeted]) {
@@ -117,7 +117,7 @@ class CultBrMetadataTest extends TestCase
     {
         $this->assertSame(
             ['Com fins lucrativos' => 'Com fins lucrativos', 'Sem fins lucrativos' => 'Sem fins lucrativos'],
-            $this->definition('conectaenteLegalEntityTypes')->options
+            $this->definition('conectaente_legalEntityTypes')->options
         );
     }
 
@@ -126,22 +126,22 @@ class CultBrMetadataTest extends TestCase
         $this->loginAsSaasSuperAdmin();
         $opportunity = $this->createOpportunity();
 
-        $opportunity->conectaenteExecutionType = 'Bolsa cultural';
-        $opportunity->conectaenteSegments = ['Teatro', 'Outros'];
-        $opportunity->conectaenteSegmentsOther = 'Palhaçaria';
-        $opportunity->conectaenteFundingSources = ['houveUtilizacao' => 'sim', 'recursosProprios' => 1500.5];
-        $opportunity->conectaenteQuotaReservation = [['label' => 'Ampla concorrência', 'vagas' => 10]];
-        $opportunity->conectaentePublishedAt = new \DateTime('2026-09-24 10:30:00');
+        $opportunity->conectaente_executionType = 'Bolsa cultural';
+        $opportunity->conectaente_segments = ['Teatro', 'Outros'];
+        $opportunity->conectaente_segmentsOther = 'Palhaçaria';
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'sim', 'recursosProprios' => 1500.5];
+        $opportunity->conectaente_quotaReservation = [['label' => 'Ampla concorrência', 'vagas' => 10]];
+        $opportunity->conectaente_publishedAt = new \DateTime('2026-09-24 10:30:00');
         $opportunity->save(true);
 
         $reloaded = $this->reloaded($opportunity);
 
-        $this->assertSame('Bolsa cultural', $reloaded->conectaenteExecutionType);
-        $this->assertSame(['Teatro', 'Outros'], $reloaded->conectaenteSegments);
-        $this->assertSame('Palhaçaria', $reloaded->conectaenteSegmentsOther);
-        $this->assertEquals((object) ['houveUtilizacao' => 'sim', 'recursosProprios' => 1500.5], $reloaded->conectaenteFundingSources);
-        $this->assertEquals([(object) ['label' => 'Ampla concorrência', 'vagas' => 10]], $reloaded->conectaenteQuotaReservation);
-        $this->assertSame('2026-09-24 10:30:00', $reloaded->conectaentePublishedAt->format('Y-m-d H:i:s'));
+        $this->assertSame('Bolsa cultural', $reloaded->conectaente_executionType);
+        $this->assertSame(['Teatro', 'Outros'], $reloaded->conectaente_segments);
+        $this->assertSame('Palhaçaria', $reloaded->conectaente_segmentsOther);
+        $this->assertEquals((object) ['houveUtilizacao' => 'sim', 'recursosProprios' => 1500.5], $reloaded->conectaente_fundingSources);
+        $this->assertEquals([(object) ['label' => 'Ampla concorrência', 'vagas' => 10]], $reloaded->conectaente_quotaReservation);
+        $this->assertSame('2026-09-24 10:30:00', $reloaded->conectaente_publishedAt->format('Y-m-d H:i:s'));
     }
 
     function testRegistrationAddsNoValidationToAnyOpportunity()

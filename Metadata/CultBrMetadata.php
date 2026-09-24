@@ -15,20 +15,20 @@ use MapasCulturais\i;
 
 final class CultBrMetadata
 {
-    const EXECUTION_TYPE = 'conectaenteExecutionType';
-    const SEGMENTS = 'conectaenteSegments';
-    const SEGMENTS_OTHER = 'conectaenteSegmentsOther';
-    const CULTURAL_STAGES = 'conectaenteCulturalStages';
-    const CULTURAL_STAGES_OTHER = 'conectaenteCulturalStagesOther';
-    const THEMATIC_AGENDAS = 'conectaenteThematicAgendas';
-    const THEMATIC_AGENDAS_OTHER = 'conectaenteThematicAgendasOther';
-    const PRIORITY_TERRITORIES = 'conectaentePriorityTerritories';
-    const FUNDING_SOURCES = 'conectaenteFundingSources';
-    const QUOTA_RESERVATION = 'conectaenteQuotaReservation';
-    const REGISTRATION_CHANNELS = 'conectaenteRegistrationChannels';
-    const AFFIRMATIVE_ACTIONS = 'conectaenteAffirmativeActions';
-    const LEGAL_ENTITY_TYPES = 'conectaenteLegalEntityTypes';
-    const PUBLISHED_AT = 'conectaentePublishedAt';
+    const EXECUTION_TYPE = 'conectaente_executionType';
+    const SEGMENTS = 'conectaente_segments';
+    const SEGMENTS_OTHER = 'conectaente_segmentsOther';
+    const CULTURAL_STAGES = 'conectaente_culturalStages';
+    const CULTURAL_STAGES_OTHER = 'conectaente_culturalStagesOther';
+    const THEMATIC_AGENDAS = 'conectaente_thematicAgendas';
+    const THEMATIC_AGENDAS_OTHER = 'conectaente_thematicAgendasOther';
+    const PRIORITY_TERRITORIES = 'conectaente_priorityTerritories';
+    const FUNDING_SOURCES = 'conectaente_fundingSources';
+    const QUOTA_RESERVATION = 'conectaente_quotaReservation';
+    const REGISTRATION_CHANNELS = 'conectaente_registrationChannels';
+    const AFFIRMATIVE_ACTIONS = 'conectaente_affirmativeActions';
+    const LEGAL_ENTITY_TYPES = 'conectaente_legalEntityTypes';
+    const PUBLISHED_AT = 'conectaente_publishedAt';
 
     /**
      * Registra na oportunidade os campos que o CultBR exige; quem os torna obrigatórios é a regra de publicação.
