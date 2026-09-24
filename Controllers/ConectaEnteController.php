@@ -7,8 +7,11 @@ use ConectaEnte\Dto\FederativeEntityCard;
 use ConectaEnte\Dto\SealOption;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\PublicationRequirements;
 use MapasCulturais\App;
+use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\PermissionDenied;
 use MapasCulturais\i;
@@ -196,6 +199,26 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->json(true);
     }
 
+    /**
+     * O que falta para publicar a oportunidade selada, com o rótulo de cada campo.
+     */
+    function GET_opportunityRequirements()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $opportunity->checkPermission('modify');
+
+        $isSealed = Plugin::instance()->sealedOpportunity()->isSealed($opportunity);
+        $missing = $isSealed ? $this->publicationErrors($opportunity) : [];
+
+        $this->json([
+            'sealed' => $isSealed,
+            'missing' => $missing,
+            'labels' => $this->fieldLabels($opportunity, array_keys($missing)),
+        ]);
+    }
+
     /** @return SealOption[] selos habilitados que nenhum Ente Federado usa, nem na lixeira */
     private function availableSeals(): array
     {
@@ -269,6 +292,55 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
 
         return $federativeEntity;
+    }
+
+    private function requestedOpportunity(): Opportunity
+    {
+        $opportunity = App::i()->repo(Opportunity::class)->find($this->urlData['id'] ?? 0);
+
+        if (!$opportunity) {
+            App::i()->pass();
+        }
+
+        return $opportunity;
+    }
+
+    // os mesmos erros que a publicação devolveria agora, sem publicar
+    private function publicationErrors(Opportunity $opportunity): array
+    {
+        $context = Plugin::instance()->publicationContext();
+        $context->enter($opportunity);
+
+        try {
+            return $opportunity->validationErrors;
+        } finally {
+            $context->leave();
+        }
+    }
+
+    private function fieldLabels(Opportunity $opportunity, array $keys): array
+    {
+        $description = $opportunity::getPropertiesMetadata();
+        $labels = [];
+
+        foreach ($keys as $key) {
+            $labels[$key] = $this->fieldLabel($description, $key);
+        }
+
+        return $labels;
+    }
+
+    // chaves sem rótulo na descrição da entidade levam o texto da tela do core
+    private function fieldLabel(array $description, string $key): string
+    {
+        return match ($key) {
+            'rules' => i::__('Regulamento'),
+            'term-area' => i::__('Área de Interesse'),
+            'registrationProponentTypes' => i::__('Tipos do proponente'),
+            'registrationRangesVacancies', 'registrationRangesTotalResource' => i::__('Faixas/linhas'),
+            PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => $description[CultBrMetadata::REGISTRATION_CHANNELS]['label'],
+            default => ($description[$key]['label'] ?? '') ?: $key,
+        };
     }
 
     private function requestedSeal(): ?Seal
