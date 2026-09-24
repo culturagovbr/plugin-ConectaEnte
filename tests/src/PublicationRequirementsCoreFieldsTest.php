@@ -2,18 +2,14 @@
 
 namespace Tests\ConectaEnte;
 
-use ConectaEnte\Plugin;
-use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Vocabulary\LegalEntityType;
-use DateTime;
 use MapasCulturais\Entities\Opportunity;
-use MapasCulturais\Entities\OpportunityFile;
 use Tests\Abstract\TestCase;
-use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
+use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 
 class PublicationRequirementsCoreFieldsTest extends TestCase
 {
-    use ConectaEnteFixtures;
+    use PublicationRequirementsFixtures;
 
     function testCompleteOpportunityHasNothingMissing()
     {
@@ -227,60 +223,11 @@ class PublicationRequirementsCoreFieldsTest extends TestCase
         );
     }
 
-    private function missing(Opportunity $opportunity): array
-    {
-        return (new PublicationRequirements(Plugin::instance()->publicationStamp()))->missing($opportunity);
-    }
-
-    private function completeOpportunity(int $status = Opportunity::STATUS_ENABLED): Opportunity
-    {
-        $opportunity = $this->opportunityWithoutRules($status);
-        $this->attachRules($opportunity);
-
-        return $this->reloaded($opportunity);
-    }
-
-    private function opportunityWithoutRules(int $status = Opportunity::STATUS_ENABLED): Opportunity
-    {
-        $this->loginAsSaasSuperAdmin();
-        $opportunity = $this->createOpportunity($status);
-        $opportunity->vacancies = 10;
-        $opportunity->totalResource = 1000;
-        $opportunity->registrationProponentTypes = ['Pessoa Física', 'MEI', 'Coletivo'];
-
-        if ($status === Opportunity::STATUS_ENABLED) {
-            $opportunity->conectaente_publishedAt = new DateTime('2025-03-10 09:00:00');
-        }
-
-        $opportunity->save(true);
-
-        return $opportunity;
-    }
-
     private function publishedWithoutDateRow(): Opportunity
     {
         $opportunity = $this->completeOpportunity(Opportunity::STATUS_DRAFT);
         $opportunity->publish(true);
 
         return $this->reloaded($opportunity);
-    }
-
-    private function attachRules(Opportunity $opportunity): void
-    {
-        $path = sys_get_temp_dir() . '/' . uniqid('regulamento-') . '.pdf';
-        file_put_contents($path, "%PDF-1.4\n%%EOF\n");
-
-        $file = new OpportunityFile([
-            'error' => UPLOAD_ERR_OK,
-            'name' => 'regulamento.pdf',
-            'type' => 'application/pdf',
-            'tmp_name' => $path,
-            'size' => filesize($path),
-        ]);
-        $file->owner = $opportunity;
-        $file->group = 'rules';
-        $file->save(true);
-
-        @unlink($path);
     }
 }
