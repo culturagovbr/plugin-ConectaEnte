@@ -127,7 +127,7 @@ final class PublicationRequirements
     // pelo status atual, o PATCH {status: 1} cobraria a data antes de o carimbo gravá-la
     private function publishedAtErrors(Opportunity $opportunity): array
     {
-        if (!$this->publicationStamp->wasPublished($opportunity) || $opportunity->getMetadata(CultBrMetadata::PUBLISHED_AT)) {
+        if (!$this->publicationStamp->wasPublished($opportunity) || $this->publicationStamp->hasPublicationDate($opportunity)) {
             return [];
         }
 

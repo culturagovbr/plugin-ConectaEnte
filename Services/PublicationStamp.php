@@ -32,13 +32,21 @@ final class PublicationStamp
             return;
         }
 
-        $inherited = $this->hasPublishedAtRow($opportunity) ? null : $this->inheritedDate($opportunity);
+        $inherited = $this->inheritableDate($opportunity);
 
         if ($inherited) {
             $opportunity->{CultBrMetadata::PUBLISHED_AT} = $inherited;
         } elseif ($this->isBeingPublished($opportunity)) {
             $opportunity->{CultBrMetadata::PUBLISHED_AT} = new DateTime();
         }
+    }
+
+    /**
+     * Se a oportunidade tem data de publicação, gravada ou ainda por herdar do publishedTimestamp.
+     */
+    public function hasPublicationDate(Opportunity $opportunity): bool
+    {
+        return $opportunity->getMetadata(CultBrMetadata::PUBLISHED_AT) || $this->inheritableDate($opportunity);
     }
 
     /**
@@ -82,6 +90,11 @@ final class PublicationStamp
     }
 
     // a linha com null é data apagada, e apagada não se herda de novo
+    private function inheritableDate(Opportunity $opportunity): ?DateTime
+    {
+        return $this->hasPublishedAtRow($opportunity) ? null : $this->inheritedDate($opportunity);
+    }
+
     private function hasPublishedAtRow(Opportunity $opportunity): bool
     {
         return $this->metadataRow($opportunity, CultBrMetadata::PUBLISHED_AT) !== null;

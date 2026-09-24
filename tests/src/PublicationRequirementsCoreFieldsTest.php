@@ -166,6 +166,16 @@ class PublicationRequirementsCoreFieldsTest extends TestCase
         $this->assertSame(['conectaente_publishedAt' => ['O campo "Data de publicação do edital" é obrigatório.']], $this->missing($opportunity));
     }
 
+    function testPublishedTimestampStillToBeInheritedCountsAsTheDate()
+    {
+        $opportunity = $this->publishedWithoutDateRow();
+        $this->assertArrayHasKey('conectaente_publishedAt', $this->missing($opportunity));
+
+        $this->writeRawMetadata($opportunity, 'publishedTimestamp', '2024-11-05 14:20:00');
+
+        $this->assertSame([], $this->missing($this->reloaded($opportunity)));
+    }
+
     function testDraftBeingPublishedIsNotAskedForTheDate()
     {
         $opportunity = $this->completeOpportunity(Opportunity::STATUS_DRAFT);
@@ -240,6 +250,14 @@ class PublicationRequirementsCoreFieldsTest extends TestCase
         $opportunity->save(true);
 
         return $opportunity;
+    }
+
+    private function publishedWithoutDateRow(): Opportunity
+    {
+        $opportunity = $this->completeOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->publish(true);
+
+        return $this->reloaded($opportunity);
     }
 
     private function attachRules(Opportunity $opportunity): void
