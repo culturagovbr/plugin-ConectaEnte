@@ -57,6 +57,8 @@ trait PublicationRequirementsFixtures
 
     private function fillEditalFields(Opportunity $opportunity): void
     {
+        $notApplicable = ['naoAplicavel' => true, 'vagas' => 0, 'valorDestinado' => 0];
+
         $opportunity->conectaente_executionType = ExecutionType::CULTURAL_EXECUTION->value;
         $opportunity->conectaente_segments = [Segment::COLLECTIONS->value];
         $opportunity->conectaente_culturalStages = [CulturalStage::ACCESS_MEDIATION_AND_ENJOYMENT->value];
@@ -65,6 +67,7 @@ trait PublicationRequirementsFixtures
         $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'nao'];
         $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'nao'];
         $opportunity->conectaente_affirmativeActions = ['opcoes' => [AffirmativeAction::NOT_PLANNED->value]];
+        $opportunity->conectaente_quotaReservation = [$notApplicable, $notApplicable, $notApplicable, ['vagas' => 10, 'valorDestinado' => 1000]];
     }
 
     private function attachRules(Opportunity $opportunity): void

@@ -239,4 +239,102 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
         $opportunity->conectaente_affirmativeActions = ['opcoes' => ['outra_legislacao'], 'outra_legislacao_descricao' => str_repeat('á', 140)];
         $this->assertSame([], $this->missing($opportunity));
     }
+
+    function testQuotaReservationNeedsAtLeastFourItems()
+    {
+        $opportunity = $this->completeOpportunity();
+        $expected = ['conectaente_quotaReservation' => ['Configure todas as cotas ou marque como Não aplicável.']];
+
+        $opportunity->conectaente_quotaReservation = null;
+        $this->assertSame($expected, $this->missing($opportunity));
+
+        $opportunity->conectaente_quotaReservation = array_slice($this->quotas(3, 1, 1, 5), 0, 3);
+        $this->assertSame($expected, $this->missing($opportunity));
+    }
+
+    function testLegalQuotasAllNotApplicableSkipTheSum()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_quotaReservation = [$this->notApplicable(), $this->notApplicable(), $this->notApplicable(), $this->quota(3)];
+
+        $this->assertSame([], $this->missing($opportunity));
+    }
+
+    function testLegalQuotasAreTheFirstThreePositions()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_quotaReservation = [$this->quota(3), $this->notApplicable(), $this->notApplicable(), $this->notApplicable()];
+        $this->assertSame(
+            ['conectaente_quotaReservation' => ['A soma das vagas reservadas às cotas deve ser igual ao Total de vagas (Total de vagas: 10; soma informada: 3).']],
+            $this->missing($opportunity),
+        );
+
+        $opportunity->conectaente_quotaReservation = [$this->quota(3), $this->quota(1), $this->quota(1), ['naoAplicavel' => true, 'vagas' => 5, 'valorDestinado' => 500]];
+        $this->assertSame([], $this->missing($opportunity));
+    }
+
+    function testNotApplicableLegalQuotaMustBeZeroed()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_quotaReservation = [['naoAplicavel' => true, 'vagas' => 0, 'valorDestinado' => 50], $this->quota(3), $this->quota(2), $this->quota(5)];
+
+        $this->assertSame(
+            ['conectaente_quotaReservation' => ['Quando a opção "Não aplicável" estiver marcada para uma cota obrigatória, o Número de vagas e o Valor destinado devem ser iguais a zero.']],
+            $this->missing($opportunity),
+        );
+    }
+
+    function testApplicableLegalQuotaNeedsNonNegativeNumbers()
+    {
+        $opportunity = $this->completeOpportunity();
+        $expected = ['conectaente_quotaReservation' => ['Configure todas as cotas ou marque como Não aplicável.']];
+
+        $opportunity->conectaente_quotaReservation = [['valorDestinado' => 300], $this->quota(1), $this->quota(1), $this->quota(8)];
+        $this->assertSame($expected, $this->missing($opportunity));
+
+        $opportunity->conectaente_quotaReservation = [$this->quota(3), ['vagas' => 1, 'valorDestinado' => -1], $this->quota(1), $this->quota(5)];
+        $this->assertSame($expected, $this->missing($opportunity));
+    }
+
+    function testQuotaSlotsMustAddUpToTheVacancies()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_quotaReservation = $this->quotas(3, 1, 1, 4);
+        $this->assertSame(
+            ['conectaente_quotaReservation' => ['A soma das vagas reservadas às cotas deve ser igual ao Total de vagas (Total de vagas: 10; soma informada: 9).']],
+            $this->missing($opportunity),
+        );
+
+        $opportunity->conectaente_quotaReservation = $this->quotas(3, 1, 1, 5);
+        $this->assertSame([], $this->missing($opportunity));
+    }
+
+    function testQuotaSumIsNotComparedWithoutVacancies()
+    {
+        $opportunity = $this->completeOpportunity();
+        $opportunity->conectaente_quotaReservation = $this->quotas(3, 1, 1, 4);
+
+        $opportunity->vacancies = 0;
+
+        $this->assertArrayNotHasKey('conectaente_quotaReservation', $this->missing($opportunity));
+    }
+
+    private function quotas(int $blackPeople, int $indigenousPeople, int $peopleWithDisabilities, int $openCompetition): array
+    {
+        return [$this->quota($blackPeople), $this->quota($indigenousPeople), $this->quota($peopleWithDisabilities), $this->quota($openCompetition)];
+    }
+
+    private function quota(int $slots): array
+    {
+        return ['vagas' => $slots, 'valorDestinado' => $slots * 100];
+    }
+
+    private function notApplicable(): array
+    {
+        return ['naoAplicavel' => true, 'vagas' => 0, 'valorDestinado' => 0];
+    }
 }

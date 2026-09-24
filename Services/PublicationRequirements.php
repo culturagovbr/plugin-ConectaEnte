@@ -21,6 +21,8 @@ final class PublicationRequirements
     const RANGE_VALUE_TOLERANCE = 0.009;
     const REGISTRATION_CHANNELS_EMAIL = CultBrMetadata::REGISTRATION_CHANNELS . 'Email';
     const OTHER_LEGISLATION_MAX_LENGTH = 140;
+    const LEGAL_QUOTA_COUNT = 3;
+    const MINIMUM_QUOTA_COUNT = 4;
     const YES = 'sim';
     const NO = 'nao';
 
@@ -47,6 +49,7 @@ final class PublicationRequirements
             $this->fundingSourceErrors($opportunity),
             $this->registrationChannelErrors($opportunity),
             $this->affirmativeActionErrors($opportunity),
+            $this->quotaReservationErrors($opportunity),
         );
     }
 
@@ -304,6 +307,52 @@ final class PublicationRequirements
         return [];
     }
 
+    private function quotaReservationErrors(Opportunity $opportunity): array
+    {
+        $quotas = array_values(array_map(
+            fn($quota) => is_array($quota) ? $quota : [],
+            $this->jsonBlock($opportunity, CultBrMetadata::QUOTA_RESERVATION),
+        ));
+        $message = $this->quotaReservationMessage($quotas, (int) $opportunity->vacancies);
+
+        return $message ? [CultBrMetadata::QUOTA_RESERVATION => [$message]] : [];
+    }
+
+    // o InMincQuotasService sem os mínimos percentuais: as três primeiras posições são as cotas legais
+    private function quotaReservationMessage(array $quotas, int $vacancies): ?string
+    {
+        if (count($quotas) < self::MINIMUM_QUOTA_COUNT) {
+            return i::__('Configure todas as cotas ou marque como Não aplicável.');
+        }
+
+        $legalQuotas = array_slice($quotas, 0, self::LEGAL_QUOTA_COUNT);
+
+        if (!array_filter($legalQuotas, fn($quota) => empty($quota['naoAplicavel']))) {
+            return null;
+        }
+
+        foreach ($legalQuotas as $quota) {
+            $slots = $this->numberOrNull($quota['vagas'] ?? null);
+            $amount = $this->numberOrNull($quota['valorDestinado'] ?? null);
+
+            if (!empty($quota['naoAplicavel']) && ($slots > 0 || $amount > 0)) {
+                return i::__('Quando a opção "Não aplicável" estiver marcada para uma cota obrigatória, o Número de vagas e o Valor destinado devem ser iguais a zero.');
+            }
+
+            if (empty($quota['naoAplicavel']) && ($slots === null || $amount === null || $slots < 0 || $amount < 0)) {
+                return i::__('Configure todas as cotas ou marque como Não aplicável.');
+            }
+        }
+
+        $slotsSum = array_sum(array_map(fn($quota) => (int) $this->numberOrNull($quota['vagas'] ?? null), $quotas));
+
+        if ($vacancies >= 1 && $slotsSum !== $vacancies) {
+            return sprintf(i::__('A soma das vagas reservadas às cotas deve ser igual ao Total de vagas (Total de vagas: %d; soma informada: %d).'), $vacancies, $slotsSum);
+        }
+
+        return null;
+    }
+
     private function registeredChoiceErrors(Opportunity $opportunity, string $key, array $values): array
     {
         $definition = $opportunity->getRegisteredMetadata($key);
@@ -347,6 +396,11 @@ final class PublicationRequirements
     private function strings(mixed $values): array
     {
         return array_values(array_filter((array) $values, 'is_string'));
+    }
+
+    private function numberOrNull(mixed $value): ?float
+    {
+        return is_numeric($value) ? (float) $value : null;
     }
 
     private function isPositiveNumber(mixed $value): bool
