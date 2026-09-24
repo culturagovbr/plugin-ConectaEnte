@@ -2,6 +2,7 @@
 
 namespace Tests\ConectaEnte\Traits;
 
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Vocabulary\AffirmativeAction;
@@ -13,6 +14,9 @@ use ConectaEnte\Vocabulary\ThematicAgenda;
 use DateTime;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\OpportunityFile;
+use MapasCulturais\Entities\Term;
+use MapasCulturais\Entities\User;
+use Psr\Http\Message\ServerRequestInterface;
 
 trait PublicationRequirementsFixtures
 {
@@ -53,6 +57,49 @@ trait PublicationRequirementsFixtures
         $opportunity->save(true);
 
         return $opportunity;
+    }
+
+    /**
+     * Oportunidade selada por um Ente Federado e completa também para o core; a incompleta fica sem o tipo de edital.
+     */
+    protected function sealedOpportunity(int $status, bool $isComplete = true): Opportunity
+    {
+        $opportunity = $this->coreCompleteOpportunity($status, $isComplete);
+        $seal = $this->createSeal();
+        $this->createFederativeEntityWithSeal($seal, document: sprintf('%014d', random_int(0, 99999999999999)));
+        $opportunity->createSealRelation($seal);
+
+        return $opportunity;
+    }
+
+    // completa também para o core, que exige datas e área na publicação
+    protected function coreCompleteOpportunity(int $status, bool $isComplete = true): Opportunity
+    {
+        $opportunity = $this->completeOpportunity($status);
+        $this->login($this->app->repo(User::class)->find($this->app->user->id));
+
+        $opportunity->registrationFrom = new DateTime('2026-10-01 00:00');
+        $opportunity->registrationTo = new DateTime('2026-10-31 18:00');
+        $opportunity->terms = ['area' => [$this->app->repo(Term::class)->findOneBy(['taxonomy' => 'area'])->term]];
+
+        if (!$isComplete) {
+            $opportunity->{CultBrMetadata::EXECUTION_TYPE} = null;
+        }
+
+        $opportunity->save(true);
+
+        return $opportunity;
+    }
+
+    // a requisição parte do EntityManager vazio, como em produção
+    protected function send(ServerRequestInterface $request): int
+    {
+        $this->app->em->clear();
+        $this->login($this->app->repo(User::class)->find($this->app->user->id));
+        $this->app->reset();
+        $this->app->run($request, false);
+
+        return $this->app->response->getStatusCode();
     }
 
     private function fillEditalFields(Opportunity $opportunity): void

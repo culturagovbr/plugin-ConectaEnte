@@ -5,8 +5,6 @@ namespace Tests\ConectaEnte;
 use ConectaEnte\Plugin;
 use DateTime;
 use MapasCulturais\Entities\Opportunity;
-use MapasCulturais\Entities\Term;
-use MapasCulturais\Entities\User;
 use Psr\Http\Message\ServerRequestInterface;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
@@ -271,46 +269,6 @@ class PublicationValidationTest extends TestCase
 
         $this->assertSame(404, $this->send($this->requestFactory->POST('opportunity', 'publish', [999999])));
         $this->assertSame(404, $this->send($this->PUT(999999, ['status' => Opportunity::STATUS_ENABLED])));
-    }
-
-    private function sealedOpportunity(int $status, bool $isComplete = true): Opportunity
-    {
-        $opportunity = $this->coreCompleteOpportunity($status, $isComplete);
-        $seal = $this->createSeal();
-        $this->createFederativeEntityWithSeal($seal, document: sprintf('%014d', random_int(0, 99999999999999)));
-        $opportunity->createSealRelation($seal);
-
-        return $opportunity;
-    }
-
-    // completa também para o core, que exige datas e área na publicação
-    private function coreCompleteOpportunity(int $status, bool $isComplete = true): Opportunity
-    {
-        $opportunity = $this->completeOpportunity($status);
-        $this->login($this->app->repo(User::class)->find($this->app->user->id));
-
-        $opportunity->registrationFrom = new DateTime('2026-10-01 00:00');
-        $opportunity->registrationTo = new DateTime('2026-10-31 18:00');
-        $opportunity->terms = ['area' => [$this->app->repo(Term::class)->findOneBy(['taxonomy' => 'area'])->term]];
-
-        if (!$isComplete) {
-            $opportunity->{self::MISSING_KEY} = null;
-        }
-
-        $opportunity->save(true);
-
-        return $opportunity;
-    }
-
-    // a requisição parte do EntityManager vazio, como em produção
-    private function send(ServerRequestInterface $request): int
-    {
-        $this->app->em->clear();
-        $this->login($this->app->repo(User::class)->find($this->app->user->id));
-        $this->app->reset();
-        $this->app->run($request, false);
-
-        return $this->app->response->getStatusCode();
     }
 
     private function assertPublishedAndStamped(Opportunity $opportunity): void
