@@ -9,6 +9,7 @@ use ConectaEnte\Http\Client;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\SealedOpportunity;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -55,6 +56,11 @@ class Plugin extends \MapasCulturais\Plugin
     function sealedOpportunity(): SealedOpportunity
     {
         return new SealedOpportunity(App::i()->repo(FederativeEntitySeal::class));
+    }
+
+    function publicationStamp(): PublicationStamp
+    {
+        return new PublicationStamp($this->sealedOpportunity());
     }
 
     public function _init(){
@@ -108,6 +114,11 @@ class Plugin extends \MapasCulturais\Plugin
             if ($federativeEntity) {
                 $this->errorJson(['sealId' => [Plugin::sealConflictMessage($federativeEntity)]], 400);
             }
+        });
+
+        // metadado alterado aqui ainda entra no saveMetadata do mesmo save
+        $app->hook('entity(Opportunity).save:before', function () {
+            Plugin::instance()->publicationStamp()->stamp($this);
         });
     }
 
