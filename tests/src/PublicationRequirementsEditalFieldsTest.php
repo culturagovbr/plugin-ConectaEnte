@@ -101,4 +101,91 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
         $opportunity->$otherKey = 'Arte com drones';
         $this->assertSame([], $this->missing($opportunity));
     }
+
+    function testFundingSourcesNeedAnAnswer()
+    {
+        $opportunity = $this->completeOpportunity();
+        $expected = ['conectaente_fundingSources' => ['O campo "Houve utilização de recursos de outras fontes?" é obrigatório.']];
+
+        $opportunity->conectaente_fundingSources = null;
+        $this->assertSame($expected, $this->missing($opportunity));
+
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'talvez'];
+        $this->assertSame($expected, $this->missing($opportunity));
+    }
+
+    function testFundingSourcesAnsweredYesNeedASource()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $expected = ['conectaente_fundingSources' => ['Selecione pelo menos uma fonte de recurso para continuar.']];
+
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'sim'];
+        $this->assertSame($expected, $this->missing($opportunity));
+
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'sim', 'outrasFontes' => []];
+        $this->assertSame($expected, $this->missing($opportunity));
+
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'sim', 'emendasParlamentares' => 0];
+        $this->assertSame([], $this->missing($opportunity));
+    }
+
+    function testOtherFundingSourcesNeedAName()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'sim', 'outrasFontes' => [['nomeFonte' => ' ', 'valor' => 500]]];
+        $this->assertSame(['conectaente_fundingSources' => ['Preencha o nome de pelo menos uma fonte em "Recursos de outras fontes".']], $this->missing($opportunity));
+
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'sim', 'outrasFontes' => [['nomeFonte' => 'Fundo municipal', 'valor' => 500]]];
+        $this->assertSame([], $this->missing($opportunity));
+    }
+
+    function testRegistrationChannelsNeedAnAnswer()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_registrationChannels = null;
+
+        $this->assertSame(['conectaente_registrationChannels' => ['O campo "Formas de inscrição previstas no edital" é obrigatório.']], $this->missing($opportunity));
+    }
+
+    function testRegistrationChannelsAnsweredYesNeedAChannelWithDescription()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => []];
+        $this->assertSame(['conectaente_registrationChannels' => ['Selecione pelo menos uma forma de inscrição para continuar.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'presencial', 'descricao' => '  ']]];
+        $this->assertSame(['conectaente_registrationChannels' => ['Preencha a descrição de cada forma de inscrição marcada.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'presencial', 'descricao' => ''], ['tipo' => 'oral', 'descricao' => '']]];
+        $this->assertSame(['conectaente_registrationChannels' => ['Preencha a descrição de cada forma de inscrição marcada.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'presencial', 'descricao' => 'Na secretaria de cultura']]];
+        $this->assertSame([], $this->missing($opportunity));
+    }
+
+    function testRegistrationChannelNeedsATypeFromTheList()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'correspondencia', 'descricao' => 'Caixa postal 10']]];
+        $this->assertSame(['conectaente_registrationChannels' => ['A forma de inscrição "correspondencia" não tem correspondente no CultBR.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['descricao' => 'Caixa postal 10']]];
+        $this->assertSame(['conectaente_registrationChannels' => ['Escolha o tipo de cada forma de inscrição marcada.']], $this->missing($opportunity));
+    }
+
+    function testEmailChannelNeedsAValidAddressUnderItsOwnKey()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'email', 'descricao' => 'secretaria de cultura']]];
+        $this->assertSame(['conectaente_registrationChannelsEmail' => ['Informe um e-mail válido.']], $this->missing($opportunity));
+
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'email', 'descricao' => 'editais@cultura.gov.br']]];
+        $this->assertSame([], $this->missing($opportunity));
+    }
 }

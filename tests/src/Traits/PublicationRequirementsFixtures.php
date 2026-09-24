@@ -61,6 +61,8 @@ trait PublicationRequirementsFixtures
         $opportunity->conectaente_culturalStages = [CulturalStage::ACCESS_MEDIATION_AND_ENJOYMENT->value];
         $opportunity->conectaente_thematicAgendas = [ThematicAgenda::FOOD_CULTURE->value];
         $opportunity->conectaente_priorityTerritories = [TargetingOption::NOT_TARGETED->value];
+        $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'nao'];
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'nao'];
     }
 
     private function attachRules(Opportunity $opportunity): void

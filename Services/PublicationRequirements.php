@@ -4,16 +4,22 @@ namespace ConectaEnte\Services;
 
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Vocabulary\CulturalStage;
+use ConectaEnte\Vocabulary\FundingSource;
 use ConectaEnte\Vocabulary\LegalEntityType;
 use ConectaEnte\Vocabulary\ProponentType;
+use ConectaEnte\Vocabulary\RegistrationChannel;
 use ConectaEnte\Vocabulary\Segment;
 use ConectaEnte\Vocabulary\ThematicAgenda;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\i;
+use Respect\Validation\Validator;
 
 final class PublicationRequirements
 {
     const RANGE_VALUE_TOLERANCE = 0.009;
+    const REGISTRATION_CHANNELS_EMAIL = CultBrMetadata::REGISTRATION_CHANNELS . 'Email';
+    const YES = 'sim';
+    const NO = 'nao';
 
     public function __construct(private PublicationStamp $publicationStamp)
     {
@@ -35,6 +41,8 @@ final class PublicationRequirements
             $this->executionTypeErrors($opportunity),
             $this->targetingErrors($opportunity),
             $this->otherSpecificationErrors($opportunity),
+            $this->fundingSourceErrors($opportunity),
+            $this->registrationChannelErrors($opportunity),
         );
     }
 
@@ -177,6 +185,76 @@ final class PublicationRequirements
         return $errors;
     }
 
+    private function fundingSourceErrors(Opportunity $opportunity): array
+    {
+        $block = $this->jsonBlock($opportunity, CultBrMetadata::FUNDING_SOURCES);
+        $answer = $block['houveUtilizacao'] ?? null;
+
+        if ($answer === self::NO) {
+            return [];
+        }
+
+        if ($answer !== self::YES) {
+            return [CultBrMetadata::FUNDING_SOURCES => [i::__('O campo "Houve utilização de recursos de outras fontes?" é obrigatório.')]];
+        }
+
+        $otherSources = array_filter((array) ($block[FundingSource::OTHER_SOURCES->value] ?? []), 'is_array');
+        $hasAmountSource = array_filter(FundingSource::cases(), fn($source) => $source !== FundingSource::OTHER_SOURCES && ($block[$source->value] ?? null) !== null);
+
+        if (!$hasAmountSource && !$otherSources) {
+            return [CultBrMetadata::FUNDING_SOURCES => [i::__('Selecione pelo menos uma fonte de recurso para continuar.')]];
+        }
+
+        if ($otherSources && !array_filter($otherSources, fn($source) => trim((string) ($source['nomeFonte'] ?? '')) !== '')) {
+            return [CultBrMetadata::FUNDING_SOURCES => [i::__('Preencha o nome de pelo menos uma fonte em "Recursos de outras fontes".')]];
+        }
+
+        return [];
+    }
+
+    private function registrationChannelErrors(Opportunity $opportunity): array
+    {
+        $block = $this->jsonBlock($opportunity, CultBrMetadata::REGISTRATION_CHANNELS);
+        $answer = $block['previstasNoEdital'] ?? null;
+
+        if ($answer === self::NO) {
+            return [];
+        }
+
+        if ($answer !== self::YES) {
+            return [CultBrMetadata::REGISTRATION_CHANNELS => [i::__('O campo "Formas de inscrição previstas no edital" é obrigatório.')]];
+        }
+
+        $channels = array_filter((array) ($block['formas'] ?? []), 'is_array');
+
+        if (!$channels) {
+            return [CultBrMetadata::REGISTRATION_CHANNELS => [i::__('Selecione pelo menos uma forma de inscrição para continuar.')]];
+        }
+
+        $messages = [];
+        $hasInvalidEmail = false;
+
+        foreach ($channels as $channel) {
+            $type = (string) ($channel['tipo'] ?? '');
+            $description = trim((string) ($channel['descricao'] ?? ''));
+
+            if ($type === '') {
+                $messages[] = i::__('Escolha o tipo de cada forma de inscrição marcada.');
+            } elseif (!RegistrationChannel::tryFrom($type)) {
+                $messages[] = sprintf(i::__('A forma de inscrição "%s" não tem correspondente no CultBR.'), $type);
+            }
+
+            if ($description === '') {
+                $messages[] = i::__('Preencha a descrição de cada forma de inscrição marcada.');
+            } elseif ($type === RegistrationChannel::EMAIL->value && !Validator::email()->validate($description)) {
+                $hasInvalidEmail = true;
+            }
+        }
+
+        return $this->keyed(CultBrMetadata::REGISTRATION_CHANNELS, $messages)
+            + ($hasInvalidEmail ? [self::REGISTRATION_CHANNELS_EMAIL => [i::__('Informe um e-mail válido.')]] : []);
+    }
+
     private function registeredChoiceErrors(Opportunity $opportunity, string $key, array $values): array
     {
         $definition = $opportunity->getRegisteredMetadata($key);
@@ -207,6 +285,14 @@ final class PublicationRequirements
     private function keyed(string $key, array $messages): array
     {
         return $messages ? [$key => array_values(array_unique($messages))] : [];
+    }
+
+    // o json do metadado volta como stdClass; convertido, lê-se como array em qualquer nível
+    private function jsonBlock(Opportunity $opportunity, string $key): array
+    {
+        $block = json_decode(json_encode($opportunity->$key), true);
+
+        return is_array($block) ? $block : [];
     }
 
     private function isPositiveNumber(mixed $value): bool
