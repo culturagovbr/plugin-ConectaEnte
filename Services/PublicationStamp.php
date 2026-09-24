@@ -50,7 +50,7 @@ final class PublicationStamp
     }
 
     /**
-     * Se a oportunidade já estava publicada antes das alterações desta requisição.
+     * Se a oportunidade estava publicada no último estado carregado ou gravado no banco.
      */
     public function wasPublished(Opportunity $opportunity): bool
     {
