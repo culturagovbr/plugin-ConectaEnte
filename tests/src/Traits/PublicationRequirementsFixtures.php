@@ -14,6 +14,7 @@ use ConectaEnte\Vocabulary\ThematicAgenda;
 use DateTime;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\OpportunityFile;
+use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\Term;
 use MapasCulturais\Entities\User;
 use Psr\Http\Message\ServerRequestInterface;
@@ -65,11 +66,20 @@ trait PublicationRequirementsFixtures
     protected function sealedOpportunity(int $status, bool $isComplete = true): Opportunity
     {
         $opportunity = $this->coreCompleteOpportunity($status, $isComplete);
-        $seal = $this->createSeal();
-        $this->createFederativeEntityWithSeal($seal, document: sprintf('%014d', random_int(0, 99999999999999)));
-        $opportunity->createSealRelation($seal);
+        $opportunity->createSealRelation($this->federativeSeal());
 
         return $opportunity;
+    }
+
+    /**
+     * Selo de um Ente Federado ativo, com documento sorteado para não colidir com outro ente do teste.
+     */
+    protected function federativeSeal(): Seal
+    {
+        $seal = $this->createSeal();
+        $this->createFederativeEntityWithSeal($seal, document: sprintf('%014d', random_int(0, 99999999999999)));
+
+        return $seal;
     }
 
     // completa também para o core, que exige datas e área na publicação

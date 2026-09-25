@@ -163,6 +163,10 @@ class Plugin extends \MapasCulturais\Plugin
         });
         $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationContext()->leave());
 
+        $app->hook('template(opportunity.edit.tabs):end', function () {
+            $this->part('conectaente/opportunity-tab');
+        });
+
         // por último: o tema registra seus hooks depois do plugin, e os erros dele também ficam no PATCH
         $app->hook('entity(Opportunity).validationErrors', function (&$errors) {
             Plugin::instance()->requirePublicationFields($this, $errors);

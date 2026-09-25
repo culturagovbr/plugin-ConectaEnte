@@ -38,6 +38,22 @@ class FederativeEntitySealRepository extends \MapasCulturais\Repository
     }
 
     /**
+     * Ids dos selos dos Entes Federados ativos, sem hidratar o vínculo, que carregaria cada selo e seus metadados.
+     *
+     * @return int[]
+     */
+    function findSealIdsOfEnabledEntities(): array
+    {
+        return $this->createQueryBuilder('sealLink')
+            ->select('IDENTITY(sealLink.seal)')
+            ->join('sealLink.federativeEntity', 'federativeEntity')
+            ->where('federativeEntity.status = :status')
+            ->setParameter('status', FederativeEntity::STATUS_ENABLED)
+            ->getQuery()
+            ->getSingleColumnResult();
+    }
+
+    /**
      * Vínculos dos entes informados, agrupados por ente — uma consulta só, montada em memória.
      *
      * @param FederativeEntity[] $federativeEntities
