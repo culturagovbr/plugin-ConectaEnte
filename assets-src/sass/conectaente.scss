@@ -42,6 +42,33 @@
     color: var(--mc-error);
 }
 
+.conectaente-opportunity-requirements {
+    &--loading {
+        opacity: .6;
+    }
+
+    &__list {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+        padding-left: 1.25rem;
+
+        ul {
+            margin: 4px 0 0;
+            padding-left: 1.25rem;
+        }
+    }
+
+    &__done,
+    &__failed {
+        margin: 0;
+    }
+
+    &__failed {
+        color: var(--mc-error);
+    }
+}
+
 .conectaente-targeting-multiselect__row {
     display: flex;
     flex-direction: column;
