@@ -28,7 +28,7 @@ class CultBrMetadataTest extends TestCase
         'conectaente_registrationChannels' => 'json',
         'conectaente_affirmativeActions' => 'json',
         'conectaente_legalEntityTypes' => 'multiselect',
-        'conectaente_publishedAt' => 'DateTime',
+        'conectaente_publishedAt' => 'datetime',
     ];
 
     function testEveryKeyIsRegisteredOnOpportunityWithItsType()
@@ -70,9 +70,47 @@ class CultBrMetadataTest extends TestCase
         ], $labels);
     }
 
-    function testPublishedAtRendersAsADateTimeField()
+    function testPublishedAtReachesThePageAsADateTime()
     {
-        $this->assertSame('datetime', $this->definition('conectaente_publishedAt')->field_type);
+        $description = Opportunity::getPropertiesMetadata()['conectaente_publishedAt'];
+
+        $this->assertSame('datetime', $description['type']);
+        $this->assertSame('datetime', $description['field_type']);
+    }
+
+    function testPublishedAtAcceptsTheDateTextThePageSends()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+
+        $opportunity->conectaente_publishedAt = '2026-09-24 10:30';
+        $opportunity->save(true);
+
+        $this->assertSame('2026-09-24 10:30:00', $this->reloaded($opportunity)->conectaente_publishedAt->format('Y-m-d H:i:s'));
+    }
+
+    function testPublishedAtClearedByThePageIsStoredAsNull()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+        $opportunity->conectaente_publishedAt = new \DateTime('2026-09-24 10:30:00');
+        $opportunity->save(true);
+
+        $opportunity->conectaente_publishedAt = '';
+        $opportunity->save(true);
+
+        $this->assertNull($this->reloaded($opportunity)->conectaente_publishedAt);
+    }
+
+    function testPublishedAtRefusesAnythingButDateOrText()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $opportunity->conectaente_publishedAt = ['locale' => 'pt-BR', '_date' => '2026-09-24T13:30:00.000Z'];
+        $opportunity->save(true);
     }
 
     function testExecutionTypeOptionsKeepTheFixedValueAsKey()
@@ -131,7 +169,7 @@ class CultBrMetadataTest extends TestCase
         $opportunity->conectaente_segmentsOther = 'Palhaçaria';
         $opportunity->conectaente_fundingSources = ['houveUtilizacao' => 'sim', 'recursosProprios' => 1500.5];
         $opportunity->conectaente_quotaReservation = [['label' => 'Ampla concorrência', 'vagas' => 10]];
-        $opportunity->conectaente_publishedAt = new \DateTime('2026-09-24 10:30:00');
+        $opportunity->conectaente_publishedAt = new \DateTime('2026-09-24 10:30:45');
         $opportunity->save(true);
 
         $reloaded = $this->reloaded($opportunity);
@@ -141,7 +179,7 @@ class CultBrMetadataTest extends TestCase
         $this->assertSame('Palhaçaria', $reloaded->conectaente_segmentsOther);
         $this->assertEquals((object) ['houveUtilizacao' => 'sim', 'recursosProprios' => 1500.5], $reloaded->conectaente_fundingSources);
         $this->assertEquals([(object) ['label' => 'Ampla concorrência', 'vagas' => 10]], $reloaded->conectaente_quotaReservation);
-        $this->assertSame('2026-09-24 10:30:00', $reloaded->conectaente_publishedAt->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-09-24 10:30:45', $reloaded->conectaente_publishedAt->format('Y-m-d H:i:s'));
     }
 
     function testRegistrationAddsNoValidationToAnyOpportunity()

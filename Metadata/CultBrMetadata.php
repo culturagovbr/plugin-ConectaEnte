@@ -11,6 +11,8 @@ use ConectaEnte\Vocabulary\Segment;
 use ConectaEnte\Vocabulary\TargetingField;
 use ConectaEnte\Vocabulary\TargetingOption;
 use ConectaEnte\Vocabulary\ThematicAgenda;
+use DateTime;
+use InvalidArgumentException;
 use MapasCulturais\i;
 
 final class CultBrMetadata
@@ -61,10 +63,28 @@ final class CultBrMetadata
 
         $plugin->registerOpportunityMetadata(self::PUBLISHED_AT, [
             'label' => i::__('Data de publicação do edital'),
-            'type' => 'DateTime',
-            // o entity-field escolhe o campo pelo field_type em minúsculas
-            'field_type' => 'datetime',
+            // o Entity.js só converte em data o tipo 'datetime'; o core só tem conversores para 'DateTime'
+            'type' => 'datetime',
+            'serialize' => self::serializeDateTime(...),
+            'unserialize' => fn($value) => $value ? new DateTime($value) : $value,
         ]);
+    }
+
+    private static function serializeDateTime(mixed $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = new DateTime($value);
+        }
+
+        if (!$value instanceof DateTime) {
+            throw new InvalidArgumentException('value must be a DateTime or a date time string');
+        }
+
+        return $value->format('Y-m-d H:i:s');
     }
 
     private static function registerMultiselect(Plugin $plugin, string $key, string $label, array $options): void
