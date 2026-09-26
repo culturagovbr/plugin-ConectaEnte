@@ -12,6 +12,7 @@ use MapasCulturais\i;
 
 $this->import('
     conectaente--opportunity-requirements
+    conectaente--quota-reservation
     conectaente--targeting-multiselect
     entity-field
     mc-card
@@ -44,6 +45,17 @@ $this->import('
                         <conectaente--targeting-multiselect :entity="entity" prop="<?= CultBrMetadata::CULTURAL_STAGES ?>" other-prop="<?= CultBrMetadata::CULTURAL_STAGES_OTHER ?>" other-option="<?= htmlspecialchars(CulturalStage::OTHER->value) ?>" required classes="col-12"></conectaente--targeting-multiselect>
                         <conectaente--targeting-multiselect :entity="entity" prop="<?= CultBrMetadata::THEMATIC_AGENDAS ?>" other-prop="<?= CultBrMetadata::THEMATIC_AGENDAS_OTHER ?>" other-option="<?= htmlspecialchars(ThematicAgenda::OTHER->value) ?>" required classes="col-12"></conectaente--targeting-multiselect>
                         <conectaente--targeting-multiselect :entity="entity" prop="<?= CultBrMetadata::PRIORITY_TERRITORIES ?>" required classes="col-12"></conectaente--targeting-multiselect>
+                    </div>
+                </template>
+            </mc-card>
+
+            <mc-card>
+                <template #title>
+                    <h3><?php i::_e('Reserva de vagas (cotas)') ?></h3>
+                </template>
+                <template #content>
+                    <div class="grid-12">
+                        <conectaente--quota-reservation :entity="entity" prop="<?= CultBrMetadata::QUOTA_RESERVATION ?>" classes="col-12"></conectaente--quota-reservation>
                     </div>
                 </template>
             </mc-card>
