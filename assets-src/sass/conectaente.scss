@@ -47,6 +47,19 @@
     gap: 24px;
 }
 
+// a aba tem mais campo que texto: a coluna dos campos ganha o espaço que o core dá à lateral
+.container:has(> .conectaente-opportunity-tab) {
+    grid-template-columns: 76% 21%;
+
+    @media (max-width: 1060px) {
+        grid-template-columns: 73% 24%;
+    }
+
+    @media (max-width: 800px) {
+        grid-template-columns: 100%;
+    }
+}
+
 .conectaente-opportunity-requirements {
     &--loading {
         opacity: .6;
