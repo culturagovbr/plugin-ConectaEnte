@@ -14,7 +14,7 @@ class OpportunityTabTest extends TestCase
     use PublicationRequirementsFixtures;
     use RequestFactory;
 
-    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect'];
+    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation'];
 
     function testEditPageImportsTheTabComponentsAndTheSealList()
     {
@@ -41,6 +41,26 @@ class OpportunityTabTest extends TestCase
         $this->assertSame(
             ['notTargeted' => '__edital_nao_se_direciona__', 'allOptions' => '__todas_opcoes__'],
             $config['conectaenteTargetingMultiselect'],
+        );
+    }
+
+    function testQuotaReservationTakesItsLabelsFromTheVocabularyInPortuguese()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+        $config = $this->jsObject($page)['config']['conectaenteQuotaReservation'];
+
+        $this->assertSame(
+            ['Pessoas negras (pretas e pardas)', 'Pessoas indígenas', 'Pessoas com deficiência'],
+            $config['legalQuotas'],
+            'As três cotas legais vão na ordem da lei, porque a regra as identifica pela posição.',
+        );
+        $this->assertSame('Ampla concorrência', $config['openCompetition']);
+        $this->assertSame(
+            array_keys($config['labels']),
+            array_values($config['labels']),
+            'Sem tradução ativa, o texto exibido é o mesmo valor gravado; o que vai ao payload é a chave.',
         );
     }
 
