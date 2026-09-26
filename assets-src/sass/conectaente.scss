@@ -129,8 +129,8 @@
 .conectaente-targeting-multiselect__tags {
     &,
     .mc-tag {
-        background-color: var(--mc-success-main, #4cb051) !important;
-        color: #fff !important;
+        background-color: var(--mc-success-500) !important;
+        color: var(--mc-white) !important;
     }
 }
 
