@@ -12,6 +12,7 @@ use MapasCulturais\i;
 
 $this->import('
     conectaente--affirmative-actions
+    conectaente--funding-sources
     conectaente--opportunity-requirements
     conectaente--quota-reservation
     conectaente--registration-channels
@@ -62,6 +63,7 @@ $this->import('
             <mc-card>
                 <template #content>
                     <div class="grid-12 conectaente-opportunity-tab__blocos">
+                        <conectaente--funding-sources :entity="entity" prop="<?= CultBrMetadata::FUNDING_SOURCES ?>" classes="col-12"></conectaente--funding-sources>
                         <conectaente--registration-channels :entity="entity" prop="<?= CultBrMetadata::REGISTRATION_CHANNELS ?>" classes="col-12"></conectaente--registration-channels>
                         <conectaente--affirmative-actions :entity="entity" prop="<?= CultBrMetadata::AFFIRMATIVE_ACTIONS ?>" classes="col-12"></conectaente--affirmative-actions>
                     </div>
