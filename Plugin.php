@@ -13,6 +13,7 @@ use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\PublicationContext;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
+use ConectaEnte\Services\RequiredCoreFields;
 use ConectaEnte\Services\SealedOpportunity;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -59,6 +60,11 @@ class Plugin extends \MapasCulturais\Plugin
     function sealedOpportunity(): SealedOpportunity
     {
         return new SealedOpportunity(App::i()->repo(FederativeEntitySeal::class));
+    }
+
+    function requiredCoreFields(): RequiredCoreFields
+    {
+        return new RequiredCoreFields($this->sealedOpportunity());
     }
 
     function fundingSourceName(): FundingSourceName
@@ -138,6 +144,10 @@ class Plugin extends \MapasCulturais\Plugin
             if ($federativeEntity) {
                 $this->errorJson(['sealId' => [Plugin::sealConflictMessage($federativeEntity)]], 400);
             }
+        });
+
+        $app->hook('entity(Opportunity).propertiesMetadata', function (&$propertiesMetadata) {
+            Plugin::instance()->requiredCoreFields()->markRequired($propertiesMetadata);
         });
 
         // metadado alterado aqui ainda entra no saveMetadata do mesmo save
