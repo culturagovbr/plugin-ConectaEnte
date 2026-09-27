@@ -106,6 +106,15 @@ class PublicationRequirementsCoreFieldsTest extends TestCase
         $this->assertSame(['rules' => ['O campo "Adicionar regulamento" é obrigatório.']], $this->missing($opportunity));
     }
 
+    function testWithoutRangesNothingIsRequired()
+    {
+        $opportunity = $this->completeOpportunity();
+
+        $opportunity->registrationRanges = [];
+
+        $this->assertSame([], $this->missing($opportunity), 'Faixa não é campo obrigatório: sem nenhuma, não há o que somar.');
+    }
+
     function testRangesMustAddUpToTheTotals()
     {
         $opportunity = $this->completeOpportunity();
