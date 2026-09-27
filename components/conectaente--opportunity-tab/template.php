@@ -34,9 +34,11 @@ $this->import('
                 <template #content>
                     <div class="grid-12">
                         <entity-field :entity="entity" prop="<?= CultBrMetadata::EXECUTION_TYPE ?>" :required="true" classes="col-12"></entity-field>
-                        <entity-field :entity="entity" prop="registrationProponentTypes" type="checklist" :required="true" classes="col-12"></entity-field>
+                        <entity-field :entity="entity" prop="registrationProponentTypes" type="checklist" classes="col-12"></entity-field>
                         <entity-field v-if="hasLegalEntity" :entity="entity" prop="<?= CultBrMetadata::LEGAL_ENTITY_TYPES ?>" type="checklist" :required="true" classes="col-12"></entity-field>
                         <entity-file :entity="entity" group-name="rules" title="<?= i::esc_attr__('Adicionar regulamento') ?>" title-modal="<?= i::esc_attr__('Adicionar regulamento') ?>" required editable classes="col-12"></entity-file>
+                        <entity-field :entity="entity" prop="registrationFrom" classes="col-6 sm:col-12"></entity-field>
+                        <entity-field v-if="!entity.isContinuousFlow || entity.hasEndDate" :entity="entity" prop="registrationTo" classes="col-6 sm:col-12"></entity-field>
                     </div>
                 </template>
             </mc-card>

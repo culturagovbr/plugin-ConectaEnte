@@ -58,6 +58,31 @@ class OpportunityTabTest extends TestCase
         $this->assertLessThan($legalEntity, $proponentTypes, 'O campo vem antes do multiselect que depende dele.');
     }
 
+    function testSealedOpportunityGetsBothRegistrationDatesInTheTab()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+
+        $template = $this->tabTemplate($page);
+
+        $this->assertStringContainsString('prop="registrationFrom"', $template, 'A pendência da data inicial também precisa de destino na aba.');
+        $this->assertStringContainsString('prop="registrationTo"', $template);
+    }
+
+    function testEndDateFollowsTheCoreConditionForContinuousFlow()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+
+        $this->assertStringContainsString(
+            'v-if="!entity.isContinuousFlow || entity.hasEndDate"',
+            $this->tabTemplate($page),
+            'Em fluxo contínuo sem data final o core esconde o campo, e a aba segue a mesma condição.',
+        );
+    }
+
     function testEditPagePublishesWhatTheTabAndTheMultiselectNeed()
     {
         $this->loginAsSaasSuperAdmin();
