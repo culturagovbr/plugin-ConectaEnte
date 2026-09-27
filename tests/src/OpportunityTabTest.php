@@ -18,7 +18,7 @@ class OpportunityTabTest extends TestCase
     use PublicationRequirementsFixtures;
     use RequestFactory;
 
-    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation', 'conectaente--registration-channels', 'conectaente--affirmative-actions', 'conectaente--funding-sources'];
+    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation', 'conectaente--registration-channels', 'conectaente--affirmative-actions', 'conectaente--funding-sources', 'conectaente--proponent-types'];
 
     function testEditPageImportsTheTabComponentsAndTheSealList()
     {
@@ -51,10 +51,11 @@ class OpportunityTabTest extends TestCase
         $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
 
         $template = $this->tabTemplate($page);
-        $proponentTypes = strpos($template, 'prop="registrationProponentTypes"');
+        $proponentTypes = strpos($template, '<conectaente--proponent-types');
         $legalEntity = strpos($template, 'prop="' . CultBrMetadata::LEGAL_ENTITY_TYPES . '"');
 
-        $this->assertNotFalse($proponentTypes, 'Os tipos de proponente são editáveis na aba, para a pendência ter destino.');
+        $this->assertNotFalse($proponentTypes, 'O campo traz a vinculação de agente coletivo, como no CultEditais.');
+        $this->assertStringNotContainsString('<opportunity-proponent-types', $template, 'O componente do core grava a cada clique e não serve ao edital selado.');
         $this->assertLessThan($legalEntity, $proponentTypes, 'O campo vem antes do multiselect que depende dele.');
     }
 
