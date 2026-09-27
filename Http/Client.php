@@ -2,6 +2,7 @@
 
 namespace ConectaEnte\Http;
 
+use ConectaEnte\Dto\ParInformation;
 use ConectaEnte\Http\Transport\CurlTransport;
 use ConectaEnte\Http\Transport\TransportInterface;
 use MapasCulturais\i;
@@ -47,6 +48,34 @@ class Client
     public function isHealthy(): bool
     {
         return $this->transport->get($this->url('/health'))->status === 200;
+    }
+
+    /**
+     * Árvore do PAR (exercício -> meta -> ação -> atividade) do ente dono do token,
+     * casada por `$document` (cnpj) na lista de entes que a resposta paginada devolve.
+     * `notFound()` cobre o contrato reduzido de produção, que pode não expor este caminho.
+     */
+    public function getParInformation(string $token, string $document): ParInformationResult
+    {
+        $response = $this->transport->get($this->url('/api/v1/par-information'), ['token' => $token]);
+
+        if (!$response->reachedServer()) {
+            return ParInformationResult::unreachable();
+        }
+
+        if ($response->status === 200) {
+            return ParInformationResult::ok(ParInformation::fromApiListResponse($response->json(), $document));
+        }
+
+        if ($response->status === 404) {
+            return ParInformationResult::notFound();
+        }
+
+        if ($response->status >= 500) {
+            return ParInformationResult::unreachable();
+        }
+
+        return ParInformationResult::rejected($this->readDetail($response->json(), $response->status));
     }
 
     private function readValidation(array $body): TokenValidation

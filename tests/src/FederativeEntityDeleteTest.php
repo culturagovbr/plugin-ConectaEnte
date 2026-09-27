@@ -64,7 +64,7 @@ class FederativeEntityDeleteTest extends TestCase
     {
         $this->loginAsSaasSuperAdmin();
         $this->createFederativeEntity('Na lixeira', '12200176000176')->delete(true);
-        Plugin::instance()->transport = FakeTransport::replying(200, ['tipo' => 'SISTEMA', 'cnpj' => '12200176000176', 'nome_ente' => 'MUNICIPIO DE ARAPIRACA']);
+        Plugin::instance()->transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA', 'cnpj' => '12200176000176', 'nome_ente' => 'MUNICIPIO DE ARAPIRACA']);
 
         $request = $this->requestFactory->POST('conectaente', 'federativeEntities', [], [
             'name' => 'De novo',
