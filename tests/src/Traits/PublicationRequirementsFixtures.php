@@ -39,6 +39,7 @@ trait PublicationRequirementsFixtures
         return $this->reloaded($opportunity);
     }
 
+
     /**
      * Oportunidade completa, menos o regulamento, ainda sem reler.
      */
