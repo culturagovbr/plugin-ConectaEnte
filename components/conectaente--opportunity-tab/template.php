@@ -13,6 +13,7 @@ use MapasCulturais\i;
 $this->import('
     conectaente--affirmative-actions
     conectaente--funding-sources
+    conectaente--opportunity-ranges
     conectaente--opportunity-requirements
     conectaente--proponent-types
     conectaente--quota-reservation
@@ -66,6 +67,7 @@ $this->import('
                     <div class="grid-12 conectaente-opportunity-tab__quotas">
                         <entity-field v-if="showsField('vacancies')" :entity="entity" prop="vacancies" classes="col-6 sm:col-12"></entity-field>
                         <entity-field v-if="showsField('totalResource')" :entity="entity" prop="totalResource" classes="col-6 sm:col-12"></entity-field>
+                        <conectaente--opportunity-ranges v-if="showsField('registrationRanges')" :entity="entity" class="col-12"></conectaente--opportunity-ranges>
                         <conectaente--quota-reservation v-if="showsField('<?= CultBrMetadata::QUOTA_RESERVATION ?>')" :entity="entity" prop="<?= CultBrMetadata::QUOTA_RESERVATION ?>" classes="col-12"></conectaente--quota-reservation>
                     </div>
                 </template>

@@ -18,7 +18,7 @@ class OpportunityTabTest extends TestCase
     use PublicationRequirementsFixtures;
     use RequestFactory;
 
-    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation', 'conectaente--registration-channels', 'conectaente--affirmative-actions', 'conectaente--funding-sources', 'conectaente--proponent-types'];
+    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation', 'conectaente--registration-channels', 'conectaente--affirmative-actions', 'conectaente--funding-sources', 'conectaente--proponent-types', 'conectaente--opportunity-ranges'];
 
     function testEditPageImportsTheTabComponentsAndTheSealList()
     {
@@ -93,11 +93,26 @@ class OpportunityTabTest extends TestCase
 
         $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
 
-        $this->assertStringContainsString(
-            'data-field="registrationProponentTypes"',
-            $this->componentTemplate($page, 'conectaente--proponent-types'),
-            'Sem a âncora, a pendência fica sem destino na lista.',
-        );
+        foreach (['conectaente--proponent-types' => 'registrationProponentTypes', 'conectaente--opportunity-ranges' => 'registrationRanges'] as $component => $field) {
+            $this->assertStringContainsString(
+                "data-field=\"{$field}\"",
+                $this->componentTemplate($page, $component),
+                'Sem a âncora, a pendência fica sem destino na lista.',
+            );
+        }
+    }
+
+    function testRangesFieldSitsNextToTheTotalsTheRuleComparesItWith()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $template = $this->tabTemplate($this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT)));
+        $ranges = strpos($template, '<conectaente--opportunity-ranges');
+
+        $this->assertNotFalse($ranges, 'As duas pendências de soma precisam de um campo na aba.');
+        $this->assertStringNotContainsString('<opportunity-ranges-config', $template, 'O componente do core grava a cada edição e não serve ao edital selado.');
+        $this->assertGreaterThan(strpos($template, 'prop="totalResource"'), $ranges, 'As faixas vêm depois dos totais com que a regra as compara.');
+        $this->assertLessThan(strpos($template, '<conectaente--quota-reservation'), $ranges);
     }
 
     function testSealedOpportunityGetsBothRegistrationDatesInTheTab()
