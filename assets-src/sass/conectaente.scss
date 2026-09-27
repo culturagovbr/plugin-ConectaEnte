@@ -47,6 +47,11 @@
     gap: 24px;
 }
 
+.conectaente-opportunity-tab__quotas .conectaente-quota-reservation {
+    border-top: var(--mc-border-hairline);
+    padding-top: 1.5rem;
+}
+
 .conectaente-opportunity-tab__blocos > * + * {
     border-top: var(--mc-border-hairline);
     padding-top: 1.5rem;

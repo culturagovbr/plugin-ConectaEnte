@@ -54,7 +54,9 @@ $this->import('
 
             <mc-card>
                 <template #content>
-                    <div class="grid-12">
+                    <div class="grid-12 conectaente-opportunity-tab__quotas">
+                        <entity-field :entity="entity" prop="vacancies" classes="col-6 sm:col-12"></entity-field>
+                        <entity-field :entity="entity" prop="totalResource" classes="col-6 sm:col-12"></entity-field>
                         <conectaente--quota-reservation :entity="entity" prop="<?= CultBrMetadata::QUOTA_RESERVATION ?>" classes="col-12"></conectaente--quota-reservation>
                     </div>
                 </template>
