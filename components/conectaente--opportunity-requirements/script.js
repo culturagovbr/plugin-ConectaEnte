@@ -15,6 +15,14 @@ app.component('conectaente--opportunity-requirements', {
             type: [Object, Array],
             default: () => ({}),
         },
+        fieldGroups: {
+            type: [Object, Array],
+            default: () => ({}),
+        },
+        groupLabels: {
+            type: Object,
+            required: true,
+        },
         loading: {
             type: Boolean,
             default: false,
@@ -29,6 +37,7 @@ app.component('conectaente--opportunity-requirements', {
         return {
             targets: [],
             activeAnchor: null,
+            openGroup: null,
             ticking: false,
         };
     },
@@ -54,8 +63,26 @@ app.component('conectaente--opportunity-requirements', {
                     messages: this.missing[key],
                     reachable: this.targets.some((target) => target.anchor === anchor),
                     active: anchor === this.activeAnchor,
+                    group: this.fieldGroups[key] || 'core',
                 };
             });
+        },
+
+        groups() {
+            return Object.keys(this.groupLabels).map((name) => ({
+                name,
+                label: this.groupLabels[name],
+                count: this.fields.filter((field) => field.group === name).length,
+            }));
+        },
+
+        openFields() {
+            return this.fields.filter((field) => field.group === this.openGroup);
+        },
+
+        // no primeiro nível, o grupo do campo que está sendo lido é quem fica em destaque
+        activeGroup() {
+            return this.fields.find((field) => field.active)?.group ?? null;
         },
     },
 
@@ -65,6 +92,10 @@ app.component('conectaente--opportunity-requirements', {
             handler() {
                 this.$nextTick(() => this.findTargets());
             },
+        },
+
+        openFields() {
+            this.$nextTick(() => this.revealActive());
         },
     },
 

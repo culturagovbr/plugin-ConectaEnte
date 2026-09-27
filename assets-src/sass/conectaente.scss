@@ -119,6 +119,16 @@
             margin: 0;
         }
 
+        .conectaente-opportunity-requirements__item--done {
+            .item__dot .dot {
+                background-color: var(--mc-gray-300);
+            }
+
+            .item__content--title {
+                color: var(--mc-gray-700);
+            }
+        }
+
         .conectaente-opportunity-requirements__item--active {
             .dot {
                 box-shadow: 0 0 0 0.25rem var(--mc-high-500);
@@ -128,6 +138,33 @@
             .item__content--title {
                 color: var(--mc-opportunities-500);
             }
+        }
+    }
+
+    &__count {
+        background: var(--mc-opportunities-500);
+        border-radius: var(--mc-border-radius-pill);
+        color: var(--mc-high-500);
+        font-size: .75rem;
+        margin-left: .5rem;
+        padding: 0 .5rem;
+    }
+
+    &__back {
+        align-items: center;
+        background: none;
+        border: 0;
+        color: inherit;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        gap: .25rem;
+        margin-bottom: .5rem;
+        padding: 0;
+
+        &:hover,
+        &:focus-visible {
+            text-decoration: underline;
         }
     }
 

@@ -92,7 +92,7 @@ $this->import('
                     <p v-else-if="hasPendingFields"><?php i::_e('O edital selado por um Ente Federado só é publicado com estes campos preenchidos, porque são eles que o CultBR recebe. A lista considera o que já foi salvo.') ?></p>
                 </template>
                 <template #content>
-                    <conectaente--opportunity-requirements :missing="missing" :labels="labels" :anchors="anchors" :loading="loading" :failed="loadFailed"></conectaente--opportunity-requirements>
+                    <conectaente--opportunity-requirements :missing="missing" :labels="labels" :anchors="anchors" :field-groups="fieldGroups" :group-labels="{ core: '<?= i::esc_attr__('Campos nativos') ?>', plugin: '<?= i::esc_attr__('Novos campos') ?>' }" :loading="loading" :failed="loadFailed"></conectaente--opportunity-requirements>
                 </template>
             </mc-card>
         </aside>

@@ -22,6 +22,7 @@ app.component('conectaente--opportunity-tab', {
             missing: null,
             labels: {},
             anchors: {},
+            fieldGroups: {},
             loading: false,
             loadFailed: false,
             lastRequest: 0,
@@ -122,6 +123,7 @@ app.component('conectaente--opportunity-tab', {
                 this.missing = requirements.missing;
                 this.labels = requirements.labels;
                 this.anchors = requirements.anchors;
+                this.fieldGroups = requirements.groups;
             }
         },
 
