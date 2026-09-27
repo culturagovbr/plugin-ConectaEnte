@@ -140,16 +140,17 @@ app.component('conectaente--opportunity-requirements', {
             this.updateActive();
         },
 
+        // acelerador por tempo, e não por quadro: sem foco na aba o quadro não vem e a trava ficaria presa
         onScroll() {
             if (this.ticking) {
                 return;
             }
 
             this.ticking = true;
-            requestAnimationFrame(() => {
+            setTimeout(() => {
                 this.ticking = false;
                 this.updateActive();
-            });
+            }, 50);
         },
 
         readingLine() {
