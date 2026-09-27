@@ -40,7 +40,7 @@ class OpportunityTabTest extends TestCase
 
         $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
 
-        $this->assertStringContainsString('group-name=\\"rules\\"', $page, 'O regulamento é editável na aba, para a pendência ter destino.');
+        $this->assertStringContainsString('group-name="rules"', $this->tabTemplate($page), 'O regulamento é editável na aba, para a pendência ter destino.');
         $this->assertStringContainsString('"entity-file":', $page);
     }
 
@@ -50,8 +50,9 @@ class OpportunityTabTest extends TestCase
 
         $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
 
-        $proponentTypes = strpos($page, 'prop=\\"registrationProponentTypes\\"');
-        $legalEntity = strpos($page, 'prop=\\"' . CultBrMetadata::LEGAL_ENTITY_TYPES . '\\"');
+        $template = $this->tabTemplate($page);
+        $proponentTypes = strpos($template, 'prop="registrationProponentTypes"');
+        $legalEntity = strpos($template, 'prop="' . CultBrMetadata::LEGAL_ENTITY_TYPES . '"');
 
         $this->assertNotFalse($proponentTypes, 'Os tipos de proponente são editáveis na aba, para a pendência ter destino.');
         $this->assertLessThan($legalEntity, $proponentTypes, 'O campo vem antes do multiselect que depende dele.');
