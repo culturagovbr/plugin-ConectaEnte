@@ -4,10 +4,17 @@ namespace ConectaEnte\Payload;
 
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Services\SealedOpportunity;
+use ConectaEnte\Vocabulary\AffirmativeAction;
+use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\ExecutionType;
+use ConectaEnte\Vocabulary\FundingSource;
 use ConectaEnte\Vocabulary\LegalEntityType;
 use ConectaEnte\Vocabulary\OpportunityStatus;
 use ConectaEnte\Vocabulary\ProponentType;
+use ConectaEnte\Vocabulary\Segment;
+use ConectaEnte\Vocabulary\TargetingField;
+use ConectaEnte\Vocabulary\TargetingOption;
+use ConectaEnte\Vocabulary\ThematicAgenda;
 use DateTimeInterface;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
@@ -51,6 +58,17 @@ final class OpportunityPayload
             'links_da_pagina_pnab' => $this->links($opportunity),
             'pdf_edital' => $opportunity->getFile('rules')?->url,
             'ente_federado' => ['cnpj' => $federativeEntity->document, 'nome' => $federativeEntity->name],
+            'segmentos_artistico_culturais' => $this->targeting($opportunity, TargetingField::SEGMENT),
+            'segmento_artistico_cultural_especificar' => $this->otherSpecification($opportunity, CultBrMetadata::SEGMENTS, CultBrMetadata::SEGMENTS_OTHER, Segment::OTHER->value),
+            'etapas_fazer_cultural' => $this->targeting($opportunity, TargetingField::CULTURAL_STAGE),
+            'etapa_fazer_cultural_especificar' => $this->otherSpecification($opportunity, CultBrMetadata::CULTURAL_STAGES, CultBrMetadata::CULTURAL_STAGES_OTHER, CulturalStage::OTHER->value),
+            'pautas_especificas' => $this->targeting($opportunity, TargetingField::THEMATIC_AGENDA),
+            'pauta_especifica_especificar' => $this->otherSpecification($opportunity, CultBrMetadata::THEMATIC_AGENDAS, CultBrMetadata::THEMATIC_AGENDAS_OTHER, ThematicAgenda::OTHER->value),
+            'recursos_territorios_prioritarios' => $this->targeting($opportunity, TargetingField::PRIORITY_TERRITORY),
+            'recursos_outras_fontes' => $this->fundingSources($opportunity),
+            'tipos_formas_inscricao' => $this->registrationChannels($opportunity),
+            'reserva_vagas_cotas' => $this->quotaReservation($opportunity),
+            'outras_modalidades_acoes_afirmativas' => $this->affirmativeActions($opportunity),
         ];
 
         App::i()->applyHook('conectaente.opportunityPayload', [$opportunity, &$payload]);
@@ -116,6 +134,128 @@ final class OpportunityPayload
         }
 
         return array_values(array_unique(array_filter($types)));
+    }
+
+    /**
+     * Os rótulos selecionados, unidos por vírgula, como o CultEditais os envia.
+     */
+    private function targeting(Opportunity $opportunity, TargetingField $field): ?string
+    {
+        $vocabulary = $field->vocabulary();
+        $values = $opportunity->{$field->metadataKey()} ?: [];
+
+        if ($values === [TargetingOption::NOT_TARGETED->value]) {
+            return $field->notTargetedText();
+        }
+
+        if (in_array(TargetingOption::ALL_OPTIONS->value, $values, true)) {
+            return implode(', ', array_map(fn($option) => $option->text(), $vocabulary::cases()));
+        }
+
+        $labels = [];
+
+        foreach ($values as $value) {
+            if ($value === TargetingOption::NOT_TARGETED->value) {
+                $labels[] = $field->notTargetedText();
+
+                continue;
+            }
+
+            // valor fora do vocabulário vai cru, como no CultEditais
+            $labels[] = $vocabulary::tryFrom($value)?->text() ?? $value;
+        }
+
+        return $labels ? implode(', ', $labels) : null;
+    }
+
+    /**
+     * O que especificar em "Outros": vazio sem a opção marcada, nulo quando marcada e sem texto.
+     */
+    private function otherSpecification(Opportunity $opportunity, string $key, string $otherKey, string $otherValue): ?string
+    {
+        if (!in_array($otherValue, $opportunity->$key ?: [], true)) {
+            return '';
+        }
+
+        $specification = trim((string) $opportunity->$otherKey);
+
+        return $specification === '' ? null : $specification;
+    }
+
+    /**
+     * As fontes de recurso em snake_case; o `_id` das linhas livres é da tela e não vai ao payload.
+     */
+    private function fundingSources(Opportunity $opportunity): array
+    {
+        $block = $this->jsonBlock($opportunity, CultBrMetadata::FUNDING_SOURCES);
+        $sources = [
+            'houve_utilizacao' => $block['houveUtilizacao'] ?? null,
+            'recursos_proprios' => $this->decimal($block[FundingSource::OWN_RESOURCES->value] ?? null),
+            'convenios_parcerias' => $this->decimal($block[FundingSource::FEDERATIVE_AGREEMENTS->value] ?? null),
+            'emendas_parlamentares' => $this->decimal($block[FundingSource::PARLIAMENTARY_AMENDMENTS->value] ?? null),
+            'remanescentes_ciclo_1' => $this->decimal($block[FundingSource::FIRST_CYCLE_REMAINDER->value] ?? null),
+            'outras_fontes' => [],
+        ];
+
+        foreach ($block[FundingSource::OTHER_SOURCES->value] ?? [] as $source) {
+            $sources['outras_fontes'][] = [
+                'nome_fonte' => $source['nomeFonte'] ?? '',
+                'valor' => $this->decimal($source['valor'] ?? null) ?? '0.00',
+            ];
+        }
+
+        return $sources;
+    }
+
+    /** @return array<int, array{tipo: string, descricao: string}> */
+    private function registrationChannels(Opportunity $opportunity): array
+    {
+        $block = $this->jsonBlock($opportunity, CultBrMetadata::REGISTRATION_CHANNELS);
+
+        if (($block['previstasNoEdital'] ?? null) !== 'sim') {
+            return [];
+        }
+
+        return array_values(array_map(
+            fn(array $channel) => ['tipo' => $channel['tipo'] ?? '', 'descricao' => $channel['descricao'] ?? ''],
+            array_filter($block['formas'] ?? [], 'is_array'),
+        ));
+    }
+
+    /** @return array<int, array{label: string, vagas: int, valor_destinado: string, nao_aplicavel: bool}> */
+    private function quotaReservation(Opportunity $opportunity): array
+    {
+        return array_values(array_map(fn(array $quota) => [
+            'label' => trim((string) ($quota['label'] ?? '')),
+            'vagas' => (int) ($quota['vagas'] ?? 0),
+            'valor_destinado' => $this->decimal($quota['valorDestinado'] ?? null) ?? '0.00',
+            'nao_aplicavel' => (bool) ($quota['naoAplicavel'] ?? false),
+        ], array_filter($this->jsonBlock($opportunity, CultBrMetadata::QUOTA_RESERVATION), 'is_array')));
+    }
+
+    private function affirmativeActions(Opportunity $opportunity): array
+    {
+        $block = $this->jsonBlock($opportunity, CultBrMetadata::AFFIRMATIVE_ACTIONS);
+        $actions = [
+            'opcoes' => array_values(array_filter($block['opcoes'] ?? [], 'is_string')),
+            'outra_legislacao_descricao' => (string) ($block['outra_legislacao_descricao'] ?? ''),
+        ];
+
+        foreach (AffirmativeAction::cases() as $action) {
+            if ($action->hasGroups()) {
+                $actions[$action->value] = array_values(array_filter($block[$action->value] ?? [], 'is_string'));
+            }
+        }
+
+        return $actions;
+    }
+
+    /** O metadado json volta como stdClass; convertido, lê-se como array em qualquer nível. */
+    private function jsonBlock(Opportunity $opportunity, string $key): array
+    {
+        $block = json_decode(json_encode($opportunity->$key), true);
+
+        return is_array($block) ? $block : [];
     }
 
     /** @return array<int, array{url: string, label: ?string}> */
