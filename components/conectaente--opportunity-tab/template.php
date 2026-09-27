@@ -13,6 +13,7 @@ use MapasCulturais\i;
 $this->import('
     conectaente--opportunity-requirements
     conectaente--quota-reservation
+    conectaente--registration-channels
     conectaente--targeting-multiselect
     entity-field
     mc-card
@@ -56,6 +57,17 @@ $this->import('
                 <template #content>
                     <div class="grid-12">
                         <conectaente--quota-reservation :entity="entity" prop="<?= CultBrMetadata::QUOTA_RESERVATION ?>" classes="col-12"></conectaente--quota-reservation>
+                    </div>
+                </template>
+            </mc-card>
+
+            <mc-card>
+                <template #title>
+                    <h3><?php i::_e('Formas de inscrição previstas no edital') ?></h3>
+                </template>
+                <template #content>
+                    <div class="grid-12">
+                        <conectaente--registration-channels :entity="entity" prop="<?= CultBrMetadata::REGISTRATION_CHANNELS ?>" classes="col-12"></conectaente--registration-channels>
                     </div>
                 </template>
             </mc-card>
