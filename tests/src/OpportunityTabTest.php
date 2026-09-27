@@ -47,6 +47,23 @@ class OpportunityTabTest extends TestCase
         );
     }
 
+    function testTabShowsTheCoreFieldsTheQuotaRuleDependsOn()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+
+        $template = $this->tabTemplate($page);
+
+        foreach (['vacancies', 'totalResource'] as $field) {
+            $this->assertStringContainsString(
+                "prop=\"{$field}\"",
+                $template,
+                "A soma das cotas é conferida contra {$field}: o campo fica ao lado da tabela, não em outra aba.",
+            );
+        }
+    }
+
     function testBlocksTakeTheirLabelsFromTheVocabulary()
     {
         $this->loginAsSaasSuperAdmin();
@@ -154,11 +171,13 @@ class OpportunityTabTest extends TestCase
         $this->assertSame($expected, $sealIds);
     }
 
-    private function editPage(Opportunity $opportunity): string
-    {
-        $this->assertSame(200, $this->send($this->requestFactory->GET('opportunity', 'edit', [$opportunity->id])));
 
-        return (string) $this->app->response->getBody();
+    /** O template da aba, como a página o entrega ao cliente. */
+    private function tabTemplate(string $page): string
+    {
+        preg_match('/"conectaente--opportunity-tab":("(?:[^"\\\\]|\\\\.)*")/', $page, $matches);
+
+        return json_decode($matches[1] ?? '""');
     }
 
     private function tabConfig(string $page): array
@@ -182,10 +201,4 @@ class OpportunityTabTest extends TestCase
         return $logger->queries;
     }
 
-    private function jsObject(string $page): array
-    {
-        preg_match('/var Mapas = (\{.*?\});\n/s', $page, $matches);
-
-        return json_decode($matches[1] ?? '{}', true);
-    }
 }

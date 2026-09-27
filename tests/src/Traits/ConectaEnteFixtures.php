@@ -160,4 +160,19 @@ trait ConectaEnteFixtures
 
         return $this->app->repo(Opportunity::class)->find($opportunity->id);
     }
+
+    protected function editPage(Opportunity $opportunity): string
+    {
+        $this->assertSame(200, $this->send($this->requestFactory->GET('opportunity', 'edit', [$opportunity->id])));
+
+        return (string) $this->app->response->getBody();
+    }
+
+    /** O jsObject que a página publica para o cliente. */
+    protected function jsObject(string $page): array
+    {
+        preg_match('/var Mapas = (\{.*?\});\n/s', $page, $matches);
+
+        return json_decode($matches[1] ?? '{}', true);
+    }
 }
