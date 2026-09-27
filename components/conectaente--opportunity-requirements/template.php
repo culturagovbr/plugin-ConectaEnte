@@ -28,7 +28,7 @@ $this->import('
                 }">
                 <div class="item__dot"><span class="dot"></span></div>
                 <div class="item__content">
-                    <button v-if="group.count" type="button" class="item__content--title conectaente-opportunity-requirements__link" @click="openGroup = group.name">
+                    <button v-if="group.count" type="button" class="item__content--title conectaente-opportunity-requirements__link" @click="chooseGroup(group.name)">
                         {{ group.label }}
                         <span class="conectaente-opportunity-requirements__count">{{ group.count }}</span>
                     </button>
@@ -40,7 +40,7 @@ $this->import('
             </div>
         </section>
         <template v-else>
-            <button type="button" class="conectaente-opportunity-requirements__back" @click="openGroup = null">
+            <button type="button" class="conectaente-opportunity-requirements__back" @click="chooseGroup(null)">
                 <mc-icon name="arrow-left"></mc-icon> <?php i::_e('Todos os campos') ?>
             </button>
             <section class="timeline conectaente-opportunity-requirements__timeline">

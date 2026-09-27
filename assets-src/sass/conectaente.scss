@@ -130,9 +130,10 @@
         }
 
         .conectaente-opportunity-requirements__item--active {
+            // anel por outline: crescer o ponto invadiria a coluna do texto
             .dot {
-                box-shadow: 0 0 0 0.25rem var(--mc-high-500);
-                transform: scale(1.2);
+                outline: 2px solid var(--mc-opportunities-300);
+                outline-offset: 1px;
             }
 
             .item__content--title {

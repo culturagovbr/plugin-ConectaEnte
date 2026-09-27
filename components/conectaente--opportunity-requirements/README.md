@@ -12,7 +12,7 @@ A origem de cada chave vem da rota, não da tela: o prefixo `conectaente_` separ
 
 ### Navegação
 
-O rótulo vira botão quando existe `[data-field="<âncora>"]` dentro da aba, e o clique rola a página até centralizar o campo. Sem elemento correspondente o rótulo fica como texto, para não haver link morto. A busca refaz-se a cada resposta da rota, porque um campo pode estar escondido por condição da aba.
+O rótulo vira botão quando existe `[data-field="<âncora>"]` dentro da aba, e o clique rola a página até o campo parar no seu trecho da linha de leitura — se apenas centralizasse, o destaque cairia no campo de cima ou no vizinho de linha. Sem elemento correspondente o rótulo fica como texto, para não haver link morto. A busca refaz-se a cada resposta da rota, porque um campo pode estar escondido por condição da aba.
 
 ### O campo que está sendo lido
 
@@ -23,7 +23,8 @@ Campos lado a lado, como Total de vagas e Valor total, dividem a faixa de rolage
 ### Armadilhas desta página
 
 - `IntersectionObserver` não dispara aqui. Quem marca o ativo é um listener de rolagem com `requestAnimationFrame`.
-- `behavior: 'smooth'` só funciona em `window`. Em elemento é ignorado e no `scrollIntoView` a animação é interrompida no início — daí o clique usar `window.scrollTo` e a rolagem do card ser animada à mão.
+- `behavior: 'smooth'` não serve aqui: em elemento é ignorado, no `scrollIntoView` a animação morre no início e, na janela, o foco que o clique dá ao botão dentro do card rolável a cancela. As duas rolagens são animadas à mão.
+- Sem foco na aba o navegador não entrega quadros, e a animação pararia no meio: há um tempo de segurança que leva a rolagem ao destino.
 - `$el` não é elemento: o template tem espaços em volta da raiz e o Vue trata o componente como fragmento. Por isso `ref="root"`.
 
 O que aparece, em ordem de prioridade:

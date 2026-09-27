@@ -39,6 +39,7 @@ app.component('conectaente--opportunity-requirements', {
             activeAnchor: null,
             openGroup: null,
             ticking: false,
+            scrolling: { page: null, card: null },
         };
     },
 
@@ -100,6 +101,10 @@ app.component('conectaente--opportunity-requirements', {
     },
 
     methods: {
+        chooseGroup(name) {
+            this.openGroup = name;
+        },
+
         // o campo pendente pode estar escondido por uma condição da aba, então a busca é a cada resposta
         findTargets() {
             const found = [];
@@ -135,9 +140,13 @@ app.component('conectaente--opportunity-requirements', {
             });
         },
 
+        readingLine() {
+            return window.innerHeight * 0.3;
+        },
+
         // ativo é o último campo cujo topo já passou da linha de leitura e que ainda está na tela
         updateActive() {
-            const readingLine = window.innerHeight * 0.3;
+            const readingLine = this.readingLine();
             let current = null;
 
             for (const target of this.targets) {
@@ -159,18 +168,30 @@ app.component('conectaente--opportunity-requirements', {
             this.$nextTick(() => this.revealActive());
         },
 
+        /**
+         * Os campos que dividem a linha com este e o quanto de rolagem cabe até o próximo.
+         *
+         * A faixa vai até onde o próximo campo começa: pela altura do campo caberia menos de
+         * um giro de roda para cada um dos que dividem a linha.
+         */
+        rowOf(box) {
+            const tops = this.targets.map(({ element }) => element.getBoundingClientRect().top);
+
+            return {
+                sameRow: this.targets.filter((_, index) => Math.abs(tops[index] - box.top) <= 8),
+                span: (tops.find((top) => top > box.top + 8) ?? box.bottom) - box.top,
+            };
+        },
+
         // campos lado a lado dividem a faixa de rolagem da linha: cada um acende no seu trecho
         pickInRow({ target, box }, readingLine) {
-            const rowTops = this.targets.map(({ element }) => element.getBoundingClientRect().top);
-            const sameRow = this.targets.filter((_, index) => Math.abs(rowTops[index] - box.top) <= 8);
+            const { sameRow, span } = this.rowOf(box);
 
             if (sameRow.length < 2) {
                 return target.anchor;
             }
 
-            // a faixa vai até onde o próximo campo começa, senão caberia menos de um giro de roda por campo
-            const nextTop = rowTops.find((top) => top > box.top + 8) ?? box.bottom;
-            const progress = Math.min(Math.max((readingLine - box.top) / (nextTop - box.top), 0), 0.999);
+            const progress = Math.min(Math.max((readingLine - box.top) / span, 0), 0.999);
 
             return sameRow[Math.floor(progress * sameRow.length)].anchor;
         },
@@ -200,9 +221,21 @@ app.component('conectaente--opportunity-requirements', {
             this.animateScroll(scroller, scroller.scrollTop + itemBox.top - scrollerBox.top - scrollerBox.height / 3);
         },
 
-        // animação à mão: behavior 'smooth' é ignorado em elemento nesta página, só funciona em window
+        /**
+         * Rola até a posição, animando à mão.
+         *
+         * `behavior: 'smooth'` é ignorado em elemento nesta página e, na janela, é cancelado
+         * pelo foco que o clique dá ao botão dentro do card rolável.
+         */
         animateScroll(scroller, to) {
-            const from = scroller.scrollTop;
+            const isWindow = scroller === window;
+            // a rolagem do card e a da página correm juntas: cada uma cancela só a sua
+            const lane = isWindow ? 'page' : 'card';
+            const moveTo = (position) => isWindow ? window.scrollTo(0, position) : (scroller.scrollTop = position);
+
+            cancelAnimationFrame(this.scrolling[lane]);
+
+            const from = isWindow ? window.scrollY : scroller.scrollTop;
             const distance = to - from;
             const duration = 280;
             let start = null;
@@ -212,15 +245,21 @@ app.component('conectaente--opportunity-requirements', {
 
                 const progress = Math.min((now - start) / duration, 1);
                 const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                moveTo(from + distance * eased);
 
-                scroller.scrollTop = from + distance * eased;
-
-                if (progress < 1) {
-                    requestAnimationFrame(step);
-                }
+                this.scrolling[lane] = progress < 1 ? requestAnimationFrame(step) : null;
             };
 
-            requestAnimationFrame(step);
+            this.scrolling[lane] = requestAnimationFrame(step);
+
+            // sem foco na aba o navegador não entrega quadros: garante o destino de qualquer jeito
+            setTimeout(() => {
+                if (this.scrolling[lane]) {
+                    cancelAnimationFrame(this.scrolling[lane]);
+                    this.scrolling[lane] = null;
+                    moveTo(to);
+                }
+            }, duration + 100);
         },
 
         goToField(field) {
@@ -230,11 +269,14 @@ app.component('conectaente--opportunity-requirements', {
                 return;
             }
 
-            // scrollIntoView suave é interrompido nesta página; scrollTo vai até o fim
+            // o campo para no seu trecho da linha de leitura, senão o destaque ficaria no vizinho
             const box = target.getBoundingClientRect();
-            const top = window.scrollY + box.top + box.height / 2 - window.innerHeight / 2;
+            const { sameRow, span } = this.rowOf(box);
+            const index = sameRow.findIndex(({ anchor }) => anchor === field.anchor);
+            const offset = sameRow.length > 1 ? (index + 0.5) / sameRow.length * span : 4;
+            const top = window.scrollY + box.top - this.readingLine() + offset;
 
-            window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+            this.animateScroll(window, Math.max(top, 0));
         },
 
         target(anchor) {
