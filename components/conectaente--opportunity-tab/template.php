@@ -55,6 +55,9 @@ $this->import('
             </mc-card>
 
             <mc-card>
+                <template #title>
+                    <h3><?php i::_e('Vagas e recursos') ?></h3>
+                </template>
                 <template #content>
                     <div class="grid-12 conectaente-opportunity-tab__quotas">
                         <entity-field :entity="entity" prop="vacancies" classes="col-6 sm:col-12"></entity-field>
@@ -65,6 +68,9 @@ $this->import('
             </mc-card>
 
             <mc-card>
+                <template #title>
+                    <h3><?php i::_e('Fontes, inscrições e ações afirmativas') ?></h3>
+                </template>
                 <template #content>
                     <div class="grid-12 conectaente-opportunity-tab__blocos">
                         <conectaente--funding-sources :entity="entity" prop="<?= CultBrMetadata::FUNDING_SOURCES ?>" classes="col-12"></conectaente--funding-sources>
