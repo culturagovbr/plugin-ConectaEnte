@@ -38,6 +38,7 @@ app.component('conectaente--opportunity-requirements', {
             targets: [],
             activeAnchor: null,
             openGroup: null,
+            groupChosen: false,
             ticking: false,
             scrolling: { page: null, card: null },
         };
@@ -98,10 +99,21 @@ app.component('conectaente--opportunity-requirements', {
         openFields() {
             this.$nextTick(() => this.revealActive());
         },
+
+        // a lista abre no primeiro grupo que tem pendência; depois disso quem manda é o usuário
+        groups: {
+            immediate: true,
+            handler(groups) {
+                if (!this.groupChosen && !this.openGroup) {
+                    this.openGroup = groups.find((group) => group.count)?.name ?? null;
+                }
+            },
+        },
     },
 
     methods: {
         chooseGroup(name) {
+            this.groupChosen = true;
             this.openGroup = name;
         },
 

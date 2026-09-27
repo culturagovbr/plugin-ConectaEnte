@@ -6,7 +6,7 @@ O desenho é o `section.timeline` do core, o mesmo do acompanhamento da inscriç
 
 ### Os dois grupos
 
-O primeiro nível traz um ponto por grupo — "Campos nativos" e "Novos campos" — com o número de pendências; clicar abre o grupo na própria timeline, e "Todos os campos" volta. Grupo sem pendência aparece cinza, com um visto, e não abre.
+A lista abre no primeiro grupo que tem pendência; "Todos os campos" leva ao primeiro nível e, a partir daí, quem escolhe é o usuário. O primeiro nível traz um ponto por grupo — "Campos nativos" e "Novos campos" — com o número de pendências; clicar abre o grupo na própria timeline, e "Todos os campos" volta. Grupo sem pendência aparece cinza, com um visto, e não abre.
 
 A origem de cada chave vem da rota, não da tela: o prefixo `conectaente_` separa campo do plugin de campo do core, e a regra mora no servidor porque lá ela tem teste.
 
