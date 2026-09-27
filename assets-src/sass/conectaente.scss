@@ -81,12 +81,13 @@
     padding-top: 1.5rem;
 }
 
-// a aba tem mais campo que texto: a coluna dos campos ganha o espaço que o core dá à lateral
+// a lista de pendências precisa de largura para navegar: o contêiner cresce em vez de espremer os campos
 .container:has(> .conectaente-opportunity-tab) {
-    grid-template-columns: 76% 21%;
+    max-width: 1360px;
+    grid-template-columns: minmax(0, 1fr) 400px;
 
-    @media (max-width: 1060px) {
-        grid-template-columns: 73% 24%;
+    @media (max-width: 1400px) {
+        grid-template-columns: minmax(0, 1fr) 340px;
     }
 
     @media (max-width: 800px) {
