@@ -9,6 +9,7 @@ use ConectaEnte\Http\Client;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\PublicationContext;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
@@ -58,6 +59,11 @@ class Plugin extends \MapasCulturais\Plugin
     function sealedOpportunity(): SealedOpportunity
     {
         return new SealedOpportunity(App::i()->repo(FederativeEntitySeal::class));
+    }
+
+    function fundingSourceName(): FundingSourceName
+    {
+        return new FundingSourceName();
     }
 
     private ?PublicationStamp $publicationStamp = null;
@@ -137,6 +143,16 @@ class Plugin extends \MapasCulturais\Plugin
         // metadado alterado aqui ainda entra no saveMetadata do mesmo save
         $app->hook('entity(Opportunity).save:before', function () {
             Plugin::instance()->publicationStamp()->stamp($this);
+            Plugin::instance()->fundingSourceName()->sanitizeOpportunity($this);
+        });
+
+        // o CultEditais saneia aqui, e só aqui; o save:before acima cobre o resto
+        $app->hook('PATCH(opportunity.single):data', function (&$data) {
+            $key = CultBrMetadata::FUNDING_SOURCES;
+
+            if (isset($data[$key])) {
+                $data[$key] = Plugin::instance()->fundingSourceName()->sanitizeBlock($data[$key]);
+            }
         });
 
         // a cópia é salva antes e depois de receber os metadados: a marca dura a requisição inteira
