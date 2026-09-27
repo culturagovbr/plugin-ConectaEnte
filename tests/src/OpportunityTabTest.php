@@ -3,6 +3,7 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Vocabulary\FundingSource;
 use ConectaEnte\Vocabulary\RegistrationChannel;
@@ -41,6 +42,19 @@ class OpportunityTabTest extends TestCase
 
         $this->assertStringContainsString('group-name=\\"rules\\"', $page, 'O regulamento é editável na aba, para a pendência ter destino.');
         $this->assertStringContainsString('"entity-file":', $page);
+    }
+
+    function testSealedOpportunityGetsTheProponentTypesFieldInTheTab()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+
+        $proponentTypes = strpos($page, 'prop=\\"registrationProponentTypes\\"');
+        $legalEntity = strpos($page, 'prop=\\"' . CultBrMetadata::LEGAL_ENTITY_TYPES . '\\"');
+
+        $this->assertNotFalse($proponentTypes, 'Os tipos de proponente são editáveis na aba, para a pendência ter destino.');
+        $this->assertLessThan($legalEntity, $proponentTypes, 'O campo vem antes do multiselect que depende dele.');
     }
 
     function testEditPagePublishesWhatTheTabAndTheMultiselectNeed()
