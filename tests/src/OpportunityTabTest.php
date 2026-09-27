@@ -59,6 +59,23 @@ class OpportunityTabTest extends TestCase
         $this->assertLessThan($legalEntity, $proponentTypes, 'O campo vem antes do multiselect que depende dele.');
     }
 
+    function testTheFormShowsTheFieldsInTheOrderTheListReadsThem()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $template = $this->tabTemplate($this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT)));
+        $positions = [];
+
+        foreach (['rules', 'registrationFrom', 'registrationTo', 'registrationProponentTypes'] as $field) {
+            $positions[$field] = strpos($template, "showsField('{$field}')");
+        }
+
+        $sorted = $positions;
+        asort($sorted);
+
+        $this->assertSame(array_keys($positions), array_keys($sorted), 'O formulário segue a ordem do CultEditais: regulamento, datas e só então os tipos de proponente.');
+    }
+
     function testTheFormFollowsTheGroupTheUserOpened()
     {
         $this->loginAsSaasSuperAdmin();

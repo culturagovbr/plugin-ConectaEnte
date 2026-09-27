@@ -2,6 +2,7 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Controllers\ConectaEnteController;
 use ConectaEnte\Metadata\CultBrMetadata;
 use MapasCulturais\Entities\Opportunity;
 use Psr\Http\Message\ServerRequestInterface;
@@ -218,6 +219,27 @@ class OpportunityRequirementsRouteTest extends TestCase
 
         $this->assertSame(array_keys($json['missing']), array_keys($json['groups']), 'A tela agrupa pelo que o servidor diz, sem decidir nada.');
         $this->assertEmpty(array_diff($json['groups'], ['core', 'plugin']), 'Só existem essas duas origens.');
+    }
+
+    function testPendenciesComeInTheOrderTheTabReadsThem()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT, isComplete: false);
+        // a data final vazia derruba também a inicial, e assim as duas datas entram na lista
+        $opportunity->registrationTo = null;
+        $opportunity->registrationProponentTypes = [];
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $keys = array_keys($this->responseJson()['missing']);
+        $expected = array_values(array_intersect(ConectaEnteController::SCREEN_ORDER, $keys));
+
+        $this->assertSame($expected, array_values(array_intersect($keys, $expected)), 'A lista é lida de cima para baixo, como o formulário.');
+        $this->assertLessThan(
+            array_search('registrationProponentTypes', $keys, true),
+            array_search('registrationFrom', $keys, true),
+            'As datas vêm antes dos tipos de proponente, como no CultEditais.',
+        );
     }
 
     private function requirements(int $opportunityId): ServerRequestInterface

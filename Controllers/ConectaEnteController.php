@@ -18,6 +18,30 @@ use MapasCulturais\i;
 
 class ConectaEnteController extends \MapasCulturais\Controller
 {
+    /** A ordem de leitura da aba, de cima para baixo, card a card. */
+    const SCREEN_ORDER = [
+        CultBrMetadata::EXECUTION_TYPE,
+        'rules',
+        'registrationFrom',
+        'registrationTo',
+        'registrationProponentTypes',
+        CultBrMetadata::LEGAL_ENTITY_TYPES,
+        CultBrMetadata::SEGMENTS,
+        CultBrMetadata::CULTURAL_STAGES,
+        CultBrMetadata::THEMATIC_AGENDAS,
+        CultBrMetadata::PRIORITY_TERRITORIES,
+        'vacancies',
+        'totalResource',
+        'registrationRangesVacancies',
+        'registrationRangesTotalResource',
+        CultBrMetadata::QUOTA_RESERVATION,
+        CultBrMetadata::FUNDING_SOURCES,
+        CultBrMetadata::REGISTRATION_CHANNELS,
+        PublicationRequirements::REGISTRATION_CHANNELS_EMAIL,
+        CultBrMetadata::AFFIRMATIVE_ACTIONS,
+        CultBrMetadata::PUBLISHED_AT,
+    ];
+
     function __construct()
     {
         $this->layout = 'panel';
@@ -210,7 +234,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $opportunity->checkPermission('modify');
 
         $isSealed = Plugin::instance()->sealedOpportunity()->isSealed($opportunity);
-        $missing = $isSealed ? $this->publicationErrors($opportunity) : [];
+        $missing = $isSealed ? $this->inScreenOrder($this->publicationErrors($opportunity)) : [];
 
         $this->json([
             'sealed' => $isSealed,
@@ -332,7 +356,17 @@ class ConectaEnteController extends \MapasCulturais\Controller
         return $labels;
     }
 
-    // chaves sem rótulo na descrição da entidade levam o texto da tela do core
+    /** A ordem em que a aba exibe os campos; chave de fora vai para o fim. */
+    private function inScreenOrder(array $missing): array
+    {
+        $order = array_flip(self::SCREEN_ORDER);
+        $last = count($order);
+
+        uksort($missing, fn($a, $b) => ($order[$a] ?? $last) <=> ($order[$b] ?? $last));
+
+        return $missing;
+    }
+
     /**
      * As mensagens que só repetem o rótulo saem: a tela mostra o nome do campo e basta.
      *
@@ -393,6 +427,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         };
     }
 
+    // chaves sem rótulo na descrição da entidade levam o texto da tela do core
     private function fieldLabel(array $description, string $key): string
     {
         return match ($key) {

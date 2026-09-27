@@ -35,11 +35,11 @@ $this->import('
                 <template #content>
                     <div class="grid-12">
                         <entity-field v-if="showsField('<?= CultBrMetadata::EXECUTION_TYPE ?>')" :entity="entity" prop="<?= CultBrMetadata::EXECUTION_TYPE ?>" :required="true" classes="col-12"></entity-field>
-                        <conectaente--proponent-types v-if="showsField('registrationProponentTypes')" :entity="entity" class="col-12"></conectaente--proponent-types>
-                        <entity-field v-if="hasLegalEntity && showsField('<?= CultBrMetadata::LEGAL_ENTITY_TYPES ?>')" :entity="entity" prop="<?= CultBrMetadata::LEGAL_ENTITY_TYPES ?>" type="checklist" :required="true" classes="col-12"></entity-field>
                         <entity-file v-if="showsField('rules')" :entity="entity" group-name="rules" title="<?= i::esc_attr__('Adicionar regulamento') ?>" title-modal="<?= i::esc_attr__('Adicionar regulamento') ?>" required editable classes="col-12"></entity-file>
                         <entity-field v-if="showsField('registrationFrom')" :entity="entity" prop="registrationFrom" classes="col-6 sm:col-12"></entity-field>
                         <entity-field v-if="(!entity.isContinuousFlow || entity.hasEndDate) && showsField('registrationTo')" :entity="entity" prop="registrationTo" classes="col-6 sm:col-12"></entity-field>
+                        <conectaente--proponent-types v-if="showsField('registrationProponentTypes')" :entity="entity" class="col-12"></conectaente--proponent-types>
+                        <entity-field v-if="hasLegalEntity && showsField('<?= CultBrMetadata::LEGAL_ENTITY_TYPES ?>')" :entity="entity" prop="<?= CultBrMetadata::LEGAL_ENTITY_TYPES ?>" type="checklist" :required="true" classes="col-12"></entity-field>
                     </div>
                 </template>
             </mc-card>
