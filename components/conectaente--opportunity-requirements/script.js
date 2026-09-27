@@ -98,8 +98,12 @@ app.component('conectaente--opportunity-requirements', {
             },
         },
 
-        openFields() {
-            this.$nextTick(() => this.revealActive());
+        // quem filtra o formulário é a aba, um tique depois desta lista: daí os dois nextTick
+        openGroup() {
+            this.$nextTick(() => this.$nextTick(() => {
+                this.findTargets();
+                this.revealActive();
+            }));
         },
 
         // a lista abre no primeiro grupo que tem pendência; depois disso quem manda é o usuário

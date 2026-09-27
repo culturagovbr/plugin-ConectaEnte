@@ -12,7 +12,7 @@ A origem de cada chave vem da rota, não da tela: o prefixo `conectaente_` separ
 
 ### Navegação
 
-O rótulo vira botão quando existe `[data-field="<âncora>"]` dentro da aba, e o clique rola a página até o campo parar no seu trecho da linha de leitura — se apenas centralizasse, o destaque cairia no campo de cima ou no vizinho de linha. Sem elemento correspondente o rótulo fica como texto, para não haver link morto. A busca refaz-se a cada resposta da rota, porque um campo pode estar escondido por condição da aba.
+O rótulo vira botão quando existe `[data-field="<âncora>"]` dentro da aba, e o clique rola a página até o campo parar no seu trecho da linha de leitura — se apenas centralizasse, o destaque cairia no campo de cima ou no vizinho de linha. Sem elemento correspondente o rótulo fica como texto, para não haver link morto. A busca refaz-se a cada resposta da rota e a cada troca de grupo — o formulário mostra só os campos do grupo aberto, e os alvos de antes deixam de existir. Quem filtra o formulário é a aba, um tique depois desta lista, por isso a busca espera dois.
 
 ### O campo que está sendo lido
 
