@@ -59,6 +59,19 @@ class OpportunityTabTest extends TestCase
         $this->assertLessThan($legalEntity, $proponentTypes, 'O campo vem antes do multiselect que depende dele.');
     }
 
+    function testFieldWhoseComponentIsNotFromTheCoreStillPublishesItsAnchor()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+
+        $this->assertStringContainsString(
+            'data-field="registrationProponentTypes"',
+            $this->componentTemplate($page, 'conectaente--proponent-types'),
+            'Sem a âncora, a pendência fica sem destino na lista.',
+        );
+    }
+
     function testSealedOpportunityGetsBothRegistrationDatesInTheTab()
     {
         $this->loginAsSaasSuperAdmin();
@@ -226,7 +239,12 @@ class OpportunityTabTest extends TestCase
     /** O template da aba, como a página o entrega ao cliente. */
     private function tabTemplate(string $page): string
     {
-        preg_match('/"conectaente--opportunity-tab":("(?:[^"\\\\]|\\\\.)*")/', $page, $matches);
+        return $this->componentTemplate($page, 'conectaente--opportunity-tab');
+    }
+
+    private function componentTemplate(string $page, string $component): string
+    {
+        preg_match('/"' . preg_quote($component, '/') . '":("(?:[^"\\\\]|\\\\.)*")/', $page, $matches);
 
         return json_decode($matches[1] ?? '""');
     }

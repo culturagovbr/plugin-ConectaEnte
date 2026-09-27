@@ -6,6 +6,8 @@ O original chama `entity.save()` a cada clique. Na aba CultBR isso não serve: a
 
 Uma instalação com o tema Pnab não aplica a versão dele deste componente — o que se perde é o asterisco de obrigatório e a condição `canConfigureAgentRelation`.
 
+A raiz publica `data-field="registrationProponentTypes"`, que é como a lista de campos pendentes encontra o campo — o original não publica nada, e sem isso o rótulo "Tipos do proponente" fica sem link.
+
 ### Propriedades
 
 - *entity **Entity*** : a oportunidade.

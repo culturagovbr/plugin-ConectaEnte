@@ -8,7 +8,7 @@ use MapasCulturais\i;
 
 ?>
 
-<div class="opportunity-proponent-types conectaente-proponent-types">
+<div class="opportunity-proponent-types conectaente-proponent-types" data-field="registrationProponentTypes">
     <h4 class="bold"><?= i::__("Tipos do proponente")?></h4>
     <h6><?= i::__("Selecione um ou mais tipos de proponente que poderá participar do edital")?></h6>
     <div>
