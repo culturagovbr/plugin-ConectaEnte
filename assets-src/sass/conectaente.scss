@@ -47,6 +47,30 @@
     gap: 24px;
 }
 
+// o campo do step ativo é contornado; outline não ocupa espaço, então o layout do core não muda
+.conectaente-opportunity-tab [data-field] {
+    border-radius: 0.25rem;
+    transition: outline-color .2s ease;
+    outline: 2px solid transparent;
+    outline-offset: 0.5rem;
+}
+
+.conectaente-opportunity-tab [data-field].conectaente-field--active {
+    outline-color: var(--mc-opportunities-300);
+}
+
+// o card acompanha a rolagem para a lista servir de navegação; rola por dentro quando não cabe
+.container:has(> .conectaente-opportunity-tab) > aside {
+    align-self: start;
+    position: sticky;
+    top: 1rem;
+
+    > .mc-card {
+        max-height: calc(100vh - 8rem);
+        overflow-y: auto;
+    }
+}
+
 .conectaente-opportunity-tab__quotas .conectaente-quota-reservation {
     border-top: var(--mc-border-hairline);
     padding-top: 1.5rem;
@@ -75,15 +99,49 @@
         opacity: .6;
     }
 
-    &__list {
-        display: grid;
-        gap: 12px;
+    // a classe do tema entra no seletor para ganhar dele sem !important
+    &__timeline.timeline {
         margin: 0;
-        padding-left: 1.25rem;
 
-        ul {
-            margin: 4px 0 0;
-            padding-left: 1.25rem;
+        .item {
+            padding-bottom: 1rem;
+        }
+
+        .item__dot {
+            &::before,
+            .dot {
+                background-color: var(--mc-opportunities-500);
+            }
+        }
+
+        .item__content--description p {
+            margin: 0;
+        }
+
+        .conectaente-opportunity-requirements__item--active {
+            .dot {
+                box-shadow: 0 0 0 0.25rem var(--mc-high-500);
+                transform: scale(1.2);
+            }
+
+            .item__content--title {
+                color: var(--mc-opportunities-500);
+            }
+        }
+    }
+
+    &__link {
+        background: none;
+        border: 0;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        padding: 0;
+        text-align: left;
+
+        &:hover,
+        &:focus-visible {
+            text-decoration: underline;
         }
     }
 

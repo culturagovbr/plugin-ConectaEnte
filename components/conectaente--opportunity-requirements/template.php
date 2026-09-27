@@ -10,7 +10,7 @@ $this->import('
     mc-loading
 ');
 ?>
-<div class="conectaente-opportunity-requirements" :class="{ 'conectaente-opportunity-requirements--loading': loading }" aria-live="polite">
+<div ref="root" class="conectaente-opportunity-requirements" :class="{ 'conectaente-opportunity-requirements--loading': loading }" aria-live="polite">
     <p v-if="failed" class="conectaente-opportunity-requirements__failed">
         <?php i::_e('Não foi possível carregar os campos pendentes.') ?>
     </p>
@@ -18,12 +18,18 @@ $this->import('
     <p v-else-if="!fields.length" class="conectaente-opportunity-requirements__done">
         <?php i::_e('Nenhum campo pendente.') ?>
     </p>
-    <ul v-else class="conectaente-opportunity-requirements__list">
-        <li v-for="field in fields" :key="field.key" class="conectaente-opportunity-requirements__field">
-            <strong>{{ field.label }}</strong>
-            <ul>
-                <li v-for="message in field.messages" :key="message">{{ message }}</li>
-            </ul>
-        </li>
-    </ul>
+    <section v-else class="timeline conectaente-opportunity-requirements__timeline">
+        <div v-for="field in fields" :key="field.key" class="item" :class="{ 'conectaente-opportunity-requirements__item--active': field.active }">
+            <div class="item__dot"><span class="dot"></span></div>
+            <div class="item__content">
+                <button v-if="field.reachable" type="button" class="item__content--title conectaente-opportunity-requirements__link" @click="goToField(field)">
+                    {{ field.label }}
+                </button>
+                <span v-else class="item__content--title">{{ field.label }}</span>
+                <div class="item__content--description">
+                    <p v-for="message in field.messages" :key="message">{{ message }}</p>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>

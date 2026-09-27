@@ -1,6 +1,24 @@
 # Componente `<conectaente--opportunity-requirements>`
 
-Lista os campos pendentes da oportunidade selada: o rótulo de cada campo seguido das mensagens do servidor. É só apresentação. Quem consulta a rota é o `conectaente--opportunity-tab`.
+Linha do tempo dos campos pendentes da oportunidade selada: um ponto por campo, o rótulo e as mensagens do servidor. Quem consulta a rota é o `conectaente--opportunity-tab`.
+
+O desenho é o `section.timeline` do core, o mesmo do acompanhamento da inscrição (`registration-status`): reta, ponto e o corte da reta no último item vêm do tema (`_timeline.scss`); o plugin só pinta o ponto com a cor da oportunidade e transforma o rótulo em botão.
+
+### Navegação
+
+O rótulo vira botão quando existe `[data-field="<âncora>"]` dentro da aba, e o clique rola a página até centralizar o campo. Sem elemento correspondente o rótulo fica como texto, para não haver link morto. A busca refaz-se a cada resposta da rota, porque um campo pode estar escondido por condição da aba.
+
+### O campo que está sendo lido
+
+Um campo por vez fica ativo: o último cujo topo passou de 30% da tela e que ainda está visível. O step dele ganha ponto maior e rótulo na cor da oportunidade, o campo recebe `conectaente-field--active`, que o contorna, e o card rola por dentro para não esconder o step.
+
+Campos lado a lado, como Total de vagas e Valor total, dividem a faixa de rolagem da linha. A faixa vai até onde o próximo campo começa: pela altura do campo caberia menos de um giro de roda para cada um.
+
+### Armadilhas desta página
+
+- `IntersectionObserver` não dispara aqui. Quem marca o ativo é um listener de rolagem com `requestAnimationFrame`.
+- `behavior: 'smooth'` só funciona em `window`. Em elemento é ignorado e no `scrollIntoView` a animação é interrompida no início — daí o clique usar `window.scrollTo` e a rolagem do card ser animada à mão.
+- `$el` não é elemento: o template tem espaços em volta da raiz e o Vue trata o componente como fragmento. Por isso `ref="root"`.
 
 O que aparece, em ordem de prioridade:
 - a mensagem de falha, se a consulta falhou;
@@ -12,6 +30,7 @@ O que aparece, em ordem de prioridade:
 
 - *missing **Object|Array|null** = null* : erros por chave, como a rota `conectaente/opportunityRequirements` devolve. `null` enquanto a rota não respondeu; `[]` quando não há pendência.
 - *labels **Object|Array*** : rótulo por chave, da mesma rota. Uma chave sem rótulo aparece como ela mesma.
+- *anchors **Object|Array** = {}* : o `data-field` de cada chave, da mesma rota. Sem entrada, a própria chave é a âncora.
 - *loading **Boolean** = false* : consulta em andamento. Esmaece a lista.
 - *failed **Boolean** = false* : a última consulta falhou.
 
@@ -26,5 +45,5 @@ $this->import('conectaente--opportunity-requirements');
 ### Exemplo de uso
 
 ```html
-<conectaente--opportunity-requirements :missing="missing" :labels="labels" :loading="loading" :failed="loadFailed"></conectaente--opportunity-requirements>
+<conectaente--opportunity-requirements :missing="missing" :labels="labels" :anchors="anchors" :loading="loading" :failed="loadFailed"></conectaente--opportunity-requirements>
 ```

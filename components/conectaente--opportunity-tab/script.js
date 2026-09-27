@@ -21,6 +21,7 @@ app.component('conectaente--opportunity-tab', {
             // null até a rota responder
             missing: null,
             labels: {},
+            anchors: {},
             loading: false,
             loadFailed: false,
             lastRequest: 0,
@@ -120,6 +121,7 @@ app.component('conectaente--opportunity-tab', {
                 this.serverSealed = requirements.sealed;
                 this.missing = requirements.missing;
                 this.labels = requirements.labels;
+                this.anchors = requirements.anchors;
             }
         },
 
