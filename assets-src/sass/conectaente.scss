@@ -47,6 +47,11 @@
     gap: 24px;
 }
 
+.conectaente-opportunity-tab__blocos > * + * {
+    border-top: var(--mc-border-hairline);
+    padding-top: 1.5rem;
+}
+
 // a aba tem mais campo que texto: a coluna dos campos ganha o espaço que o core dá à lateral
 .container:has(> .conectaente-opportunity-tab) {
     grid-template-columns: 76% 21%;

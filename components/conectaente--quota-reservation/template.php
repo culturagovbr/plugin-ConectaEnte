@@ -14,6 +14,10 @@ $this->import('
 ?>
 <div v-if="description" class="conectaente-quota-reservation" :class="[{ 'field--error': hasError }, classes]" :data-field="prop">
     <div class="conectaente-quota-reservation__header field">
+        <label class="field__title">
+            {{ description.label }}
+            <span class="required">*<?php i::_e('obrigatório') ?></span>
+        </label>
         <h6>{{ text('sectionDescription') }}</h6>
         <div class="conectaente-quota-reservation__hint">
             <strong>{{ text('infoBlockTitle') }}</strong>

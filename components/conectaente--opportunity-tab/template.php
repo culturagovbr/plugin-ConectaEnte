@@ -11,6 +11,7 @@ use ConectaEnte\Vocabulary\ThematicAgenda;
 use MapasCulturais\i;
 
 $this->import('
+    conectaente--affirmative-actions
     conectaente--opportunity-requirements
     conectaente--quota-reservation
     conectaente--registration-channels
@@ -51,9 +52,6 @@ $this->import('
             </mc-card>
 
             <mc-card>
-                <template #title>
-                    <h3><?php i::_e('Reserva de vagas (cotas)') ?></h3>
-                </template>
                 <template #content>
                     <div class="grid-12">
                         <conectaente--quota-reservation :entity="entity" prop="<?= CultBrMetadata::QUOTA_RESERVATION ?>" classes="col-12"></conectaente--quota-reservation>
@@ -62,12 +60,10 @@ $this->import('
             </mc-card>
 
             <mc-card>
-                <template #title>
-                    <h3><?php i::_e('Formas de inscrição previstas no edital') ?></h3>
-                </template>
                 <template #content>
-                    <div class="grid-12">
+                    <div class="grid-12 conectaente-opportunity-tab__blocos">
                         <conectaente--registration-channels :entity="entity" prop="<?= CultBrMetadata::REGISTRATION_CHANNELS ?>" classes="col-12"></conectaente--registration-channels>
+                        <conectaente--affirmative-actions :entity="entity" prop="<?= CultBrMetadata::AFFIRMATIVE_ACTIONS ?>" classes="col-12"></conectaente--affirmative-actions>
                     </div>
                 </template>
             </mc-card>
