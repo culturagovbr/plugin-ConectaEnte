@@ -136,6 +136,14 @@ app.component('conectaente--quota-reservation', {
 
     created() {
         ensureQuotas(this.entity, this.prop, this.legalQuotas, this.openCompetition);
+        this.recalcGeneralCompetition();
+    },
+
+    watch: {
+        // o total de vagas é editado ao lado da tabela, e a ampla concorrência é o que sobra dele
+        'entity.vacancies'() {
+            this.recalcGeneralCompetition();
+        },
     },
 
     methods: {
