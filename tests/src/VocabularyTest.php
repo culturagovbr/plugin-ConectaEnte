@@ -2,6 +2,7 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Vocabulary\AffirmativeAction;
 use ConectaEnte\Vocabulary\AffirmativeActionGroup;
 use ConectaEnte\Vocabulary\CulturalStage;
@@ -363,5 +364,20 @@ class VocabularyTest extends TestCase
     private function texts(string $vocabulary): array
     {
         return array_map(fn($case) => $case->text(), $vocabulary::cases());
+    }
+
+    function testEveryTargetingFieldKnowsItsMetadataAndVocabulary()
+    {
+        $expected = [
+            [CultBrMetadata::SEGMENTS, Segment::class],
+            [CultBrMetadata::CULTURAL_STAGES, CulturalStage::class],
+            [CultBrMetadata::THEMATIC_AGENDAS, ThematicAgenda::class],
+            [CultBrMetadata::PRIORITY_TERRITORIES, PriorityTerritory::class],
+        ];
+
+        $this->assertSame($expected, array_map(
+            fn(TargetingField $field) => [$field->metadataKey(), $field->vocabulary()],
+            TargetingField::cases(),
+        ), 'O payload lê o metadado e o vocabulário pelo campo: trocar o par manda opção de um campo no outro.');
     }
 }
