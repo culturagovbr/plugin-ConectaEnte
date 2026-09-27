@@ -33,6 +33,16 @@ class OpportunityTabTest extends TestCase
         $this->assertContains($seal->id, $this->tabConfig($page)['federativeSealIds']);
     }
 
+    function testSealedOpportunityGetsTheRulesFieldInTheTab()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+
+        $this->assertStringContainsString('group-name=\\"rules\\"', $page, 'O regulamento é editável na aba, para a pendência ter destino.');
+        $this->assertStringContainsString('"entity-file":', $page);
+    }
+
     function testEditPagePublishesWhatTheTabAndTheMultiselectNeed()
     {
         $this->loginAsSaasSuperAdmin();
