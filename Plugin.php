@@ -14,7 +14,7 @@ use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\PublicationContext;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
-use ConectaEnte\Services\RequiredCoreFields;
+use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\SealedOpportunity;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -68,9 +68,9 @@ class Plugin extends \MapasCulturais\Plugin
         return new OpportunityPayload($this->sealedOpportunity());
     }
 
-    function requiredCoreFields(): RequiredCoreFields
+    function coreFieldsDescription(): CoreFieldsDescription
     {
-        return new RequiredCoreFields($this->sealedOpportunity());
+        return new CoreFieldsDescription($this->sealedOpportunity());
     }
 
     function fundingSourceName(): FundingSourceName
@@ -153,7 +153,7 @@ class Plugin extends \MapasCulturais\Plugin
         });
 
         $app->hook('entity(Opportunity).propertiesMetadata', function (&$propertiesMetadata) {
-            Plugin::instance()->requiredCoreFields()->markRequired($propertiesMetadata);
+            Plugin::instance()->coreFieldsDescription()->complete($propertiesMetadata);
         });
 
         // metadado alterado aqui ainda entra no saveMetadata do mesmo save

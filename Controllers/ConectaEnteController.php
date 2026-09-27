@@ -398,7 +398,6 @@ class ConectaEnteController extends \MapasCulturais\Controller
         return match ($key) {
             'rules' => i::__('Regulamento'),
             'term-area' => i::__('Área de Interesse'),
-            'registrationProponentTypes' => i::__('Tipos do proponente'),
             'registrationRangesVacancies', 'registrationRangesTotalResource' => i::__('Faixas/linhas'),
             PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => $description[CultBrMetadata::REGISTRATION_CHANNELS]['label'],
             default => ($description[$key]['label'] ?? '') ?: $key,

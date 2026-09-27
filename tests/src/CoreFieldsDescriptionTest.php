@@ -2,19 +2,39 @@
 
 namespace Tests\ConectaEnte;
 
-use ConectaEnte\Services\RequiredCoreFields;
+use ConectaEnte\Plugin;
+use ConectaEnte\Services\CoreFieldsDescription;
 use MapasCulturais\Entities\Opportunity;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 use Tests\Traits\RequestFactory;
 
 /**
- * Na edição da oportunidade selada, os campos que a publicação exige chegam à tela marcados como obrigatórios.
+ * A descrição que a tela recebe: o rótulo que o core não dá e, na oportunidade selada, a obrigatoriedade.
  */
-class RequiredLabelTest extends TestCase
+class CoreFieldsDescriptionTest extends TestCase
 {
     use PublicationRequirementsFixtures;
     use RequestFactory;
+
+    function testFieldWithoutALabelInTheCoreGetsOne()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+
+        $this->send($this->requestFactory->GET('opportunity', 'edit', [$opportunity->id]));
+
+        $this->assertSame('Tipos do proponente', Opportunity::getPropertiesMetadata()['registrationProponentTypes']['label']);
+    }
+
+    function testLabelTheCoreAlreadyGivesIsKept()
+    {
+        $description = ['registrationProponentTypes' => ['label' => 'Quem pode se inscrever']];
+
+        Plugin::instance()->coreFieldsDescription()->complete($description);
+
+        $this->assertSame('Quem pode se inscrever', $description['registrationProponentTypes']['label'], 'O plugin preenche o que falta, não o que o core decidiu.');
+    }
 
     function testSealedOpportunityMarksTheFieldsThePublicationDemands()
     {
@@ -53,7 +73,7 @@ class RequiredLabelTest extends TestCase
 
     function testTheMarkedFieldsAreTheOnesTheCoreLeavesOptional()
     {
-        $this->assertSame(['vacancies', 'totalResource'], RequiredCoreFields::FIELDS);
+        $this->assertSame(['vacancies', 'totalResource'], CoreFieldsDescription::REQUIRED);
     }
 
     function testAnotherPageOfTheSealedOpportunityIsNotMarked()
