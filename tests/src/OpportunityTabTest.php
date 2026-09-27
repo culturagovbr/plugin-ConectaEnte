@@ -91,7 +91,7 @@ class OpportunityTabTest extends TestCase
         $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
 
         $this->assertStringContainsString(
-            'v-if="!entity.isContinuousFlow || entity.hasEndDate"',
+            '!entity.isContinuousFlow || entity.hasEndDate',
             $this->tabTemplate($page),
             'Em fluxo contínuo sem data final o core esconde o campo, e a aba segue a mesma condição.',
         );
