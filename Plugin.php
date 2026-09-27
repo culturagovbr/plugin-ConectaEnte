@@ -8,6 +8,7 @@ use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\Client;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Payload\OpportunityPayload;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\PublicationContext;
@@ -60,6 +61,11 @@ class Plugin extends \MapasCulturais\Plugin
     function sealedOpportunity(): SealedOpportunity
     {
         return new SealedOpportunity(App::i()->repo(FederativeEntitySeal::class));
+    }
+
+    function opportunityPayload(): OpportunityPayload
+    {
+        return new OpportunityPayload($this->sealedOpportunity());
     }
 
     function requiredCoreFields(): RequiredCoreFields
