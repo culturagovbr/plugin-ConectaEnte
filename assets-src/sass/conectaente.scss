@@ -136,14 +136,6 @@
     }
 }
 
-.conectaente-targeting-multiselect__tags {
-    &,
-    .mc-tag {
-        background-color: var(--mc-success-500) !important;
-        color: var(--mc-white) !important;
-    }
-}
-
 @import './components/quota-reservation';
 @import './components/registration-channels';
 @import './components/affirmative-actions';

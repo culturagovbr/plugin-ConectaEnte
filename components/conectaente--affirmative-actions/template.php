@@ -41,7 +41,7 @@ $this->import('
                         <div class="conectaente-affirmative-actions__multiselect-wrap">
                             <mc-multiselect :model="getSublistModel(option.value)" :items="groups" :placeholder="text('subcategoriasPlaceholder')" hide-button :preserve-order="true"></mc-multiselect>
                         </div>
-                        <mc-tag-list editable :tags="getSublistModel(option.value)" :labels="sublistLabels"></mc-tag-list>
+                        <mc-tag-list editable classes="opportunity__background opportunity__color" :tags="getSublistModel(option.value)" :labels="sublistLabels"></mc-tag-list>
                     </div>
                 </template>
 

@@ -30,7 +30,7 @@ $this->import('
         </div>
         <div v-if="!isNotTargeted" class="field__group conectaente-targeting-multiselect__select">
             <mc-multiselect placeholder="<?php i::esc_attr_e('Digite para buscar') ?>" :model="values" :items="selectableOptions" :preserve-order="true" hide-filter hide-button @selected="onSelect" @removed="onRemove"></mc-multiselect>
-            <mc-tag-list :tags="selectedTags" :labels="description.options" classes="conectaente-targeting-multiselect__tags" editable @remove="onRemove"></mc-tag-list>
+            <mc-tag-list :tags="selectedTags" :labels="description.options" classes="opportunity__background opportunity__color" editable @remove="onRemove"></mc-tag-list>
         </div>
         <div v-if="otherProp && isOtherSelected" class="conectaente-targeting-multiselect__other">
             <entity-field :entity="entity" :prop="otherProp" :required="true"></entity-field>
