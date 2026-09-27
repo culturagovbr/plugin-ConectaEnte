@@ -3,6 +3,9 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Services\FundingSourceName;
+use ConectaEnte\Vocabulary\FundingSource;
+use ConectaEnte\Vocabulary\RegistrationChannel;
 use Doctrine\DBAL\Logging\DebugStack;
 use MapasCulturais\Entities\Opportunity;
 use Tests\Abstract\TestCase;
@@ -14,7 +17,7 @@ class OpportunityTabTest extends TestCase
     use PublicationRequirementsFixtures;
     use RequestFactory;
 
-    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation'];
+    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation', 'conectaente--registration-channels', 'conectaente--affirmative-actions', 'conectaente--funding-sources'];
 
     function testEditPageImportsTheTabComponentsAndTheSealList()
     {
@@ -42,6 +45,24 @@ class OpportunityTabTest extends TestCase
             ['notTargeted' => '__edital_nao_se_direciona__', 'allOptions' => '__todas_opcoes__'],
             $config['conectaenteTargetingMultiselect'],
         );
+    }
+
+    function testBlocksTakeTheirLabelsFromTheVocabulary()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $config = $this->jsObject($this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT)))['config'];
+
+        $this->assertSame(
+            array_map(fn(RegistrationChannel $channel) => $channel->label(), RegistrationChannel::cases()),
+            array_column($config['conectaenteRegistrationChannels']['channels'], 'label'),
+        );
+        $this->assertSame(
+            array_map(fn(FundingSource $source) => $source->label(), FundingSource::cases()),
+            array_column($config['conectaenteFundingSources']['sources'], 'label'),
+            'Os rótulos da tela saem do vocabulário; texts.php não os repete.',
+        );
+        $this->assertSame(FundingSourceName::MAX_LENGTH, $config['conectaenteFundingSources']['nameMaxLength']);
     }
 
     function testQuotaReservationTakesItsLabelsFromTheVocabularyInPortuguese()
