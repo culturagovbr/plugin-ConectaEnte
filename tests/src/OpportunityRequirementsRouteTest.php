@@ -81,7 +81,7 @@ class OpportunityRequirementsRouteTest extends TestCase
         $missing = $this->responseJson()['missing'];
         $this->assertSame(400, $this->send($this->requestFactory->POST('opportunity', 'publish', [$opportunity->id])));
 
-        $this->assertSame($this->responseJson()['data'], $missing);
+        $this->assertSame(array_keys($this->responseJson()['data']), array_keys($missing), 'As chaves são as mesmas; a rota só omite a mensagem que repete o rótulo.');
     }
 
     function testFieldsWithoutARegisteredLabelGetTheCoreScreenText()
@@ -124,6 +124,36 @@ class OpportunityRequirementsRouteTest extends TestCase
         }
 
         $this->assertSame(['themeField' => 'themeField'], $this->responseJson()['labels']);
+    }
+
+    function testMessageThatOnlyRepeatsTheLabelIsLeftOut()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->{CultBrMetadata::EXECUTION_TYPE} = null;
+        $opportunity->registrationProponentTypes = [];
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $missing = $this->responseJson()['missing'];
+
+        $this->assertSame([], $missing[CultBrMetadata::EXECUTION_TYPE], 'A chave continua pendente; a tela mostra só o rótulo.');
+        $this->assertSame([], $missing['registrationProponentTypes']);
+    }
+
+    function testMessageThatSaysMoreThanRequiredStays()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->vacancies = 0;
+        $opportunity->{CultBrMetadata::QUOTA_RESERVATION} = [];
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $missing = $this->responseJson()['missing'];
+
+        $this->assertNotEmpty($missing['vacancies'], 'A mensagem diz que zero não vale, o que o rótulo não diz.');
+        $this->assertNotEmpty($missing[CultBrMetadata::QUOTA_RESERVATION]);
     }
 
     function testPendencyWithoutAFieldOfItsOwnPointsToTheFieldThatProducedIt()

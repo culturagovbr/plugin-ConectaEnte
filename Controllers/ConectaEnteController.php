@@ -214,7 +214,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
 
         $this->json([
             'sealed' => $isSealed,
-            'missing' => $missing,
+            'missing' => $this->withoutPlainRequiredMessages($missing),
             'labels' => $this->fieldLabels($opportunity, array_keys($missing)),
             'anchors' => $this->fieldAnchors(array_keys($missing)),
         ]);
@@ -332,6 +332,24 @@ class ConectaEnteController extends \MapasCulturais\Controller
     }
 
     // chaves sem rótulo na descrição da entidade levam o texto da tela do core
+    /**
+     * As mensagens que só repetem o rótulo saem: a tela mostra o nome do campo e basta.
+     *
+     * Reconhece a fórmula em pt-br, que é a língua das mensagens de publicação; a que traz
+     * regra além da obrigatoriedade fica.
+     */
+    private function withoutPlainRequiredMessages(array $missing): array
+    {
+        foreach ($missing as $key => $messages) {
+            $missing[$key] = array_values(array_filter(
+                $messages,
+                fn($message) => !preg_match('/\bé obrigatóri[ao]\.?$/u', trim((string) $message)),
+            ));
+        }
+
+        return $missing;
+    }
+
     /**
      * O `data-field` que a tela usa para rolar até o campo, por chave pendente.
      *
