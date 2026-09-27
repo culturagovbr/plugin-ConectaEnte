@@ -2,6 +2,7 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Metadata\CultBrMetadata;
 use MapasCulturais\Entities\Opportunity;
 use Psr\Http\Message\ServerRequestInterface;
 use Tests\Abstract\TestCase;
@@ -41,7 +42,7 @@ class OpportunityRequirementsRouteTest extends TestCase
 
         $this->assertSame(200, $this->send($this->requirements($opportunity->id)));
 
-        $this->assertSame(['sealed' => false, 'missing' => [], 'labels' => []], $this->responseJson());
+        $this->assertSame(['sealed' => false, 'missing' => [], 'labels' => [], 'anchors' => []], $this->responseJson());
     }
 
     function testSealedIncompleteOpportunityListsThePluginAndTheCoreFields()
@@ -69,7 +70,7 @@ class OpportunityRequirementsRouteTest extends TestCase
 
         $this->assertSame(200, $this->send($this->requirements($opportunity->id)));
 
-        $this->assertSame(['sealed' => true, 'missing' => [], 'labels' => []], $this->responseJson());
+        $this->assertSame(['sealed' => true, 'missing' => [], 'labels' => [], 'anchors' => []], $this->responseJson());
     }
 
     function testRouteAnswersWhatThePublicationRefuses()
@@ -123,6 +124,38 @@ class OpportunityRequirementsRouteTest extends TestCase
         }
 
         $this->assertSame(['themeField' => 'themeField'], $this->responseJson()['labels']);
+    }
+
+    function testPendencyWithoutAFieldOfItsOwnPointsToTheFieldThatProducedIt()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->registrationRanges = [['label' => 'Faixa única', 'limit' => 1, 'value' => 1]];
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'email', 'descricao' => 'secretaria']]];
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $anchors = $this->responseJson()['anchors'];
+
+        $this->assertSame('registrationRanges', $anchors['registrationRangesVacancies']);
+        $this->assertSame('registrationRanges', $anchors['registrationRangesTotalResource']);
+        $this->assertSame(CultBrMetadata::REGISTRATION_CHANNELS, $anchors['conectaente_registrationChannelsEmail']);
+    }
+
+    function testEveryOtherPendencyIsItsOwnAnchor()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->vacancies = null;
+        $opportunity->{CultBrMetadata::SEGMENTS} = [];
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $json = $this->responseJson();
+
+        $this->assertSame('vacancies', $json['anchors']['vacancies']);
+        $this->assertSame(CultBrMetadata::SEGMENTS, $json['anchors'][CultBrMetadata::SEGMENTS]);
+        $this->assertSame(array_keys($json['missing']), array_keys($json['anchors']), 'Toda pendência tem âncora, para a tela não decidir nada.');
     }
 
     private function requirements(int $opportunityId): ServerRequestInterface

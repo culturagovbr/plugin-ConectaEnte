@@ -216,6 +216,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
             'sealed' => $isSealed,
             'missing' => $missing,
             'labels' => $this->fieldLabels($opportunity, array_keys($missing)),
+            'anchors' => $this->fieldAnchors(array_keys($missing)),
         ]);
     }
 
@@ -331,6 +332,32 @@ class ConectaEnteController extends \MapasCulturais\Controller
     }
 
     // chaves sem rótulo na descrição da entidade levam o texto da tela do core
+    /**
+     * O `data-field` que a tela usa para rolar até o campo, por chave pendente.
+     *
+     * @return array<string, string>
+     */
+    private function fieldAnchors(array $keys): array
+    {
+        $anchors = [];
+
+        foreach ($keys as $key) {
+            $anchors[$key] = $this->fieldAnchor($key);
+        }
+
+        return $anchors;
+    }
+
+    /** A chave é o próprio `data-field`, salvo quando a pendência não tem campo só dela. */
+    private function fieldAnchor(string $key): string
+    {
+        return match ($key) {
+            'registrationRangesVacancies', 'registrationRangesTotalResource' => 'registrationRanges',
+            PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => CultBrMetadata::REGISTRATION_CHANNELS,
+            default => $key,
+        };
+    }
+
     private function fieldLabel(array $description, string $key): string
     {
         return match ($key) {
