@@ -23,6 +23,8 @@ app.component('conectaente--opportunity-tab', {
             labels: {},
             anchors: {},
             fieldGroups: {},
+            // null enquanto nenhum grupo está aberto: aí a aba mostra o formulário inteiro
+            openGroup: null,
             loading: false,
             loadFailed: false,
             lastRequest: 0,
@@ -91,6 +93,19 @@ app.component('conectaente--opportunity-tab', {
     },
 
     methods: {
+        // a rota só classifica as pendências, e aqui há campo preenchido também
+        groupOf(field) {
+            return field.startsWith('conectaente_') ? 'plugin' : 'core';
+        },
+
+        showsField(field) {
+            return !this.openGroup || this.groupOf(field) === this.openGroup;
+        },
+
+        showsAnyField(fields) {
+            return fields.some((field) => this.showsField(field));
+        },
+
         scheduleReload() {
             // a resposta de uma consulta em curso já nasce velha
             this.lastRequest++;

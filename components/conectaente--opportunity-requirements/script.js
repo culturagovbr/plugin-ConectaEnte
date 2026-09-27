@@ -1,6 +1,8 @@
 app.component('conectaente--opportunity-requirements', {
     template: $TEMPLATES['conectaente--opportunity-requirements'],
 
+    emits: ['group'],
+
     props: {
         // null enquanto a rota não respondeu; [] quando não há pendência, e objeto quando há
         missing: {
@@ -106,6 +108,7 @@ app.component('conectaente--opportunity-requirements', {
             handler(groups) {
                 if (!this.groupChosen && !this.openGroup) {
                     this.openGroup = groups.find((group) => group.count)?.name ?? null;
+                    this.$emit('group', this.openGroup);
                 }
             },
         },
@@ -115,6 +118,7 @@ app.component('conectaente--opportunity-requirements', {
         chooseGroup(name) {
             this.groupChosen = true;
             this.openGroup = name;
+            this.$emit('group', name);
         },
 
         // o campo pendente pode estar escondido por uma condição da aba, então a busca é a cada resposta

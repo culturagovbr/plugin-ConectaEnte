@@ -34,6 +34,12 @@ O card mostra:
 
 O texto acompanha o status: no rascunho, os campos pendentes impedem a publicação; na oportunidade publicada, impedem o salvamento. A lista considera o que já foi salvo, não o que está sendo digitado.
 
+### O grupo escolhido filtra a tela
+
+A lista de pendências avisa a aba a cada troca de grupo (evento `group`), e a aba esconde os campos de fora: com "Campos nativos" aberto ficam os seis do core, com "Novos campos" os dez do plugin, e sem grupo escolhido aparece tudo. Card que fica sem nenhum campo do grupo desaparece.
+
+A origem do campo é decidida na tela pelo prefixo `conectaente_`, e não pelo mapa `groups` que a rota devolve: aquele mapa só traz as pendências, e o formulário também exibe campo já preenchido.
+
 ### Campos
 
 - `conectaente_executionType`.

@@ -59,6 +59,17 @@ class OpportunityTabTest extends TestCase
         $this->assertLessThan($legalEntity, $proponentTypes, 'O campo vem antes do multiselect que depende dele.');
     }
 
+    function testTheFormFollowsTheGroupTheUserOpened()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $template = $this->tabTemplate($this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT)));
+
+        $this->assertStringContainsString("showsField('registrationProponentTypes')", $template, 'Campo do core só aparece no grupo dele.');
+        $this->assertStringContainsString("showsField('" . CultBrMetadata::SEGMENTS . "')", $template, 'Campo do plugin idem, e o card inteiro depende dele.');
+        $this->assertStringContainsString("showsAnyField(['vacancies'", $template, 'Card misto aparece enquanto tiver algum campo do grupo.');
+    }
+
     function testFieldWhoseComponentIsNotFromTheCoreStillPublishesItsAnchor()
     {
         $this->loginAsSaasSuperAdmin();
