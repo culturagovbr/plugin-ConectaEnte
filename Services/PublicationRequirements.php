@@ -279,8 +279,8 @@ final class PublicationRequirements
                 array_push($messages, ...$this->choiceMessages(
                     $this->strings($block[$action->value] ?? []),
                     AffirmativeActionGroup::tryFrom(...),
-                    i::__('Por favor, selecione pelo menos uma subcategoria.'),
-                    fn($group) => sprintf(i::__('O grupo "%s" não tem correspondente no CultBR.'), $group),
+                    sprintf(i::__('Selecione pelo menos uma subcategoria de "%s".'), $action->text()),
+                    fn($group) => sprintf(i::__('O grupo "%s" de "%s" não tem correspondente no CultBR.'), $group, $action->text()),
                 ));
             }
         }

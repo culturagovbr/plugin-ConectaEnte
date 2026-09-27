@@ -217,10 +217,10 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
         $opportunity = $this->completeOpportunity();
 
         $opportunity->conectaente_affirmativeActions = ['opcoes' => ['bonus_agentes']];
-        $this->assertSame(['conectaente_affirmativeActions' => ['Por favor, selecione pelo menos uma subcategoria.']], $this->missing($opportunity));
+        $this->assertSame(['conectaente_affirmativeActions' => ['Selecione pelo menos uma subcategoria de "Bônus de pontuação para agentes culturais".']], $this->missing($opportunity));
 
         $opportunity->conectaente_affirmativeActions = ['opcoes' => ['bonus_agentes'], 'bonus_agentes' => ['pessoas_negras', 'quilombolas']];
-        $this->assertSame(['conectaente_affirmativeActions' => ['O grupo "quilombolas" não tem correspondente no CultBR.']], $this->missing($opportunity));
+        $this->assertSame(['conectaente_affirmativeActions' => ['O grupo "quilombolas" de "Bônus de pontuação para agentes culturais" não tem correspondente no CultBR.']], $this->missing($opportunity));
 
         $opportunity->conectaente_affirmativeActions = ['opcoes' => ['bonus_agentes'], 'bonus_agentes' => ['pessoas_negras']];
         $this->assertSame([], $this->missing($opportunity));
