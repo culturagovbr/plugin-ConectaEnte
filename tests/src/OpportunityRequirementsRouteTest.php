@@ -42,7 +42,7 @@ class OpportunityRequirementsRouteTest extends TestCase
 
         $this->assertSame(200, $this->send($this->requirements($opportunity->id)));
 
-        $this->assertSame(['sealed' => false, 'missing' => [], 'labels' => [], 'anchors' => []], $this->responseJson());
+        $this->assertSame(['sealed' => false, 'missing' => [], 'labels' => [], 'anchors' => [], 'groups' => []], $this->responseJson());
     }
 
     function testSealedIncompleteOpportunityListsThePluginAndTheCoreFields()
@@ -70,7 +70,7 @@ class OpportunityRequirementsRouteTest extends TestCase
 
         $this->assertSame(200, $this->send($this->requirements($opportunity->id)));
 
-        $this->assertSame(['sealed' => true, 'missing' => [], 'labels' => [], 'anchors' => []], $this->responseJson());
+        $this->assertSame(['sealed' => true, 'missing' => [], 'labels' => [], 'anchors' => [], 'groups' => []], $this->responseJson());
     }
 
     function testRouteAnswersWhatThePublicationRefuses()
@@ -186,6 +186,38 @@ class OpportunityRequirementsRouteTest extends TestCase
         $this->assertSame('vacancies', $json['anchors']['vacancies']);
         $this->assertSame(CultBrMetadata::SEGMENTS, $json['anchors'][CultBrMetadata::SEGMENTS]);
         $this->assertSame(array_keys($json['missing']), array_keys($json['anchors']), 'Toda pendência tem âncora, para a tela não decidir nada.');
+    }
+
+    function testEachPendencyComesWithItsOrigin()
+    {
+        // vacancies fica preenchido: a regra de faixas só compara a soma quando ele existe
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->registrationProponentTypes = [];
+        $opportunity->registrationRanges = [['label' => 'Faixa única', 'limit' => 1, 'value' => 1]];
+        $opportunity->{CultBrMetadata::SEGMENTS} = [];
+        $opportunity->{CultBrMetadata::REGISTRATION_CHANNELS} = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'email', 'descricao' => 'secretaria']]];
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $groups = $this->responseJson()['groups'];
+
+        $this->assertSame('core', $groups['registrationProponentTypes']);
+        $this->assertSame('core', $groups['registrationRangesVacancies'], 'Pseudo-chave de faixa nasce de um campo do core.');
+        $this->assertSame('plugin', $groups[CultBrMetadata::SEGMENTS]);
+        $this->assertSame('plugin', $groups['conectaente_registrationChannelsEmail'], 'Pseudo-chave do canal nasce de um campo do plugin.');
+    }
+
+    function testEveryPendencyHasAnOrigin()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT, isComplete: false);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $json = $this->responseJson();
+
+        $this->assertSame(array_keys($json['missing']), array_keys($json['groups']), 'A tela agrupa pelo que o servidor diz, sem decidir nada.');
+        $this->assertEmpty(array_diff($json['groups'], ['core', 'plugin']), 'Só existem essas duas origens.');
     }
 
     private function requirements(int $opportunityId): ServerRequestInterface

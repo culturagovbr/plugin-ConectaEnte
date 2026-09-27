@@ -217,6 +217,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
             'missing' => $this->withoutPlainRequiredMessages($missing),
             'labels' => $this->fieldLabels($opportunity, array_keys($missing)),
             'anchors' => $this->fieldAnchors(array_keys($missing)),
+            'groups' => $this->fieldGroups(array_keys($missing)),
         ]);
     }
 
@@ -348,6 +349,22 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
 
         return $missing;
+    }
+
+    /**
+     * A origem de cada chave pendente: campo do plugin ou campo do core que ele exige.
+     *
+     * @return array<string, string>
+     */
+    private function fieldGroups(array $keys): array
+    {
+        $groups = [];
+
+        foreach ($keys as $key) {
+            $groups[$key] = str_starts_with($key, CultBrMetadata::PREFIX) ? 'plugin' : 'core';
+        }
+
+        return $groups;
     }
 
     /**

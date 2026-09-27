@@ -17,6 +17,9 @@ use MapasCulturais\i;
 
 final class CultBrMetadata
 {
+    /** O que separa um campo do plugin de um campo do core na lista de pendências. */
+    const PREFIX = 'conectaente_';
+
     const EXECUTION_TYPE = 'conectaente_executionType';
     const SEGMENTS = 'conectaente_segments';
     const SEGMENTS_OTHER = 'conectaente_segmentsOther';
