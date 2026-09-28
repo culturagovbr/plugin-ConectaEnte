@@ -74,6 +74,7 @@ class ParInformationRouteTest extends TestCase
     function testEmptyCacheAnswersUnavailableWithoutCallingTheApi()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->app->mscache->delete(\ConectaEnte\Services\ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
         Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['data' => []]);
 
         $this->assertSame(200, $this->send($this->parInformation($opportunity->id)));

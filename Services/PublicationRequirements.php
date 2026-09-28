@@ -26,8 +26,10 @@ final class PublicationRequirements
     const YES = 'sim';
     const NO = 'nao';
 
-    public function __construct(private PublicationStamp $publicationStamp)
-    {
+    public function __construct(
+        private PublicationStamp $publicationStamp,
+        private ParInformationService $parInformationService,
+    ) {
     }
 
     /**
@@ -41,6 +43,7 @@ final class PublicationRequirements
             $this->legalEntityErrors($opportunity),
             $this->rulesErrors($opportunity),
             $this->rangeErrors($opportunity),
+            $this->parErrors($opportunity),
             $this->publishedAtErrors($opportunity),
             $this->registrationEndErrors($opportunity),
             $this->executionTypeErrors($opportunity),
@@ -90,6 +93,46 @@ final class PublicationRequirements
             i::__('O campo "Tipo de pessoa jurídica" é obrigatório.'),
             fn($value) => sprintf(i::__('O tipo de pessoa jurídica "%s" não tem correspondente no CultBR.'), $value),
         ));
+    }
+
+    private function parErrors(Opportunity $opportunity): array
+    {
+        $labels = [
+            CultBrMetadata::PAR_EXERCISE_ID => i::__('Exercício do PAR'),
+            CultBrMetadata::PAR_GOAL_ID => i::__('Meta do PAR'),
+            CultBrMetadata::PAR_ACTION_ID => i::__('Ação do PAR'),
+            CultBrMetadata::PAR_ACTIVITY_ID => i::__('Atividade do PAR'),
+        ];
+        $errors = [];
+
+        foreach ($labels as $key => $label) {
+            if (trim((string) $opportunity->$key) === '') {
+                $errors[$key] = [sprintf(i::__('O campo "%s" é obrigatório.'), $label)];
+            }
+        }
+
+        return $errors ?: $this->parChainErrors($opportunity);
+    }
+
+    // a publicação nunca espera a API: sem árvore no cache, a consistência fica para o envio
+    private function parChainErrors(Opportunity $opportunity): array
+    {
+        $result = $this->parInformationService->getForOpportunity($opportunity);
+
+        if (!$result?->tree) {
+            return [];
+        }
+
+        $isConsistent = $result->tree->isConsistentPath(
+            (string) $opportunity->{CultBrMetadata::PAR_EXERCISE_ID},
+            (string) $opportunity->{CultBrMetadata::PAR_GOAL_ID},
+            (string) $opportunity->{CultBrMetadata::PAR_ACTION_ID},
+            (string) $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID},
+        );
+
+        return $isConsistent ? [] : [
+            CultBrMetadata::PAR_ACTIVITY_ID => [i::__('A seleção do PAR não forma uma cadeia válida de exercício, meta, ação e atividade.')],
+        ];
     }
 
     private function rulesErrors(Opportunity $opportunity): array

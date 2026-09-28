@@ -37,6 +37,7 @@ class ParInformationServiceTest extends TestCase
     function testEmptyCacheIsUnavailableWithoutTouchingTheApi()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->app->mscache->delete(ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
         Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['data' => []]);
 
         $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);

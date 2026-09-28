@@ -101,7 +101,7 @@ class Plugin extends \MapasCulturais\Plugin
 
     function publicationRequirements(): PublicationRequirements
     {
-        return new PublicationRequirements($this->publicationStamp());
+        return new PublicationRequirements($this->publicationStamp(), $this->parInformationService());
     }
 
     /**

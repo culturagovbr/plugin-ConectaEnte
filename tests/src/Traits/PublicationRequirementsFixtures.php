@@ -25,7 +25,7 @@ trait PublicationRequirementsFixtures
 
     protected function missing(Opportunity $opportunity): array
     {
-        return (new PublicationRequirements(Plugin::instance()->publicationStamp()))->missing($opportunity);
+        return Plugin::instance()->publicationRequirements()->missing($opportunity);
     }
 
     /**
@@ -78,7 +78,9 @@ trait PublicationRequirementsFixtures
     protected function federativeSeal(): Seal
     {
         $seal = $this->createSeal();
-        $this->createFederativeEntityWithSeal($seal, document: sprintf('%014d', random_int(0, 99999999999999)));
+        $federativeEntity = $this->createFederativeEntityWithSeal($seal, document: sprintf('%014d', random_int(0, 99999999999999)));
+        // a árvore em cache casa a cadeia da fixture: a consistência roda e não acusa nada
+        $this->primeParInformationCache($federativeEntity, $this->referenceParTree());
 
         return $seal;
     }
@@ -126,6 +128,20 @@ trait PublicationRequirementsFixtures
         $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'nao'];
         $opportunity->conectaente_affirmativeActions = ['opcoes' => [AffirmativeAction::NOT_PLANNED->value]];
         $opportunity->conectaente_quotaReservation = [$notApplicable, $notApplicable, $notApplicable, ['vagas' => 10, 'valorDestinado' => 1000]];
+        $opportunity->{CultBrMetadata::PAR_EXERCISE_ID} = '2024';
+        $opportunity->{CultBrMetadata::PAR_GOAL_ID} = '7';
+        $opportunity->{CultBrMetadata::PAR_ACTION_ID} = '70';
+        $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID} = '700';
+    }
+
+    /** A árvore que casa a cadeia gravada por `fillEditalFields`. */
+    protected function referenceParTree(): array
+    {
+        return [[
+            'id' => '2024',
+            'ano' => '2024',
+            'metas' => [['id' => '7', 'nome' => 'Meta 1', 'acoes' => [['id' => '70', 'nome' => 'Ação 1', 'atividades' => [['id' => '700', 'nome' => 'Atividade 1']]]]]],
+        ]];
     }
 
     private function attachRules(Opportunity $opportunity): void

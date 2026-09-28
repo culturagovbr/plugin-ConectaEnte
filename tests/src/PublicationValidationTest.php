@@ -2,6 +2,7 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use DateTime;
 use MapasCulturais\Entities\Opportunity;
@@ -180,6 +181,17 @@ class PublicationValidationTest extends TestCase
         $published = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
         $this->assertSame(400, $this->send($this->PUT($published, ['shortDescription' => 'Nova descrição'])));
         $this->assertSame([self::MISSING_KEY], array_keys($this->responseErrors()));
+    }
+
+    function testPublishingWithoutAParLevelIsRefusedNamingIt()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID} = '';
+        $opportunity->save(true);
+
+        $this->assertSame(400, $this->send($this->requestFactory->POST('opportunity', 'publish', [$opportunity->id])));
+
+        $this->assertArrayHasKey(CultBrMetadata::PAR_ACTIVITY_ID, json_decode((string) $this->app->response->getBody(), true)['data']);
     }
 
     function testUnpublishingIncompleteSealedOpportunityIsNotBlocked()
