@@ -101,8 +101,7 @@ class OpportunityRequirementsRouteTest extends TestCase
             'rules' => 'Regulamento',
             'term-area' => 'Área de Interesse',
             'registrationProponentTypes' => 'Tipos do proponente',
-            'registrationRangesVacancies' => 'Faixas/linhas',
-            'registrationRangesTotalResource' => 'Faixas/linhas',
+            'registrationRanges' => 'Faixas/linhas',
             'conectaente_registrationChannelsEmail' => 'Formas de inscrição previstas no edital',
         ], $this->responseJson()['labels']);
     }
@@ -168,8 +167,6 @@ class OpportunityRequirementsRouteTest extends TestCase
 
         $anchors = $this->responseJson()['anchors'];
 
-        $this->assertSame('registrationRanges', $anchors['registrationRangesVacancies']);
-        $this->assertSame('registrationRanges', $anchors['registrationRangesTotalResource']);
         $this->assertSame(CultBrMetadata::REGISTRATION_CHANNELS, $anchors['conectaente_registrationChannelsEmail']);
     }
 
@@ -204,7 +201,7 @@ class OpportunityRequirementsRouteTest extends TestCase
         $groups = $this->responseJson()['groups'];
 
         $this->assertSame('core', $groups['registrationProponentTypes']);
-        $this->assertSame('core', $groups['registrationRangesVacancies'], 'Pseudo-chave de faixa nasce de um campo do core.');
+        $this->assertSame('core', $groups['registrationRanges']);
         $this->assertSame('plugin', $groups[CultBrMetadata::SEGMENTS]);
         $this->assertSame('plugin', $groups['conectaente_registrationChannelsEmail'], 'Pseudo-chave do canal nasce de um campo do plugin.');
     }

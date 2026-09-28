@@ -154,14 +154,15 @@ final class PublicationRequirements
         $errors = [];
 
         if ($vacancies !== null && $this->rangeSum($ranges, 'limit', 'intval') !== (int) $vacancies) {
-            $errors['registrationRangesVacancies'] = [i::__('O total de vagas das categorias deve ser igual ao Total de vagas definido;')];
+            $errors[] = i::__('O total de vagas das categorias deve ser igual ao Total de vagas definido;');
         }
 
         if ($totalResource !== null && abs($this->rangeSum($ranges, 'value', 'floatval') - (float) $totalResource) > self::RANGE_VALUE_TOLERANCE) {
-            $errors['registrationRangesTotalResource'] = [i::__('O total em valores das categorias deve ser igual ao Valor total definido;')];
+            $errors[] = i::__('O total em valores das categorias deve ser igual ao Valor total definido;');
         }
 
-        return $errors;
+        // as duas somas são do mesmo campo: um passo só na lista, com o que estiver divergindo
+        return $errors ? ['registrationRanges' => $errors] : [];
     }
 
     private function rangeSum(array $ranges, string $column, callable $cast): int|float

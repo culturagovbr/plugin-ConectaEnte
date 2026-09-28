@@ -36,8 +36,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         CultBrMetadata::PRIORITY_TERRITORIES,
         'vacancies',
         'totalResource',
-        'registrationRangesVacancies',
-        'registrationRangesTotalResource',
+        'registrationRanges',
         CultBrMetadata::QUOTA_RESERVATION,
         CultBrMetadata::FUNDING_SOURCES,
         CultBrMetadata::REGISTRATION_CHANNELS,
@@ -450,7 +449,6 @@ class ConectaEnteController extends \MapasCulturais\Controller
     private function fieldAnchor(string $key): string
     {
         return match ($key) {
-            'registrationRangesVacancies', 'registrationRangesTotalResource' => 'registrationRanges',
             PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => CultBrMetadata::REGISTRATION_CHANNELS,
             default => $key,
         };
@@ -462,7 +460,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         return match ($key) {
             'rules' => i::__('Regulamento'),
             'term-area' => i::__('Área de Interesse'),
-            'registrationRangesVacancies', 'registrationRangesTotalResource' => i::__('Faixas/linhas'),
+            'registrationRanges' => i::__('Faixas/linhas'),
             PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => $description[CultBrMetadata::REGISTRATION_CHANNELS]['label'],
             default => ($description[$key]['label'] ?? '') ?: $key,
         };

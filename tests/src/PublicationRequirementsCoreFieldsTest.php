@@ -126,9 +126,11 @@ class PublicationRequirementsCoreFieldsTest extends TestCase
         ];
 
         $this->assertSame([
-            'registrationRangesVacancies' => ['O total de vagas das categorias deve ser igual ao Total de vagas definido;'],
-            'registrationRangesTotalResource' => ['O total em valores das categorias deve ser igual ao Valor total definido;'],
-        ], $this->missing($opportunity));
+            'registrationRanges' => [
+                'O total de vagas das categorias deve ser igual ao Total de vagas definido;',
+                'O total em valores das categorias deve ser igual ao Valor total definido;',
+            ],
+        ], $this->missing($opportunity), 'As duas somas são do mesmo campo: um passo, com as duas mensagens.');
     }
 
     function testRangesAddingUpToTheTotalsWithinACentPass()
