@@ -28,6 +28,18 @@ class OpportunityFieldComponentsTest extends TestCase
         $this->assertArrayHasKey('conectaente--federative-entity-par', $this->fieldComponentScripts());
     }
 
+    function testEveryComponentAnswersByItsOwnDirectoryName()
+    {
+        foreach ($this->componentScripts() as $name => $script) {
+            $this->assertStringContainsString("app.component('{$name}'", $script, 'Porte por cópia esquece de trocar o nome registrado.');
+            $this->assertStringContainsString("\$TEMPLATES['{$name}']", $script);
+
+            if (file_exists(PLUGINS_PATH . "ConectaEnte/components/{$name}/texts.php")) {
+                $this->assertStringContainsString("Utils.getTexts('{$name}')", $script, 'Textos buscados por outro nome voltam vazios.');
+            }
+        }
+    }
+
     /** @return array<string, string> */
     private function componentScripts(): array
     {
