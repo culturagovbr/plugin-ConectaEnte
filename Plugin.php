@@ -62,7 +62,10 @@ class Plugin extends \MapasCulturais\Plugin
 
     function client(): Client
     {
-        return new Client($this->_config['host'], $this->transport ?? $this->defaultTransport(), $this->isDevMode());
+        $transport = $this->transport ?? $this->defaultTransport();
+
+        // só a fixture precisa servir a qualquer ente; com transporte real o cnpj continua filtrando
+        return new Client($this->_config['host'], $transport, $transport instanceof FixtureTransport);
     }
 
     /** Janela alternativa, para os testes controlarem a duração. */

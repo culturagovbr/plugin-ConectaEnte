@@ -3,6 +3,7 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Http\Transport\FixtureTransport;
+use Tests\ConectaEnte\Doubles\FakeTransport;
 use ConectaEnte\Plugin;
 use Tests\Abstract\TestCase;
 
@@ -34,6 +35,20 @@ class DevModeTest extends TestCase
     function testLiveIsTheDefault()
     {
         $this->assertFalse(Plugin::instance()->isDevMode(), 'Sem declaração da instalação, o plugin fala com o CultBR de verdade.');
+    }
+
+    function testTheEnteFilterHoldsWithARealTransport()
+    {
+        $plugin = Plugin::instance();
+        $plugin->transport = FakeTransport::replying(200, ['data' => [['cnpj' => '99999999999999', 'exercicios' => [['id' => 'de-outro-ente']]]]]);
+
+        try {
+            $resultado = $plugin->client()->getParInformation('token', '12200176000176');
+        } finally {
+            $plugin->transport = null;
+        }
+
+        $this->assertNull($resultado->tree->exercises[0] ?? null, 'Em modo dev a fixture serve a qualquer ente; um transporte de verdade continua conferindo o cnpj.');
     }
 
     private function fixtureTransport(): FixtureTransport
