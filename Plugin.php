@@ -228,36 +228,6 @@ class Plugin extends \MapasCulturais\Plugin
             $this->part('conectaente/opportunity-tab');
         });
 
-        // Não bloqueia seleção parcial nem publicação: só recusa uma cadeia de ids que não
-        // existe na árvore do ente (ex. atividade de outra ação), quando os 4 estão presentes.
-        $app->hook('entity(Opportunity).validationErrors', function (&$errors) use ($app) {
-            /** @var Opportunity $this */
-            if ($this->parent) {
-                return;
-            }
-
-            $ids = array_filter([
-                'parExercicioId' => (string) ($this->parExercicioId ?? ''),
-                'parMetaId' => (string) ($this->parMetaId ?? ''),
-                'parAcaoId' => (string) ($this->parAcaoId ?? ''),
-                'parAtividadeId' => (string) ($this->parAtividadeId ?? ''),
-            ], fn($value) => $value !== '');
-
-            if (count($ids) !== 4) {
-                return;
-            }
-
-            $result = Plugin::instance()->parInformationService()->getForOpportunity($this);
-
-            if (!$result || !$result->tree) {
-                return;
-            }
-
-            if (!$result->tree->isConsistentPath($ids['parExercicioId'], $ids['parMetaId'], $ids['parAcaoId'], $ids['parAtividadeId'])) {
-                $errors['parAtividadeId'] = [i::__('A seleção do PAR não forma uma cadeia válida (exercício/meta/ação/atividade).')];
-            }
-        });
-
         // por último: o tema registra seus hooks depois do plugin, e os erros dele também ficam no PATCH
         $app->hook('entity(Opportunity).validationErrors', function (&$errors) {
             Plugin::instance()->requirePublicationFields($this, $errors);
