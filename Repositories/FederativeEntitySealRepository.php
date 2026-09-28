@@ -4,8 +4,11 @@ namespace ConectaEnte\Repositories;
 
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use Doctrine\ORM\Query\Expr\Join;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\OpportunitySealRelation;
 use MapasCulturais\Entities\Seal;
+use MapasCulturais\Entities\SealRelation;
 
 class FederativeEntitySealRepository extends \MapasCulturais\Repository
 {
@@ -51,6 +54,36 @@ class FederativeEntitySealRepository extends \MapasCulturais\Repository
             ->setParameter('status', FederativeEntity::STATUS_ENABLED)
             ->getQuery()
             ->getSingleColumnResult();
+    }
+
+    /**
+     * Entes ativos com selo aplicado a alguma oportunidade viva — os únicos cuja árvore do PAR alguém abre.
+     *
+     * Selo e relação seguem o critério do core em `getSealRelations()`. Oportunidade viva é rascunho
+     * ou publicada: fase, arquivada e lixeira não têm quem edite os campos do CultBR.
+     *
+     * @return FederativeEntity[]
+     */
+    function findEntitiesSealingLiveOpportunities(): array
+    {
+        return $this->getEntityManager()->createQueryBuilder()
+            ->select('federativeEntity')
+            ->distinct()
+            ->from(FederativeEntity::class, 'federativeEntity')
+            ->join('federativeEntity.seals', 'sealLink')
+            ->join('sealLink.seal', 'seal')
+            ->join(OpportunitySealRelation::class, 'sealRelation', Join::WITH, 'sealRelation.seal = sealLink.seal')
+            ->join('sealRelation.owner', 'opportunity')
+            ->where('federativeEntity.status = :entityStatus')
+            ->andWhere('seal.status IN (:sealStatuses)')
+            ->andWhere('sealRelation.status = :relationStatus')
+            ->andWhere('opportunity.status >= :opportunityStatus')
+            ->setParameter('entityStatus', FederativeEntity::STATUS_ENABLED)
+            ->setParameter('sealStatuses', [Seal::STATUS_ENABLED, Seal::STATUS_RELATED])
+            ->setParameter('relationStatus', SealRelation::STATUS_ENABLED)
+            ->setParameter('opportunityStatus', Opportunity::STATUS_DRAFT)
+            ->getQuery()
+            ->getResult();
     }
 
     /**
