@@ -273,6 +273,18 @@ class OpportunityRequirementsRouteTest extends TestCase
         );
     }
 
+    function testPublishedOpportunityStillListsWhatTheCultBrExpects()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
+
+        $this->assertSame(200, $this->send($this->requirements($opportunity->id)));
+
+        $this->assertNotEmpty(
+            $this->responseJson()['missing'],
+            'Salvar deixou de cobrar, mas a lista continua dizendo o que falta — é o único aviso que resta ao gestor.',
+        );
+    }
+
     private function requirements(int $opportunityId): ServerRequestInterface
     {
         return $this->requestFactory->GET('conectaente', 'opportunityRequirements', [$opportunityId], ajax: true);
