@@ -11,7 +11,6 @@ final class ParAtividade implements JsonSerializable
     public function __construct(
         public readonly string $id,
         public readonly ?string $nome,
-        public readonly ?string $ano,
         public readonly ?string $valor,
     ) {
     }
@@ -21,7 +20,6 @@ final class ParAtividade implements JsonSerializable
         return new self(
             id: self::id($data),
             nome: self::scalar($data, 'nome'),
-            ano: self::scalar($data, 'ano'),
             valor: self::scalar($data, 'valor'),
         );
     }

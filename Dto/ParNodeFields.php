@@ -3,7 +3,7 @@
 namespace ConectaEnte\Dto;
 
 /**
- * Parsing comum aos 4 níveis do PAR: só `id` é garantido pelo contrato, o resto vira `null` quando ausente.
+ * Parsing comum aos níveis do PAR: só `id` é garantido pelo contrato, o resto vira `null` quando ausente.
  */
 trait ParNodeFields
 {
@@ -25,6 +25,6 @@ trait ParNodeFields
 
     private function scalarFields(): array
     {
-        return ['id' => $this->id, 'nome' => $this->nome, 'ano' => $this->ano, 'valor' => $this->valor];
+        return ['id' => $this->id, 'nome' => $this->nome, 'valor' => $this->valor];
     }
 }

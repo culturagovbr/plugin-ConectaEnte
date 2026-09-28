@@ -12,7 +12,6 @@ final class ParAcao implements JsonSerializable
     public function __construct(
         public readonly string $id,
         public readonly ?string $nome,
-        public readonly ?string $ano,
         public readonly ?string $valor,
         public readonly array $atividades,
     ) {
@@ -23,7 +22,6 @@ final class ParAcao implements JsonSerializable
         return new self(
             id: self::id($data),
             nome: self::scalar($data, 'nome'),
-            ano: self::scalar($data, 'ano'),
             valor: self::scalar($data, 'valor'),
             atividades: self::children($data, 'atividades', [ParAtividade::class, 'fromArray']),
         );

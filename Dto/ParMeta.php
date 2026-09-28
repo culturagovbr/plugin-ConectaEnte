@@ -12,7 +12,6 @@ final class ParMeta implements JsonSerializable
     public function __construct(
         public readonly string $id,
         public readonly ?string $nome,
-        public readonly ?string $ano,
         public readonly ?string $valor,
         public readonly array $acoes,
     ) {
@@ -23,7 +22,6 @@ final class ParMeta implements JsonSerializable
         return new self(
             id: self::id($data),
             nome: self::scalar($data, 'nome'),
-            ano: self::scalar($data, 'ano'),
             valor: self::scalar($data, 'valor'),
             acoes: self::children($data, 'acoes', [ParAcao::class, 'fromArray']),
         );
