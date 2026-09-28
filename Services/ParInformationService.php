@@ -9,10 +9,7 @@ use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 
 /**
- * Lê a árvore do PAR do ente ligado a uma oportunidade pelo selo, só do
- * cache (por ente, não por oportunidade — entes com várias oportunidades
- * compartilham o mesmo dado). Nunca chama a API: quem popula o cache é o
- * `Jobs\ParInformationSyncJob`, fora do caminho da requisição do usuário.
+ * Lê a árvore do PAR só do cache, por Ente Federado; quem a busca na API é o job de sincronização.
  */
 class ParInformationService
 {
@@ -50,9 +47,7 @@ class ParInformationService
     public function getForFederativeEntity(FederativeEntity $federativeEntity): ParInformationResult
     {
         $app = App::i();
-        // uma leitura só: contains()+fetch() teria uma janela para o cache expirar entre as
-        // duas chamadas, e o tipo guardado também precisa ser conferido (uma classe antiga
-        // sobrevivendo no cache viraria __PHP_Incomplete_Class, não um ParInformationResult).
+        // uma leitura só, e conferindo o tipo: classe antiga no cache vira __PHP_Incomplete_Class
         $cached = $app->cache->fetch(self::cacheKey($federativeEntity));
 
         if ($cached instanceof ParInformationResult) {

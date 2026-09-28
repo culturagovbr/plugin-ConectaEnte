@@ -6,9 +6,7 @@ use JsonSerializable;
 use MapasCulturais\App;
 
 /**
- * Árvore do PAR de um ente: Exercício -> Meta -> Ação -> Atividade. Só `id` é
- * garantido em cada nível pelo contrato (`ParInformationEnteSchema`); o resto
- * vira `null` quando ausente, em vez de estourar.
+ * Árvore do PAR de um ente: Exercício -> Meta -> Ação -> Atividade; só `id` é garantido em cada nível.
  */
 final class ParInformation implements JsonSerializable
 {
@@ -20,10 +18,7 @@ final class ParInformation implements JsonSerializable
     }
 
     /**
-     * `data` é uma lista de entes, não a árvore de um só: casa pelo `cnpj`
-     * (normalizado, sem pontuação) em vez de assumir `data[0]`. Mais de um
-     * item batendo o mesmo cnpj não deveria acontecer, mas o contrato não
-     * proíbe — usa o primeiro e registra no log, em vez de escolher em silêncio.
+     * A árvore do ente cujo cnpj casa; `data` é lista de entes, e `data[0]` não é o certo.
      */
     public static function fromApiListResponse(array $body, string $document): self
     {
@@ -59,9 +54,7 @@ final class ParInformation implements JsonSerializable
     }
 
     /**
-     * Confere se a cadeia de ids forma um caminho válido na árvore: cada nível
-     * precisa ser filho do anterior. Não decide se a seleção é obrigatória —
-     * só que, se presente, é consistente.
+     * Se a cadeia de ids é um caminho da árvore: cada nível filho do anterior.
      */
     public function isConsistentPath(string $exercicioId, string $metaId, string $acaoId, string $atividadeId): bool
     {
