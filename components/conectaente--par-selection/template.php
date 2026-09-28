@@ -6,10 +6,12 @@
 $this->import('
     conectaente--federative-entity-par
     mc-alert
+    mc-loading
 ');
 ?>
 <div class="conectaente-par-selection" :class="classes">
-    <mc-alert v-if="!available" type="warning">{{ text('unavailable') }}</mc-alert>
+    <mc-loading v-if="loading" :condition="true"></mc-loading>
+    <mc-alert v-else-if="!available" type="warning">{{ text('unavailable') }}</mc-alert>
     <conectaente--federative-entity-par
         v-else
         :exercises="exercises"

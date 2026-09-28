@@ -29,6 +29,7 @@ app.component('conectaente--par-selection', {
             exercises: [],
             // até a rota responder não há por que avisar de indisponibilidade
             available: true,
+            loading: true,
             selection: this.entitySelection(),
         };
     },
@@ -78,6 +79,8 @@ app.component('conectaente--par-selection', {
                 this.exercises = parInformation.exercicios || [];
             } catch (error) {
                 this.available = false;
+            } finally {
+                this.loading = false;
             }
         },
     },

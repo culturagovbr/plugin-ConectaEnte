@@ -117,7 +117,7 @@ final class PublicationRequirements
     // a publicação nunca espera a API: sem árvore no cache, a consistência fica para o envio
     private function parChainErrors(Opportunity $opportunity): array
     {
-        $result = $this->parInformationService->getForOpportunity($opportunity);
+        $result = $this->parInformationService->cachedForOpportunity($opportunity);
 
         if (!$result?->tree) {
             return [];

@@ -30,6 +30,7 @@ class Plugin extends \MapasCulturais\Plugin
     const DEFAULT_HOST = 'https://ente.conecta.hmg.cultbr.cultura.gov.br';
     const DEFAULT_PASSWORD_WINDOW = 120;
     const DEFAULT_PAR_SYNC_INTERVAL_MINUTES = 30;
+    const DEFAULT_PAR_CACHE_TTL_MINUTES = 5;
 
     function __construct(array $config = [])
     {
@@ -37,6 +38,7 @@ class Plugin extends \MapasCulturais\Plugin
             'host' => env('CONECTAENTE_HOST', self::DEFAULT_HOST),
             'passwordWindow' => (int) env('CONECTAENTE_PASSWORD_WINDOW', self::DEFAULT_PASSWORD_WINDOW),
             'parSyncIntervalMinutes' => (int) env('CONECTAENTE_PAR_SYNC_INTERVAL_MINUTES', self::DEFAULT_PAR_SYNC_INTERVAL_MINUTES),
+            'parCacheTtlMinutes' => (int) env('CONECTAENTE_PAR_CACHE_TTL_MINUTES', self::DEFAULT_PAR_CACHE_TTL_MINUTES),
         ];
 
         parent::__construct($config);
@@ -120,8 +122,8 @@ class Plugin extends \MapasCulturais\Plugin
 
     function parInformationService(): ParInformationService
     {
-        // TTL de três intervalos: a árvore sobrevive a duas sincronizações perdidas sem expirar
-        return $this->parInformationService ?? new ParInformationService($this->_config['parSyncIntervalMinutes'] * 3 * 60);
+        // TTL curto: o CultBR muda o PAR em intervalo imprevisível, e árvore vencida faz o gestor escolher o que não existe
+        return $this->parInformationService ?? new ParInformationService($this->_config['parCacheTtlMinutes'] * 60, $this->client());
     }
 
     public function _init(){

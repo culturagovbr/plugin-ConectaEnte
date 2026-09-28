@@ -38,8 +38,8 @@ final class ParInformationResult
         return new self(tree: null, unreachable: false, notFound: true);
     }
 
-    public static function unavailable(): self
+    public static function unavailable(?string $message = null): self
     {
-        return new self(tree: null, unreachable: false, notFound: false, unavailable: true);
+        return new self(tree: null, unreachable: false, notFound: false, unavailable: true, message: $message);
     }
 }

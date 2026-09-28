@@ -71,16 +71,36 @@ class ParInformationRouteTest extends TestCase
         $this->assertSame(['id', 'nome', 'valor', 'acoes'], array_keys($body['exercicios'][0]['metas'][0]));
     }
 
-    function testEmptyCacheAnswersUnavailableWithoutCallingTheApi()
+    function testEmptyCacheGetsTheTreeFromTheApi()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
-        $this->app->mscache->delete(\ConectaEnte\Services\ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
-        Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['data' => []]);
+        $federativeEntity = $this->resolveFederativeEntity($opportunity);
+        $this->app->mscache->delete(\ConectaEnte\Services\ParInformationService::cacheKey($federativeEntity));
+        Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['data' => [
+            ['cnpj' => $federativeEntity->document, 'exercicios' => [['id' => '2026', 'ano' => '2026']]],
+        ]]);
 
         $this->assertSame(200, $this->send($this->parInformation($opportunity->id)));
 
-        $this->assertSame(['available' => false, 'exercicios' => []], $this->responseJson());
-        $this->assertSame([], $transport->requestedUrls, 'A requisição do usuário nunca espera a API.');
+        $body = $this->responseJson();
+        $this->assertTrue($body['available'], 'Cache frio não vira aviso de indisponibilidade na tela.');
+        $this->assertSame('2026', $body['exercicios'][0]['ano']);
+        $this->assertCount(1, $transport->requestedUrls);
+    }
+
+    function testApiOutOfReachWithNothingCachedAnswersUnavailable()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->app->mscache->delete(\ConectaEnte\Services\ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
+        Plugin::instance()->transport = FakeTransport::unreachable();
+
+        $this->assertSame(200, $this->send($this->parInformation($opportunity->id)));
+
+        $this->assertSame(
+            ['available' => false, 'exercicios' => []],
+            $this->responseJson(),
+            'Sem cache e sem API, a tela avisa em vez de mostrar lista vazia.',
+        );
     }
 
     function testCachedNotFoundAnswersUnavailable()
@@ -92,7 +112,11 @@ class ParInformationRouteTest extends TestCase
 
         $this->assertSame(200, $this->send($this->parInformation($opportunity->id)));
 
-        $this->assertSame(['available' => false, 'exercicios' => []], $this->responseJson(), 'Ambiente sem a rota do PAR não é "ente sem dados".');
+        $this->assertSame(
+            ['available' => false, 'exercicios' => []],
+            $this->responseJson(),
+            'Ambiente sem a rota do PAR não é "ente sem dados".',
+        );
     }
 
     function testNodeWithoutANameKeepsItsIdInTheJson()
@@ -107,6 +131,14 @@ class ParInformationRouteTest extends TestCase
         $goal = $this->responseJson()['exercicios'][0]['metas'][0];
         $this->assertSame('m1', $goal['id'], 'É o id que a tela usa como rótulo quando o nome vem nulo.');
         $this->assertNull($goal['nome']);
+    }
+
+    // o Plugin é singleton do processo: transporte e serviço trocados aqui vazariam para os testes seguintes
+    protected function tearDown(): void
+    {
+        Plugin::instance()->transport = null;
+
+        parent::tearDown();
     }
 
     private function parInformation(int $opportunityId): ServerRequestInterface

@@ -34,8 +34,8 @@ class ParInformationSyncJobTest extends TestCase
         $this->executeJob();
 
         $service = Plugin::instance()->parInformationService();
-        $this->assertSame('a-2024', $service->getForFederativeEntity($first)->tree->exercises[0]->id);
-        $this->assertSame('b-2024', $service->getForFederativeEntity($second)->tree->exercises[0]->id);
+        $this->assertSame('a-2024', $service->cachedForFederativeEntity($first)->tree->exercises[0]->id);
+        $this->assertSame('b-2024', $service->cachedForFederativeEntity($second)->tree->exercises[0]->id);
     }
 
     function testWritesNotFoundToTheCache()
@@ -46,7 +46,7 @@ class ParInformationSyncJobTest extends TestCase
 
         $this->executeJob();
 
-        $result = Plugin::instance()->parInformationService()->getForFederativeEntity($federativeEntity);
+        $result = Plugin::instance()->parInformationService()->cachedForFederativeEntity($federativeEntity);
 
         $this->assertTrue($result->notFound, 'O ambiente sem a rota fica registrado, para a tela avisar sem esperar a API.');
     }
@@ -60,7 +60,7 @@ class ParInformationSyncJobTest extends TestCase
 
         $this->executeJob();
 
-        $result = Plugin::instance()->parInformationService()->getForFederativeEntity($federativeEntity);
+        $result = Plugin::instance()->parInformationService()->cachedForFederativeEntity($federativeEntity);
 
         $this->assertNotNull($result->tree, 'A árvore boa fica até a API voltar.');
     }
@@ -74,10 +74,13 @@ class ParInformationSyncJobTest extends TestCase
 
         $this->executeJob();
 
-        $result = Plugin::instance()->parInformationService()->getForFederativeEntity($federativeEntity);
+        $result = Plugin::instance()->parInformationService()->cachedForFederativeEntity($federativeEntity);
 
-        $this->assertTrue($result->unavailable, 'Token rejeitado não pode virar "ente sem PAR" no cache.');
-        $this->assertTrue($handler->hasWarningThatContains("falha ao atualizar o ente {$federativeEntity->id}"));
+        $this->assertNull($result, 'Token rejeitado não pode virar "ente sem PAR" no cache.');
+        $this->assertTrue(
+            $handler->hasWarningThatContains("falha ao atualizar o ente {$federativeEntity->id}: Token inválido"),
+            'Sem o motivo, o log não distingue token rejeitado de CultBR fora do ar.',
+        );
     }
 
     function testTrashedEntityIsSkipped()
@@ -105,8 +108,8 @@ class ParInformationSyncJobTest extends TestCase
         $this->executeJob();
 
         $service = Plugin::instance()->parInformationService();
-        $this->assertTrue($service->getForFederativeEntity($first)->unavailable);
-        $this->assertSame('b-2024', $service->getForFederativeEntity($second)->tree->exercises[0]->id);
+        $this->assertNull($service->cachedForFederativeEntity($first), 'Ente que estourou não deixa nada no cache.');
+        $this->assertSame('b-2024', $service->cachedForFederativeEntity($second)->tree->exercises[0]->id);
         $this->assertTrue($handler->hasErrorThatContains("exceção ao atualizar o ente {$first->id}"));
     }
 

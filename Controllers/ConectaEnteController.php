@@ -264,8 +264,8 @@ class ConectaEnteController extends \MapasCulturais\Controller
             $this->json(['available' => true, 'exercicios' => []]);
         }
 
-        // cache vazio ou caminho ausente na API não é "ente sem dados": não se sabe se há dado
-        if ($result->unavailable || $result->notFound) {
+        // sem árvore não se sabe se há dado: a tela avisa em vez de mostrar lista vazia
+        if (!$result->tree) {
             $this->json(['available' => false, 'exercicios' => []]);
         }
 

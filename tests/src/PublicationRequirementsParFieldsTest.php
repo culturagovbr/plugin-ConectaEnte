@@ -3,9 +3,11 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Plugin;
 use ConectaEnte\Services\ParInformationService;
 use MapasCulturais\Entities\Opportunity;
 use Tests\Abstract\TestCase;
+use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 
 /**
@@ -91,6 +93,17 @@ class PublicationRequirementsParFieldsTest extends TestCase
             $this->missing($opportunity),
             'Sem a árvore à mão, a publicação não fica presa esperando a API; a cadeia é conferida no envio.',
         );
+    }
+
+    function testTheRuleNeverWaitsForTheApi()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->dropParCache($opportunity);
+        Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['data' => []]);
+
+        $this->missing($opportunity);
+
+        $this->assertSame([], $transport->requestedUrls, 'Salvar o edital não pode ficar preso esperando o CultBR responder.');
     }
 
     private function withoutParSelection(Opportunity $opportunity): Opportunity

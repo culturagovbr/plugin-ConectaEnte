@@ -10,7 +10,7 @@ use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 
 /**
- * O serviço só lê o cache; quem fala com a API é o job de sincronização.
+ * O serviço serve o cache enquanto ele está fresco e busca na API quando não está.
  */
 class ParInformationServiceTest extends TestCase
 {
@@ -34,27 +34,62 @@ class ParInformationServiceTest extends TestCase
         $this->assertSame('2024', $result->tree->exercises[0]->year);
     }
 
-    function testEmptyCacheIsUnavailableWithoutTouchingTheApi()
+    function testEmptyCacheFetchesFromTheApiAndKeepsIt()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
-        $this->app->mscache->delete(ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
+        $federativeEntity = $this->resolveFederativeEntity($opportunity);
+        $this->app->mscache->delete(ParInformationService::cacheKey($federativeEntity));
+        Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['data' => [
+            ['cnpj' => $federativeEntity->document, 'exercicios' => [['id' => '2026', 'ano' => '2026']]],
+        ]]);
+
+        $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
+
+        $this->assertSame('2026', $result->tree->exercises[0]->year, 'Cache vazio não trava a tela: busca na hora.');
+        $this->assertCount(1, $transport->requestedUrls);
+        $this->assertInstanceOf(
+            \ConectaEnte\Http\ParInformationResult::class,
+            $this->app->mscache->fetch(ParInformationService::cacheKey($federativeEntity)),
+            'O que foi buscado fica no cache, para a próxima abertura não pagar de novo.',
+        );
+    }
+
+    function testWarmCacheIsServedWithoutTouchingTheApi()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->primeParInformationCache($this->resolveFederativeEntity($opportunity), [['id' => '2024', 'ano' => '2024']]);
         Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['data' => []]);
 
         $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
 
-        $this->assertTrue($result->unavailable);
-        $this->assertSame([], $transport->requestedUrls, 'A requisição do usuário nunca espera a API.');
+        $this->assertSame('2024', $result->tree->exercises[0]->year);
+        $this->assertSame([], $transport->requestedUrls, 'Dentro da validade, a árvore sai do cache.');
     }
 
-    function testGarbageInTheCacheIsUnavailableInsteadOfThrowing()
+    function testApiFailureLeavesNoTreeAndIsNotCached()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $federativeEntity = $this->resolveFederativeEntity($opportunity);
+        $this->app->mscache->delete(ParInformationService::cacheKey($federativeEntity));
+        Plugin::instance()->transport = FakeTransport::unreachable();
+
+        $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
+
+        $this->assertNull($result->tree);
+        $this->assertTrue($result->unreachable, 'O motivo precisa sobreviver: é ele que a tela mostra ao gestor.');
+        $this->assertFalse($this->app->mscache->contains(ParInformationService::cacheKey($federativeEntity)), 'CultBR fora do ar não vira "ente sem PAR" por cinco minutos.');
+    }
+
+    function testGarbageInTheCacheIsIgnoredInsteadOfThrowing()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
         $federativeEntity = $this->resolveFederativeEntity($opportunity);
         $this->app->mscache->save(ParInformationService::cacheKey($federativeEntity), 'lixo', 3600);
+        Plugin::instance()->transport = FakeTransport::unreachable();
 
         $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
 
-        $this->assertTrue($result->unavailable);
+        $this->assertNull($result->tree, 'Classe antiga no cache não pode explodir nem virar árvore.');
     }
 
     function testCachedNotFoundIsPassedThrough()
@@ -88,14 +123,12 @@ class ParInformationServiceTest extends TestCase
         $this->assertNotNull($result->tree, 'O job grava sem subsite; a tela lê de dentro de um — o dado precisa atravessar.');
     }
 
-    function testTtlComesFromTheSyncInterval()
+    function testTtlIsShortBecauseTheCultBrChangesThePar()
     {
-        $service = Plugin::instance()->parInformationService();
-
         $this->assertSame(
-            Plugin::DEFAULT_PAR_SYNC_INTERVAL_MINUTES * 3 * 60,
-            $service->cacheTtl(),
-            'Três intervalos: a árvore sobrevive a duas sincronizações perdidas.',
+            Plugin::DEFAULT_PAR_CACHE_TTL_MINUTES * 60,
+            Plugin::instance()->parInformationService()->cacheTtl(),
+            'Cinco minutos: árvore vencida faz o gestor escolher atividade que já não existe.',
         );
     }
 }
