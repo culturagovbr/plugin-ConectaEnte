@@ -23,10 +23,21 @@ final class ParInformation implements JsonSerializable
     public static function fromApiListResponse(array $body, string $document): self
     {
         $targetDocument = self::onlyDigits($document);
+        $data = $body['data'] ?? [];
+        $items = array_filter(is_array($data) ? $data : [], 'is_array');
         $matches = array_values(array_filter(
-            $body['data'] ?? [],
-            fn($item) => is_array($item) && self::onlyDigits((string) ($item['cnpj'] ?? '')) === $targetDocument,
+            $items,
+            fn($item) => self::onlyDigits((string) ($item['cnpj'] ?? '')) === $targetDocument,
         ));
+
+        if (count($items) > count($matches)) {
+            App::i()->log->warning(sprintf(
+                'ParInformation: %d de %d entes em par-information não são o cnpj %s; descartados.',
+                count($items) - count($matches),
+                count($items),
+                $targetDocument,
+            ));
+        }
 
         if (!$matches) {
             return self::empty();
