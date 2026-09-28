@@ -109,16 +109,6 @@ class ParInformationRouteTest extends TestCase
         $this->assertNull($goal['nome']);
     }
 
-    // sem o reset() que o login da suíte faz: ele apaga o mscache, e o cenário é "o job já rodou em outro processo"
-    protected function send(ServerRequestInterface $request): int
-    {
-        $this->app->em->clear();
-        $this->app->auth->authenticatedUser = $this->app->repo(\MapasCulturais\Entities\User::class)->find($this->app->user->id);
-        $this->app->run($request, false);
-
-        return $this->app->response->getStatusCode();
-    }
-
     private function parInformation(int $opportunityId): ServerRequestInterface
     {
         return $this->requestFactory->GET('conectaente', 'parInformation', [$opportunityId], ajax: true);

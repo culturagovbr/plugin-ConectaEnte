@@ -108,8 +108,10 @@ trait PublicationRequirementsFixtures
     protected function send(ServerRequestInterface $request): int
     {
         $this->app->em->clear();
-        $this->login($this->app->repo(User::class)->find($this->app->user->id));
-        $this->app->reset();
+        // o reset() completo apagaria o mscache, que simula o job do PAR já ter rodado em outro processo
+        $this->app->view->importedComponents = [];
+        $this->app->components->templates = [];
+        $this->app->auth->authenticatedUser = $this->app->repo(User::class)->find($this->app->user->id);
         $this->app->run($request, false);
 
         return $this->app->response->getStatusCode();
