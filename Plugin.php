@@ -45,8 +45,8 @@ class Plugin extends \MapasCulturais\Plugin
             'passwordWindow' => (int) env('CONECTAENTE_PASSWORD_WINDOW', self::DEFAULT_PASSWORD_WINDOW),
             'parSyncIntervalMinutes' => (int) env('CONECTAENTE_PAR_SYNC_INTERVAL_MINUTES', self::DEFAULT_PAR_SYNC_INTERVAL_MINUTES),
             'parCacheTtlMinutes' => (int) env('CONECTAENTE_PAR_CACHE_TTL_MINUTES', self::DEFAULT_PAR_CACHE_TTL_MINUTES),
-            // padrão é falar com o CultBR de verdade: o modo dev só existe quando a instalação o declara
-            'mode' => env('CONECTAENTE_MODE', self::MODE_LIVE),
+            // enquanto o CultBR não estabiliza, a instalação nasce em dev e declara CONECTAENTE_MODE=live para valer
+            'mode' => env('CONECTAENTE_MODE', self::MODE_DEV),
         ];
 
         parent::__construct($config);

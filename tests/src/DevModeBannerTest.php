@@ -17,6 +17,8 @@ class DevModeBannerTest extends TestCase
 
     function testTheBannerDoesNotExistInLiveMode()
     {
+        Plugin::instance()->mode = Plugin::MODE_LIVE;
+
         $this->assertStringNotContainsString(
             self::BANNER,
             $this->homePage(),

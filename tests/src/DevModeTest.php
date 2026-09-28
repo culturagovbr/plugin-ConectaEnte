@@ -32,9 +32,9 @@ class DevModeTest extends TestCase
         $this->assertStringContainsString('rota-que-nao-existe', (string) $response->transportError);
     }
 
-    function testLiveIsTheDefault()
+    function testDevIsTheDefaultWhileTheCultBrDoesNotSettle()
     {
-        $this->assertFalse(Plugin::instance()->isDevMode(), 'Sem declaração da instalação, o plugin fala com o CultBR de verdade.');
+        $this->assertTrue(Plugin::instance()->isDevMode(), 'A instalação declara CONECTAENTE_MODE=live para falar com o CultBR de verdade.');
     }
 
     function testTheEnteFilterHoldsWithARealTransport()
