@@ -1,6 +1,13 @@
 /**
  * Cascata Exercício → Meta → Ação → Atividade do PAR, sobre a árvore que o chamador entrega.
  */
+const PAR_METADATA_KEY_BY_FIELD = {
+    exercise: 'parExercicioId',
+    goal: 'parMetaId',
+    action: 'parAcaoId',
+    activity: 'parAtividadeId',
+};
+
 app.component('conectaente--federative-entity-par', {
     template: $TEMPLATES['conectaente--federative-entity-par'],
     emits: ['update:modelValue'],
@@ -239,13 +246,7 @@ app.component('conectaente--federative-entity-par', {
 
         /** A primeira mensagem do servidor para o nível, ou vazio. */
         serverErrorMessage(field) {
-            const metadataKeyByField = {
-                exercise: 'parExercicioId',
-                goal: 'parMetaId',
-                action: 'parAcaoId',
-                activity: 'parAtividadeId',
-            };
-            const messages = this.serverErrors?.[metadataKeyByField[field]];
+            const messages = this.serverErrors?.[PAR_METADATA_KEY_BY_FIELD[field]];
 
             return Array.isArray(messages) && messages.length ? messages[0] : '';
         },

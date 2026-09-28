@@ -15,6 +15,7 @@ $this->import('
     conectaente--funding-sources
     conectaente--opportunity-ranges
     conectaente--opportunity-requirements
+    conectaente--par-selection
     conectaente--proponent-types
     conectaente--quota-reservation
     conectaente--registration-channels
@@ -29,6 +30,18 @@ $this->import('
 <mc-tab v-if="isSealed" label="<?php i::esc_attr_e('CultBR') ?>" slug="cultbr">
     <mc-container>
         <main class="conectaente-opportunity-tab">
+            <mc-card v-if="showsAnyField(config.parFields)">
+                <template #title>
+                    <h3><?php i::_e('Dados do PAR') ?></h3>
+                    <p><?php i::_e('Exercício, meta, ação e atividade do Plano de Ação e Referência do Ente Federado que selou este edital.') ?></p>
+                </template>
+                <template #content>
+                    <div class="grid-12">
+                        <conectaente--par-selection :entity="entity" classes="col-12"></conectaente--par-selection>
+                    </div>
+                </template>
+            </mc-card>
+
             <mc-card v-if="showsAnyField(['<?= CultBrMetadata::EXECUTION_TYPE ?>', 'registrationProponentTypes', 'rules', 'registrationFrom'])">
                 <template #title>
                     <h3><?php i::_e('Identificação do edital') ?></h3>

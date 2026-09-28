@@ -34,7 +34,7 @@
     <template v-else>
         <p v-if="exercises.length === 0" class="conectaente-federative-entity-par__empty">{{ emptyHint || text('emptyList') }}</p>
         <template v-else>
-            <div class="field conectaente-federative-entity-par__field" :class="{ error: (showFieldErrors && fieldErrors.exercise) || serverErrorMessage('exercise') }">
+            <div class="field conectaente-federative-entity-par__field" data-field="parExercicioId" :class="{ error: (showFieldErrors && fieldErrors.exercise) || serverErrorMessage('exercise') }">
                 <label class="field__title">{{ text('labelExercise') }} <span class="required">*{{ text('required') }}</span></label>
                 <div class="field__input">
                     <select v-model="exerciseId" required>
@@ -45,7 +45,7 @@
                 <small v-if="(showFieldErrors && fieldErrors.exercise) || serverErrorMessage('exercise')" class="field__error">{{ serverErrorMessage('exercise') || fieldErrorMessage('exercise') }}</small>
             </div>
 
-            <div class="field conectaente-federative-entity-par__field" :class="{ error: (showFieldErrors && fieldErrors.goal) || serverErrorMessage('goal') }">
+            <div class="field conectaente-federative-entity-par__field" data-field="parMetaId" :class="{ error: (showFieldErrors && fieldErrors.goal) || serverErrorMessage('goal') }">
                 <label class="field__title">{{ text('labelGoal') }} <span class="required">*{{ text('required') }}</span></label>
                 <p v-if="exerciseHasNoGoals" class="conectaente-federative-entity-par__no-options">{{ text('noGoalsForExercise') }}</p>
                 <div v-else class="field__input">
@@ -57,7 +57,7 @@
                 <small v-if="(showFieldErrors && fieldErrors.goal) || serverErrorMessage('goal')" class="field__error">{{ serverErrorMessage('goal') || fieldErrorMessage('goal') }}</small>
             </div>
 
-            <div class="field conectaente-federative-entity-par__field" :class="{ error: (showFieldErrors && fieldErrors.action) || serverErrorMessage('action') }">
+            <div class="field conectaente-federative-entity-par__field" data-field="parAcaoId" :class="{ error: (showFieldErrors && fieldErrors.action) || serverErrorMessage('action') }">
                 <label class="field__title">{{ text('labelAction') }} <span class="required">*{{ text('required') }}</span></label>
                 <p v-if="goalHasNoActions" class="conectaente-federative-entity-par__no-options">{{ text('noActionsForGoal') }}</p>
                 <div v-else class="field__input">
@@ -69,7 +69,7 @@
                 <small v-if="(showFieldErrors && fieldErrors.action) || serverErrorMessage('action')" class="field__error">{{ serverErrorMessage('action') || fieldErrorMessage('action') }}</small>
             </div>
 
-            <div class="field conectaente-federative-entity-par__field" :class="{ error: (showFieldErrors && fieldErrors.activity) || serverErrorMessage('activity') }">
+            <div class="field conectaente-federative-entity-par__field" data-field="parAtividadeId" :class="{ error: (showFieldErrors && fieldErrors.activity) || serverErrorMessage('activity') }">
                 <label class="field__title">{{ text('labelActivity') }} <span class="required">*{{ text('required') }}</span></label>
                 <p v-if="actionHasNoActivities" class="conectaente-federative-entity-par__no-options">{{ text('noActivitiesForAction') }}</p>
                 <div v-else class="field__input">

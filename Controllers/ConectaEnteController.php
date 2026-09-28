@@ -20,16 +20,16 @@ class ConectaEnteController extends \MapasCulturais\Controller
 {
     /** A ordem de leitura da aba, de cima para baixo, card a card. */
     const SCREEN_ORDER = [
+        CultBrMetadata::PAR_EXERCISE_ID,
+        CultBrMetadata::PAR_GOAL_ID,
+        CultBrMetadata::PAR_ACTION_ID,
+        CultBrMetadata::PAR_ACTIVITY_ID,
         CultBrMetadata::EXECUTION_TYPE,
         'rules',
         'registrationFrom',
         'registrationTo',
         'registrationProponentTypes',
         CultBrMetadata::LEGAL_ENTITY_TYPES,
-        CultBrMetadata::PAR_EXERCISE_ID,
-        CultBrMetadata::PAR_GOAL_ID,
-        CultBrMetadata::PAR_ACTION_ID,
-        CultBrMetadata::PAR_ACTIVITY_ID,
         CultBrMetadata::SEGMENTS,
         CultBrMetadata::CULTURAL_STAGES,
         CultBrMetadata::THEMATIC_AGENDAS,

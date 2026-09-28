@@ -18,7 +18,7 @@ class OpportunityTabTest extends TestCase
     use PublicationRequirementsFixtures;
     use RequestFactory;
 
-    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation', 'conectaente--registration-channels', 'conectaente--affirmative-actions', 'conectaente--funding-sources', 'conectaente--proponent-types', 'conectaente--opportunity-ranges'];
+    const COMPONENTS = ['conectaente--opportunity-tab', 'conectaente--opportunity-requirements', 'conectaente--targeting-multiselect', 'conectaente--quota-reservation', 'conectaente--registration-channels', 'conectaente--affirmative-actions', 'conectaente--funding-sources', 'conectaente--proponent-types', 'conectaente--opportunity-ranges', 'conectaente--par-selection', 'conectaente--federative-entity-par'];
 
     function testEditPageImportsTheTabComponentsAndTheSealList()
     {
@@ -276,6 +276,41 @@ class OpportunityTabTest extends TestCase
 
         $this->assertCount(1, $queries);
         $this->assertSame($expected, $sealIds);
+    }
+
+
+    function testTheParCardOpensTheTab()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $template = $this->tabTemplate($this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT)));
+        $par = strpos($template, '<conectaente--par-selection');
+
+        $this->assertNotFalse($par, 'Sem campo na aba, as quatro pendências do PAR não teriam onde ser resolvidas.');
+        $this->assertLessThan(strpos($template, '<h3>Identificação do edital</h3>'), $par, 'O PAR é o primeiro card, em qualquer grupo aberto.');
+        $this->assertStringNotContainsString('<mc-federative-entity-par', $template, 'O componente do tema depende do AldirBlanc; o plugin usa a própria cópia.');
+    }
+
+    function testTheParCardFollowsTheGroupTheUserOpened()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+
+        $this->assertStringContainsString('showsAnyField(config.parFields)', $this->tabTemplate($page), 'O card do PAR some com o filtro, como os outros.');
+        $this->assertSame(CultBrMetadata::PAR_KEYS, $this->tabConfig($page)['parFields'], 'A tela classifica as quatro como campo do plugin por esta lista: elas não têm o prefixo.');
+    }
+
+    function testEachParLevelPublishesItsAnchor()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $page = $this->editPage($this->createOpportunityWithSeal($this->federativeSeal(), Opportunity::STATUS_DRAFT));
+        $template = $this->componentTemplate($page, 'conectaente--federative-entity-par');
+
+        foreach (CultBrMetadata::PAR_KEYS as $key) {
+            $this->assertStringContainsString("data-field=\"{$key}\"", $template, 'Cada pendência do PAR rola até o próprio select.');
+        }
     }
 
 

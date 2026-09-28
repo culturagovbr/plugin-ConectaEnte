@@ -96,7 +96,10 @@ app.component('conectaente--opportunity-tab', {
     methods: {
         // a rota só classifica as pendências, e aqui há campo preenchido também
         groupOf(field) {
-            return field.startsWith('conectaente_') ? 'plugin' : 'core';
+            // os campos do PAR não têm o prefixo: as chaves são as que o AldirBlanc já usa
+            const isPluginField = field.startsWith('conectaente_') || this.config.parFields.includes(field);
+
+            return isPluginField ? 'plugin' : 'core';
         },
 
         showsField(field) {
