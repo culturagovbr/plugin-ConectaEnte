@@ -18,6 +18,7 @@ use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\SealedOpportunity;
+use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\BadRequest;
@@ -28,15 +29,14 @@ class Plugin extends \MapasCulturais\Plugin
 {
     const DEFAULT_HOST = 'https://ente.conecta.hmg.cultbr.cultura.gov.br';
     const DEFAULT_PASSWORD_WINDOW = 120;
-    // Maior que o intervalo do ParInformationSyncJob (30min), para nunca expirar entre execuções.
-    const DEFAULT_PAR_INFORMATION_CACHE_TTL = 2700;
+    const DEFAULT_PAR_SYNC_INTERVAL_MINUTES = 30;
 
     function __construct(array $config = [])
     {
         $config += [
             'host' => env('CONECTAENTE_HOST', self::DEFAULT_HOST),
             'passwordWindow' => (int) env('CONECTAENTE_PASSWORD_WINDOW', self::DEFAULT_PASSWORD_WINDOW),
-            'parInformationCacheTTL' => (int) env('CONECTAENTE_PAR_INFORMATION_CACHE_TTL', self::DEFAULT_PAR_INFORMATION_CACHE_TTL),
+            'parSyncIntervalMinutes' => (int) env('CONECTAENTE_PAR_SYNC_INTERVAL_MINUTES', self::DEFAULT_PAR_SYNC_INTERVAL_MINUTES),
         ];
 
         parent::__construct($config);
@@ -104,12 +104,24 @@ class Plugin extends \MapasCulturais\Plugin
         return new PublicationRequirements($this->publicationStamp());
     }
 
+    /**
+     * Agenda a próxima sincronização do PAR, uma iteração por vez.
+     *
+     * O job se apaga ao executar e o boot seguinte o recria; preso em PROCESSING,
+     * a limpeza de 5 minutos do core só o recolhe com iterations = 1.
+     */
+    function scheduleParSync(): void
+    {
+        App::i()->enqueueJob(ParInformationSyncJob::SLUG, [], "+{$this->_config['parSyncIntervalMinutes']} minutes", '', 1);
+    }
+
     /** Serviço alternativo, para os testes controlarem cache/transporte da árvore do PAR. */
     public ?ParInformationService $parInformationService = null;
 
     function parInformationService(): ParInformationService
     {
-        return $this->parInformationService ?? new ParInformationService($this->_config['parInformationCacheTTL']);
+        // TTL de três intervalos: a árvore sobrevive a duas sincronizações perdidas sem expirar
+        return $this->parInformationService ?? new ParInformationService($this->_config['parSyncIntervalMinutes'] * 3 * 60);
     }
 
     public function _init(){
@@ -117,19 +129,22 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
 
-        // id do job é determinístico (ParInformationSyncJob::_generateId): chamado sem
-        // condição a cada boot, mas vira só uma leitura por PK quando já está agendado.
         try {
-            $app->enqueueJob(
-                ParInformationSyncJob::SLUG,
-                [],
-                'now',
-                ParInformationSyncJob::INTERVAL,
-                ParInformationSyncJob::ITERATIONS,
-            );
+            $this->scheduleParSync();
         } catch (\Doctrine\DBAL\Exception\TableNotFoundException $e) {
             // tabela job ainda não criada (migração em andamento)
         }
+
+        // token novo ou trocado não espera o próximo ciclo
+        $app->hook('entity(ConectaEnte.Entities.FederativeEntity).save:after', function () use ($app) {
+            $jobType = $app->getRegisteredJobType(ParInformationSyncJob::SLUG);
+            $scheduled = $app->repo(Job::class)->findOneBy(['id' => $jobType->generateId([], 'now', '', 1)]);
+
+            // substituir o job no meio de uma execução derrubaria o worker que o carrega
+            if (!$scheduled || $scheduled->status === Job::STATUS_WAITING) {
+                $app->enqueueJob(ParInformationSyncJob::SLUG, [], 'now', '', 1, true);
+            }
+        });
 
         // BaseV1 imprime o grupo `app`, BaseV2 o `app-v2`
         $app->view->enqueueStyle('app', 'conectaente', 'css/conectaente.css');

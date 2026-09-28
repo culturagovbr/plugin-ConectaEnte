@@ -15,31 +15,15 @@ use MapasCulturais\Entities\Job;
 class ParInformationSyncJob extends JobType
 {
     const SLUG = 'conectaente-par-information-sync';
-    const INTERVAL = '+30 minutes';
-    // o core não tem "para sempre": um número grande evita reagendar a cada execução
-    const ITERATIONS = 87600;
 
     protected function _generateId(array $data, string $start_string, string $interval_string, int $iterations)
     {
         return self::SLUG;
     }
 
-    // true mesmo em falha: o core só reagenda a próxima execução quando `_execute` tem sucesso
     public function _execute(Job $job)
     {
         $app = App::i();
-
-        try {
-            $this->syncAll($app);
-        } catch (\Throwable $e) {
-            $app->log->error("ParInformationSyncJob falhou: {$e->getMessage()}");
-        }
-
-        return true;
-    }
-
-    private function syncAll(App $app): void
-    {
         $service = Plugin::instance()->parInformationService();
         $client = Plugin::instance()->client();
 
@@ -60,5 +44,7 @@ class ParInformationSyncJob extends JobType
                 $app->log->error("ParInformationSyncJob: exceção ao atualizar o ente {$federativeEntity->id}: {$e->getMessage()}");
             }
         }
+
+        return true;
     }
 }
