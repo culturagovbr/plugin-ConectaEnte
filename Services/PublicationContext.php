@@ -9,6 +9,7 @@ final class PublicationContext
     private ?int $opportunityId = null;
     private ?int $requestedStatus = null;
     private ?int $patchedOpportunityId = null;
+    private ?int $simulatedOpportunityId = null;
 
     /**
      * Marca o status ao qual a requisição leva a oportunidade, antes de o status mudar.
@@ -17,6 +18,13 @@ final class PublicationContext
     {
         $this->opportunityId = $opportunity->id;
         $this->requestedStatus = $status;
+    }
+
+    /** Marca que a pergunta é "o que falta para publicar", não uma requisição que salva. */
+    public function simulate(Opportunity $opportunity): void
+    {
+        $this->simulatedOpportunityId = $opportunity->id;
+        $this->enter($opportunity);
     }
 
     /**
@@ -35,6 +43,7 @@ final class PublicationContext
         $this->opportunityId = null;
         $this->requestedStatus = null;
         $this->patchedOpportunityId = null;
+        $this->simulatedOpportunityId = null;
     }
 
     /**
@@ -45,6 +54,12 @@ final class PublicationContext
         $status = $this->isMarked($opportunity, $this->opportunityId) ? $this->requestedStatus : (int) $opportunity->status;
 
         return $status === Opportunity::STATUS_ENABLED;
+    }
+
+    /** Se a pergunta é uma simulação de publicação, não um salvamento. */
+    public function isSimulating(Opportunity $opportunity): bool
+    {
+        return $this->isMarked($opportunity, $this->simulatedOpportunityId);
     }
 
     /**

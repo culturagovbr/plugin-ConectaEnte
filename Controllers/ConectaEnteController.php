@@ -372,7 +372,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
     private function publicationErrors(Opportunity $opportunity): array
     {
         $context = Plugin::instance()->publicationContext();
-        $context->enter($opportunity);
+        $context->simulate($opportunity);
 
         try {
             return $opportunity->validationErrors;

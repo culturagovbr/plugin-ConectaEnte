@@ -274,6 +274,13 @@ class Plugin extends \MapasCulturais\Plugin
         }, 1000);
     }
 
+    private function requiresPublicationFields(Opportunity $opportunity): bool
+    {
+        // cobrados ao publicar, não a cada salvamento: no PATCH o status em memória já é o pedido, e quem sabe é o banco
+        return $this->publicationContext()->isSimulating($opportunity)
+            || !$this->publicationStamp()->wasPublished($opportunity);
+    }
+
     /**
      * Soma aos erros da oportunidade selada o que falta para ela sair publicada da requisição.
      */
@@ -283,8 +290,11 @@ class Plugin extends \MapasCulturais\Plugin
             return;
         }
 
-        $errors = array_merge_recursive($errors, $this->publicationRequirements()->missing($opportunity));
+        if ($this->requiresPublicationFields($opportunity)) {
+            $errors = array_merge_recursive($errors, $this->publicationRequirements()->missing($opportunity));
+        }
 
+        // o PATCH continua guardando o que outros hooks acharam, mesmo quando o plugin não cobra nada
         if ($errors && $this->publicationContext()->isPatching($opportunity)) {
             $this->keepErrorsInPatch($errors);
         }

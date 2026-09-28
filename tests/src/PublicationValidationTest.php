@@ -81,15 +81,13 @@ class PublicationValidationTest extends TestCase
         $this->assertSame('Rascunho em andamento', $this->reloaded($opportunity)->shortDescription);
     }
 
-    function testPatchOfPublishedIncompleteSealedOpportunityIsRefused()
+    function testPatchOfPublishedIncompleteSealedOpportunitySaves()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
-        $shortDescription = $opportunity->shortDescription;
 
-        $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['shortDescription' => 'Nova descrição'])));
+        $this->assertSame(200, $this->send($this->requestFactory->PATCH_entity($opportunity, ['shortDescription' => 'Nova descrição'])));
 
-        $this->assertSame([self::MISSING_KEY], array_keys($this->responseErrors()));
-        $this->assertSame($shortDescription, $this->reloaded($opportunity)->shortDescription);
+        $this->assertSame('Nova descrição', $this->reloaded($opportunity)->shortDescription, 'O edital já publicado não fica preso ao que o CultBR exige para publicar.');
     }
 
     function testPatchPublishingIncompleteSealedOpportunityIsRefusedOnStatus()
@@ -121,7 +119,7 @@ class PublicationValidationTest extends TestCase
 
     function testPatchKeepsTheErrorsAddedByTheCoreModules()
     {
-        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT, isComplete: false);
         $hadModuleConfig = array_key_exists('module.Entities', $this->app->config);
         $moduleConfig = $this->app->config['module.Entities'] ?? null;
         $this->app->config['module.Entities']['requiredAvatar'] = [$opportunity::getClassName() => true];
@@ -161,17 +159,17 @@ class PublicationValidationTest extends TestCase
         $this->assertArrayHasKey('themeField', $this->responseErrors());
     }
 
-    function testForceSaveStillSavesThePublishedIncompleteSealedOpportunity()
+    function testForceSaveStillPublishesTheIncompleteSealedOpportunity()
     {
-        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT, isComplete: false);
 
-        $request = $this->requestFactory->PATCH('opportunity', 'single', [$opportunity->id], ['shortDescription' => 'Salva mesmo assim'], headers: ['mapas-force-save' => '1']);
-        $this->assertSame(400, $this->send($request));
+        $request = $this->requestFactory->PATCH('opportunity', 'single', [$opportunity->id], ['status' => Opportunity::STATUS_ENABLED], headers: ['mapas-force-save' => '1']);
+        $this->assertSame(400, $this->send($request), 'A recusa continua sendo relatada, para o gestor saber o que ficou faltando.');
 
-        $this->assertSame('Salva mesmo assim', $this->reloaded($opportunity)->shortDescription);
+        $this->assertSame(Opportunity::STATUS_ENABLED, $this->reloaded($opportunity)->status, 'O force save do core atravessa a regra do plugin, como atravessa a do core.');
     }
 
-    function testPutOfIncompleteSealedOpportunityIsRefused()
+    function testPutRefusesToPublishAndAcceptsSavingWhatIsPublished()
     {
         $draft = $this->sealedOpportunity(Opportunity::STATUS_DRAFT, isComplete: false);
         $this->assertSame(400, $this->send($this->PUT($draft, ['status' => Opportunity::STATUS_ENABLED])));
@@ -179,8 +177,63 @@ class PublicationValidationTest extends TestCase
         $this->assertSame(Opportunity::STATUS_DRAFT, $this->reloaded($draft)->status);
 
         $published = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
-        $this->assertSame(400, $this->send($this->PUT($published, ['shortDescription' => 'Nova descrição'])));
-        $this->assertSame([self::MISSING_KEY], array_keys($this->responseErrors()));
+        $this->assertSame(200, $this->send($this->PUT($published, ['shortDescription' => 'Nova descrição'])), 'Salvar o que já está publicado não é publicar.');
+    }
+
+    function testOpportunitySealedAfterBeingPublishedStillSaves()
+    {
+        $opportunity = $this->coreCompleteOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
+        $this->app->disableAccessControl();
+        $opportunity->createSealRelation($this->federativeSeal());
+        $this->app->enableAccessControl();
+        // sem esta pré-condição o teste passaria por a oportunidade não estar selada, que é outro caminho
+        $this->assertTrue(Plugin::instance()->sealedOpportunity()->isSealed($this->reloaded($opportunity)));
+
+        $this->assertSame(
+            200,
+            $this->send($this->requestFactory->PATCH_entity($this->reloaded($opportunity), ['shortDescription' => 'Nova descrição'])),
+            'Selar um edital já publicado deixa os trinta campos vazios de uma vez; cobrá-los travaria o gestor sem saída.',
+        );
+    }
+
+    function testPublishedOpportunityKeepsTheCoreRules()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+
+        $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['name' => ''])));
+
+        $this->assertArrayHasKey('name', $this->responseErrors(), 'O corte é dos campos do CultBR; o que o core exige continua valendo.');
+    }
+
+    function testPublishingByPatchStillRequiresTheFields()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT, isComplete: false);
+
+        $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['status' => Opportunity::STATUS_ENABLED])));
+
+        $this->assertSame(Opportunity::STATUS_DRAFT, $this->reloaded($opportunity)->status, 'É pelo PATCH que o front V2 publica: o status em memória já é 1, e quem sabe da transição é o banco.');
+    }
+
+    function testPublishingAgainAfterUnpublishingRequiresTheFields()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
+        $this->send($this->PUT($opportunity, ['status' => Opportunity::STATUS_DRAFT]));
+
+        $this->assertSame(400, $this->send($this->requestFactory->POST('opportunity', 'publish', [$this->reloaded($opportunity)->id])));
+
+        $this->assertSame(Opportunity::STATUS_DRAFT, $this->reloaded($opportunity)->status);
+    }
+
+    function testTheSimulationMarkDoesNotSurviveTheRequest()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
+        $this->send($this->requestFactory->GET('conectaente', 'opportunityRequirements', [$opportunity->id], ajax: true));
+
+        $this->assertSame(
+            200,
+            $this->send($this->requestFactory->PATCH_entity($this->reloaded($opportunity), ['shortDescription' => 'Nova descrição'])),
+            'A marca da aba não pode fazer o salvamento seguinte cobrar o que a publicação exige.',
+        );
     }
 
     function testPublishingWithoutAParLevelIsRefusedNamingIt()
@@ -237,23 +290,24 @@ class PublicationValidationTest extends TestCase
 
     function testPatchMarkEndsWithTheRequest()
     {
-        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED, isComplete: false);
-        $this->send($this->requestFactory->PATCH_entity($opportunity, ['status' => Opportunity::STATUS_ENABLED]));
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT, isComplete: false);
+
+        $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['status' => Opportunity::STATUS_ENABLED])), 'Durante a requisição a marca vale: o rascunho está publicando.');
 
         $errors = $this->reloaded($opportunity)->validationErrors;
 
-        $this->assertArrayHasKey(self::MISSING_KEY, $errors);
-        $this->assertArrayNotHasKey('status', $errors);
+        $this->assertArrayNotHasKey('status', $errors, 'A marca do status pedido morre com a requisição; fora dela o rascunho não está publicando nada.');
+        $this->assertArrayNotHasKey(self::MISSING_KEY, $errors);
     }
 
     function testCoreAndPluginErrorsOnTheSameFieldAreKept()
     {
-        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
         $opportunity->registrationFrom = new DateTime('2112-01-01 00:00');
         $opportunity->registrationTo = Opportunity::CONTINUOUS_FLOW_DATE;
         $opportunity->save(true);
 
-        $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['shortDescription' => 'Nova descrição'])));
+        $this->assertSame(400, $this->send($this->requestFactory->PATCH_entity($opportunity, ['status' => Opportunity::STATUS_ENABLED])));
 
         $messages = $this->responseErrors()['registrationTo'] ?? [];
         $this->assertContains('A data final das inscrições deve ser maior ou igual a data inicial', $messages);
