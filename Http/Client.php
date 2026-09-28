@@ -51,9 +51,7 @@ class Client
     }
 
     /**
-     * Árvore do PAR (exercício -> meta -> ação -> atividade) do ente dono do token,
-     * casada por `$document` (cnpj) na lista de entes que a resposta paginada devolve.
-     * `notFound()` cobre o contrato reduzido de produção, que pode não expor este caminho.
+     * A árvore do PAR do ente dono do token, casada pelo cnpj na lista que a resposta devolve.
      */
     public function getParInformation(string $token, string $document): ParInformationResult
     {
@@ -64,7 +62,14 @@ class Client
         }
 
         if ($response->status === 200) {
-            return ParInformationResult::ok(ParInformation::fromApiListResponse($response->json(), $document));
+            $body = $response->decoded();
+
+            // corpo imprestável não pode virar árvore vazia: o job gravaria "ente sem PAR" no cache
+            if ($body === null) {
+                return ParInformationResult::unreachable(i::__('A resposta da API não é um JSON válido.'));
+            }
+
+            return ParInformationResult::ok(ParInformation::fromApiListResponse($body, $document));
         }
 
         if ($response->status === 404) {

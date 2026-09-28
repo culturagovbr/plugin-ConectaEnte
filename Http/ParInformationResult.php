@@ -28,9 +28,9 @@ final class ParInformationResult
         return new self(tree: null, unreachable: false, notFound: false, message: $message);
     }
 
-    public static function unreachable(): self
+    public static function unreachable(?string $message = null): self
     {
-        return new self(tree: null, unreachable: true, notFound: false);
+        return new self(tree: null, unreachable: true, notFound: false, message: $message);
     }
 
     public static function notFound(): self
