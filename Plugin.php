@@ -32,7 +32,7 @@ class Plugin extends \MapasCulturais\Plugin
     const DEFAULT_HOST = 'https://ente.conecta.hmg.cultbr.cultura.gov.br';
     const DEFAULT_PASSWORD_WINDOW = 120;
     const DEFAULT_PAR_SYNC_INTERVAL_MINUTES = 30;
-    const DEFAULT_PAR_CACHE_TTL_MINUTES = 5;
+    const DEFAULT_PAR_CACHE_TTL_MINUTES = 10;
 
     /** Em `dev` nenhuma rota do CultBR é chamada: a resposta vem de `fixtures/<rota>.json`. */
     const MODE_LIVE = 'live';
