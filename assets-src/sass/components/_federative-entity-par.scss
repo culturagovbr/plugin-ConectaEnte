@@ -1,0 +1,18 @@
+// o aviso e a cascata respiram como os campos, e o contorno do campo ativo cabe sem invadir o vizinho
+.conectaente-par-selection {
+    display: grid;
+    gap: 1.5rem;
+}
+
+// os quatro níveis empilhados: o respiro é o que deixa o contorno do campo ativo caber sem invadir o vizinho
+.conectaente-federative-entity-par {
+    display: grid;
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.conectaente-federative-entity-par__no-options,
+.conectaente-federative-entity-par__empty {
+    color: var(--mc-low-500);
+    margin: 0;
+}
