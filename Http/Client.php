@@ -13,8 +13,12 @@ class Client
 
     private TransportInterface $transport;
 
-    public function __construct(private string $host, ?TransportInterface $transport = null)
-    {
+    public function __construct(
+        private string $host,
+        ?TransportInterface $transport = null,
+        // em modo dev a fixture é uma só, e precisa servir a qualquer ente cadastrado
+        private bool $acceptsAnyEnte = false,
+    ) {
         $this->transport = $transport ?? new CurlTransport;
     }
 
@@ -69,7 +73,7 @@ class Client
                 return ParInformationResult::unreachable(i::__('A resposta da API não é um JSON válido.'));
             }
 
-            return ParInformationResult::ok(ParInformation::fromApiListResponse($body, $document));
+            return ParInformationResult::ok(ParInformation::fromApiListResponse($body, $this->enteDocument($body, $document)));
         }
 
         if ($response->status === 404) {
@@ -101,6 +105,11 @@ class Client
     /**
      * `detail` é texto em 400, 401, 403 e 404, e lista de erros de campo em 422.
      */
+    private function enteDocument(array $body, string $document): string
+    {
+        return $this->acceptsAnyEnte ? (string) ($body['data'][0]['cnpj'] ?? $document) : $document;
+    }
+
     private function readDetail(array $body, int $status): string
     {
         $detail = $body['detail'] ?? null;

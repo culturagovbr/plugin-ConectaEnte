@@ -88,6 +88,28 @@ class ParInformationRouteTest extends TestCase
         $this->assertCount(1, $transport->requestedUrls);
     }
 
+    function testTheReasonTellsTheGestorWhereTheProblemIs()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->app->mscache->delete(\ConectaEnte\Services\ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
+        Plugin::instance()->transport = FakeTransport::replying(401, ['detail' => 'Token inválido']);
+
+        $this->send($this->parInformation($opportunity->id));
+
+        $this->assertSame('rejected', $this->responseJson()['reason'], 'Token recusado não se resolve esperando: a tela precisa dizer isso.');
+    }
+
+    function testCultBrOutOfAirIsToldApartFromRejectedToken()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->app->mscache->delete(\ConectaEnte\Services\ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
+        Plugin::instance()->transport = FakeTransport::unreachable();
+
+        $this->send($this->parInformation($opportunity->id));
+
+        $this->assertSame('unreachable', $this->responseJson()['reason']);
+    }
+
     function testApiOutOfReachWithNothingCachedAnswersUnavailable()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
@@ -97,7 +119,7 @@ class ParInformationRouteTest extends TestCase
         $this->assertSame(200, $this->send($this->parInformation($opportunity->id)));
 
         $this->assertSame(
-            ['available' => false, 'exercicios' => []],
+            ['available' => false, 'reason' => 'unreachable', 'exercicios' => []],
             $this->responseJson(),
             'Sem cache e sem API, a tela avisa em vez de mostrar lista vazia.',
         );
@@ -113,7 +135,7 @@ class ParInformationRouteTest extends TestCase
         $this->assertSame(200, $this->send($this->parInformation($opportunity->id)));
 
         $this->assertSame(
-            ['available' => false, 'exercicios' => []],
+            ['available' => false, 'reason' => 'notFound', 'exercicios' => []],
             $this->responseJson(),
             'Ambiente sem a rota do PAR não é "ente sem dados".',
         );
@@ -137,6 +159,7 @@ class ParInformationRouteTest extends TestCase
     protected function tearDown(): void
     {
         Plugin::instance()->transport = null;
+        Plugin::instance()->parInformationService = null;
 
         parent::tearDown();
     }

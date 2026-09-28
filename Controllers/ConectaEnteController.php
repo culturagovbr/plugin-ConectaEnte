@@ -7,6 +7,7 @@ use ConectaEnte\Dto\FederativeEntityCard;
 use ConectaEnte\Dto\SealOption;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Http\ParInformationResult;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
@@ -264,12 +265,21 @@ class ConectaEnteController extends \MapasCulturais\Controller
             $this->json(['available' => true, 'exercicios' => []]);
         }
 
-        // sem árvore não se sabe se há dado: a tela avisa em vez de mostrar lista vazia
+        // sem árvore a tela precisa do motivo: token recusado não se resolve esperando, falha do CultBR sim
         if (!$result->tree) {
-            $this->json(['available' => false, 'exercicios' => []]);
+            $this->json(['available' => false, 'reason' => $this->parUnavailableReason($result), 'exercicios' => []]);
         }
 
-        $this->json(['available' => true] + $result->tree->jsonSerialize());
+        $this->json(['available' => true, 'simulated' => Plugin::instance()->isDevMode()] + $result->tree->jsonSerialize());
+    }
+
+    private function parUnavailableReason(ParInformationResult $result): string
+    {
+        return match (true) {
+            $result->notFound => 'notFound',
+            $result->unreachable => 'unreachable',
+            default => 'rejected',
+        };
     }
 
     /** @return SealOption[] selos habilitados que nenhum Ente Federado usa, nem na lixeira */

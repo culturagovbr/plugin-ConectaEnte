@@ -29,6 +29,8 @@ app.component('conectaente--par-selection', {
             exercises: [],
             // até a rota responder não há por que avisar de indisponibilidade
             available: true,
+            reason: null,
+            simulated: false,
             loading: true,
             selection: this.entitySelection(),
         };
@@ -46,6 +48,12 @@ app.component('conectaente--par-selection', {
 
     mounted() {
         this.loadTree();
+    },
+
+    computed: {
+        unavailableMessage() {
+            return this.text(this.reason ?? 'unreachable');
+        },
     },
 
     methods: {
@@ -76,9 +84,12 @@ app.component('conectaente--par-selection', {
                 }
 
                 this.available = parInformation.available;
+                this.reason = parInformation.reason ?? null;
+                this.simulated = parInformation.simulated ?? false;
                 this.exercises = parInformation.exercicios || [];
             } catch (error) {
                 this.available = false;
+                this.reason = 'unreachable';
             } finally {
                 this.loading = false;
             }

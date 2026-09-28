@@ -6,6 +6,8 @@ use ConectaEnte\Auth\PasswordWindow;
 use ConectaEnte\Controllers\ConectaEnteController;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\Client;
+use ConectaEnte\Http\Transport\CurlTransport;
+use ConectaEnte\Http\Transport\FixtureTransport;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Payload\OpportunityPayload;
@@ -32,6 +34,10 @@ class Plugin extends \MapasCulturais\Plugin
     const DEFAULT_PAR_SYNC_INTERVAL_MINUTES = 30;
     const DEFAULT_PAR_CACHE_TTL_MINUTES = 5;
 
+    /** Em `dev` nenhuma rota do CultBR é chamada: a resposta vem de `fixtures/<rota>.json`. */
+    const MODE_LIVE = 'live';
+    const MODE_DEV = 'dev';
+
     function __construct(array $config = [])
     {
         $config += [
@@ -39,6 +45,8 @@ class Plugin extends \MapasCulturais\Plugin
             'passwordWindow' => (int) env('CONECTAENTE_PASSWORD_WINDOW', self::DEFAULT_PASSWORD_WINDOW),
             'parSyncIntervalMinutes' => (int) env('CONECTAENTE_PAR_SYNC_INTERVAL_MINUTES', self::DEFAULT_PAR_SYNC_INTERVAL_MINUTES),
             'parCacheTtlMinutes' => (int) env('CONECTAENTE_PAR_CACHE_TTL_MINUTES', self::DEFAULT_PAR_CACHE_TTL_MINUTES),
+            // padrão é falar com o CultBR de verdade: o modo dev só existe quando a instalação o declara
+            'mode' => env('CONECTAENTE_MODE', self::MODE_LIVE),
         ];
 
         parent::__construct($config);
@@ -54,7 +62,7 @@ class Plugin extends \MapasCulturais\Plugin
 
     function client(): Client
     {
-        return new Client($this->_config['host'], $this->transport);
+        return new Client($this->_config['host'], $this->transport ?? $this->defaultTransport(), $this->isDevMode());
     }
 
     /** Janela alternativa, para os testes controlarem a duração. */
@@ -115,6 +123,21 @@ class Plugin extends \MapasCulturais\Plugin
     function scheduleParSync(): void
     {
         App::i()->enqueueJob(ParInformationSyncJob::SLUG, [], "+{$this->_config['parSyncIntervalMinutes']} minutes", '', 1);
+    }
+
+    function isDevMode(): bool
+    {
+        return $this->_config['mode'] === self::MODE_DEV;
+    }
+
+    function fixturesPath(): string
+    {
+        return __DIR__ . '/fixtures';
+    }
+
+    private function defaultTransport(): TransportInterface
+    {
+        return $this->isDevMode() ? new FixtureTransport($this->fixturesPath()) : new CurlTransport();
     }
 
     /** Serviço alternativo, para os testes controlarem cache/transporte da árvore do PAR. */
