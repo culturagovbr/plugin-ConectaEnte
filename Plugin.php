@@ -280,14 +280,5 @@ class Plugin extends \MapasCulturais\Plugin
         $app->registerController('conectaente', ConectaEnteController::class);
 
         CultBrMetadata::register($this);
-
-        // Mesmas chaves que o AldirBlanc/Pnab já usam para o PAR: não ativar os dois fluxos ao mesmo tempo.
-        foreach (['parExercicioId' => 'Exercício', 'parMetaId' => 'Meta', 'parAcaoId' => 'Ação', 'parAtividadeId' => 'Atividade'] as $key => $label) {
-            $this->registerMetadata('MapasCulturais\Entities\Opportunity', $key, [
-                'label' => sprintf(i::__('PAR - %s'), $label),
-                'type' => 'string',
-                'private' => false,
-            ]);
-        }
     }
 }
