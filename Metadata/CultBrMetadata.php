@@ -36,12 +36,12 @@ final class CultBrMetadata
     const PUBLISHED_AT = 'conectaente_publishedAt';
 
     // sem o prefixo: são as chaves que o AldirBlanc/Pnab já usam para o PAR
-    const PAR_EXERCICIO_ID = 'parExercicioId';
-    const PAR_META_ID = 'parMetaId';
-    const PAR_ACAO_ID = 'parAcaoId';
-    const PAR_ATIVIDADE_ID = 'parAtividadeId';
+    const PAR_EXERCISE_ID = 'parExercicioId';
+    const PAR_GOAL_ID = 'parMetaId';
+    const PAR_ACTION_ID = 'parAcaoId';
+    const PAR_ACTIVITY_ID = 'parAtividadeId';
 
-    const PAR_KEYS = [self::PAR_EXERCICIO_ID, self::PAR_META_ID, self::PAR_ACAO_ID, self::PAR_ATIVIDADE_ID];
+    const PAR_KEYS = [self::PAR_EXERCISE_ID, self::PAR_GOAL_ID, self::PAR_ACTION_ID, self::PAR_ACTIVITY_ID];
 
     /**
      * Registra na oportunidade os campos que o CultBR exige; quem os torna obrigatórios é a regra de publicação.
@@ -80,10 +80,10 @@ final class CultBrMetadata
             'unserialize' => fn($value) => $value ? new DateTime($value) : $value,
         ]);
 
-        self::registerText($plugin, self::PAR_EXERCICIO_ID, i::__('Exercício do PAR'));
-        self::registerText($plugin, self::PAR_META_ID, i::__('Meta do PAR'));
-        self::registerText($plugin, self::PAR_ACAO_ID, i::__('Ação do PAR'));
-        self::registerText($plugin, self::PAR_ATIVIDADE_ID, i::__('Atividade do PAR'));
+        self::registerText($plugin, self::PAR_EXERCISE_ID, i::__('Exercício do PAR'));
+        self::registerText($plugin, self::PAR_GOAL_ID, i::__('Meta do PAR'));
+        self::registerText($plugin, self::PAR_ACTION_ID, i::__('Ação do PAR'));
+        self::registerText($plugin, self::PAR_ACTIVITY_ID, i::__('Atividade do PAR'));
     }
 
     private static function serializeDateTime(mixed $value): ?string
