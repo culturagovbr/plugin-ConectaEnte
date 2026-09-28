@@ -12,8 +12,8 @@ final class ParInformation implements JsonSerializable
 {
     use ParNodeFields;
 
-    /** @param ParExercicio[] $exercicios */
-    public function __construct(public readonly array $exercicios)
+    /** @param ParExercise[] $exercises */
+    public function __construct(public readonly array $exercises)
     {
     }
 
@@ -51,7 +51,7 @@ final class ParInformation implements JsonSerializable
             ));
         }
 
-        return new self(self::children($matches[0], 'exercicios', [ParExercicio::class, 'fromArray']));
+        return new self(self::children($matches[0], 'exercicios', [ParExercise::class, 'fromArray']));
     }
 
     public static function empty(): self
@@ -67,17 +67,17 @@ final class ParInformation implements JsonSerializable
     /**
      * Se a cadeia de ids é um caminho da árvore: cada nível filho do anterior.
      */
-    public function isConsistentPath(string $exercicioId, string $metaId, string $acaoId, string $atividadeId): bool
+    public function isConsistentPath(string $exerciseId, string $goalId, string $actionId, string $activityId): bool
     {
-        $exercicio = $this->findById($this->exercicios, $exercicioId);
-        $meta = $exercicio ? $this->findById($exercicio->metas, $metaId) : null;
-        $acao = $meta ? $this->findById($meta->acoes, $acaoId) : null;
-        $atividade = $acao ? $this->findById($acao->atividades, $atividadeId) : null;
+        $exercise = $this->findById($this->exercises, $exerciseId);
+        $goal = $exercise ? $this->findById($exercise->goals, $goalId) : null;
+        $action = $goal ? $this->findById($goal->actions, $actionId) : null;
+        $activity = $action ? $this->findById($action->activities, $activityId) : null;
 
-        return $atividade !== null;
+        return $activity !== null;
     }
 
-    /** @param array<ParExercicio|ParMeta|ParAcao|ParAtividade> $items */
+    /** @param array<ParExercise|ParGoal|ParAction|ParActivity> $items */
     private function findById(array $items, string $id): mixed
     {
         foreach ($items as $item) {
@@ -91,6 +91,6 @@ final class ParInformation implements JsonSerializable
 
     public function jsonSerialize(): array
     {
-        return ['exercicios' => array_values($this->exercicios)];
+        return ['exercicios' => array_values($this->exercises)];
     }
 }

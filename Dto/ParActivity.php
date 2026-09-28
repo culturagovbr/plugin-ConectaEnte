@@ -4,14 +4,14 @@ namespace ConectaEnte\Dto;
 
 use JsonSerializable;
 
-final class ParAtividade implements JsonSerializable
+final class ParActivity implements JsonSerializable
 {
     use ParNodeFields;
 
     public function __construct(
         public readonly string $id,
-        public readonly ?string $nome,
-        public readonly ?string $valor,
+        public readonly ?string $name,
+        public readonly ?string $amount,
     ) {
     }
 
@@ -19,8 +19,8 @@ final class ParAtividade implements JsonSerializable
     {
         return new self(
             id: self::id($data),
-            nome: self::scalar($data, 'nome'),
-            valor: self::scalar($data, 'valor'),
+            name: self::scalar($data, 'nome'),
+            amount: self::scalar($data, 'valor'),
         );
     }
 

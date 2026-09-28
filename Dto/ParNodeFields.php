@@ -25,6 +25,6 @@ trait ParNodeFields
 
     private function scalarFields(): array
     {
-        return ['id' => $this->id, 'nome' => $this->nome, 'valor' => $this->valor];
+        return ['id' => $this->id, 'nome' => $this->name, 'valor' => $this->amount];
     }
 }

@@ -149,13 +149,13 @@ trait ConectaEnteFixtures
 
     /**
      * Simula o `ParInformationSyncJob` já ter rodado com sucesso para este ente: grava a
-     * árvore direto no cache, no mesmo formato/chave que o job produz. `$exercicios` usa o
+     * árvore direto no cache, no mesmo formato/chave que o job produz. `$exercises` usa o
      * formato de nível já achatado (sem `pagination`/`data`/`cnpj`) por conveniência do teste.
      */
-    protected function primeParInformationCache(FederativeEntity $federativeEntity, array $exercicios): void
+    protected function primeParInformationCache(FederativeEntity $federativeEntity, array $exercises): void
     {
         $tree = ParInformation::fromApiListResponse([
-            'data' => [['cnpj' => $federativeEntity->document, 'exercicios' => $exercicios]],
+            'data' => [['cnpj' => $federativeEntity->document, 'exercicios' => $exercises]],
         ], $federativeEntity->document);
 
         App::i()->cache->save(

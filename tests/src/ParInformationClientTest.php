@@ -32,7 +32,7 @@ class ParInformationClientTest extends TestCase
         ]]);
 
         $this->assertNotNull($result->tree);
-        $this->assertSame('2024', $result->tree->exercicios[0]->id);
+        $this->assertSame('2024', $result->tree->exercises[0]->id);
         $this->assertFalse($result->unreachable);
         $this->assertFalse($result->notFound);
     }
@@ -42,7 +42,7 @@ class ParInformationClientTest extends TestCase
         $result = $this->get(200, ['data' => [['cnpj' => self::DOCUMENT, 'exercicios' => []]]]);
 
         $this->assertNotNull($result->tree, 'Árvore vazia é resposta boa: o job pode guardá-la.');
-        $this->assertSame([], $result->tree->exercicios);
+        $this->assertSame([], $result->tree->exercises);
     }
 
     function testBodyThatIsNotJsonIsTreatedAsUnreachable()
@@ -95,7 +95,7 @@ class ParInformationClientTest extends TestCase
             ['cnpj' => '12.200.176/0001-76', 'exercicios' => [['id' => '2024']]],
         ]]);
 
-        $this->assertSame('2024', $result->tree->exercicios[0]->id);
+        $this->assertSame('2024', $result->tree->exercises[0]->id);
     }
 
     function testResponseWithoutTheEntityGivesAnEmptyTree()
@@ -103,7 +103,7 @@ class ParInformationClientTest extends TestCase
         $result = $this->get(200, ['data' => [['cnpj' => '99999999000191', 'exercicios' => [['id' => 'de-outro']]]]]);
 
         $this->assertNotNull($result->tree);
-        $this->assertSame([], $result->tree->exercicios, 'Sem o ente do token, não há árvore a oferecer.');
+        $this->assertSame([], $result->tree->exercises, 'Sem o ente do token, não há árvore a oferecer.');
     }
 
     private function get(int $status, array|string $body): \ConectaEnte\Http\ParInformationResult

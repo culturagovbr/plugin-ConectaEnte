@@ -16,16 +16,16 @@ class ParInformationDtoTest extends TestCase
 
     function testReadsTheWholeTreeOfTheMatchingEntity()
     {
-        $tree = $this->treeOf([$this->entity([$this->exercicio()])]);
+        $tree = $this->treeOf([$this->entity([$this->exercise()])]);
 
-        $exercicio = $tree->exercicios[0];
-        $meta = $exercicio->metas[0];
-        $acao = $meta->acoes[0];
+        $exercise = $tree->exercises[0];
+        $goal = $exercise->goals[0];
+        $action = $goal->actions[0];
 
-        $this->assertSame('2024', $exercicio->ano);
-        $this->assertSame('Meta 1', $meta->nome);
-        $this->assertSame('Ação 1', $acao->nome);
-        $this->assertSame('Atividade 1', $acao->atividades[0]->nome);
+        $this->assertSame('2024', $exercise->year);
+        $this->assertSame('Meta 1', $goal->name);
+        $this->assertSame('Ação 1', $action->name);
+        $this->assertSame('Atividade 1', $action->activities[0]->name);
     }
 
     function testOnlyTheIdIsRequiredAtEveryLevel()
@@ -34,14 +34,14 @@ class ParInformationDtoTest extends TestCase
             ['id' => 1, 'metas' => [['id' => 2, 'acoes' => [['id' => 3, 'atividades' => [['id' => 4]]]]]]],
         ])]);
 
-        $exercicio = $tree->exercicios[0];
-        $meta = $exercicio->metas[0];
-        $acao = $meta->acoes[0];
+        $exercise = $tree->exercises[0];
+        $goal = $exercise->goals[0];
+        $action = $goal->actions[0];
 
-        $this->assertNull($exercicio->ano);
-        $this->assertNull($meta->nome);
-        $this->assertNull($meta->valor);
-        $this->assertNull($acao->atividades[0]->nome);
+        $this->assertNull($exercise->year);
+        $this->assertNull($goal->name);
+        $this->assertNull($goal->amount);
+        $this->assertNull($action->activities[0]->name);
     }
 
     function testNumericIdsBecomeStrings()
@@ -50,37 +50,37 @@ class ParInformationDtoTest extends TestCase
             ['id' => 10, 'metas' => [['id' => 20, 'acoes' => [['id' => 30, 'atividades' => [['id' => 40]]]]]]],
         ])]);
 
-        $exercicio = $tree->exercicios[0];
+        $exercise = $tree->exercises[0];
 
-        $this->assertSame('10', $exercicio->id, 'O metadado gravado é string; comparar com int falharia ao reabrir a edição.');
-        $this->assertSame('20', $exercicio->metas[0]->id);
-        $this->assertSame('30', $exercicio->metas[0]->acoes[0]->id);
-        $this->assertSame('40', $exercicio->metas[0]->acoes[0]->atividades[0]->id);
+        $this->assertSame('10', $exercise->id, 'O metadado gravado é string; comparar com int falharia ao reabrir a edição.');
+        $this->assertSame('20', $exercise->goals[0]->id);
+        $this->assertSame('30', $exercise->goals[0]->actions[0]->id);
+        $this->assertSame('40', $exercise->goals[0]->actions[0]->activities[0]->id);
     }
 
     function testEachLevelSerializesOnlyTheFieldsItsSchemaHas()
     {
-        $serialized = json_decode(json_encode($this->treeOf([$this->entity([$this->exercicio()])])), true);
+        $serialized = json_decode(json_encode($this->treeOf([$this->entity([$this->exercise()])])), true);
 
-        $exercicio = $serialized['exercicios'][0];
-        $meta = $exercicio['metas'][0];
-        $acao = $meta['acoes'][0];
+        $exercise = $serialized['exercicios'][0];
+        $goal = $exercise['metas'][0];
+        $action = $goal['acoes'][0];
 
-        $this->assertSame(['id', 'ano', 'metas'], array_keys($exercicio), 'ParExercicioSchema é { id, ano, metas }.');
-        $this->assertSame(['id', 'nome', 'valor', 'acoes'], array_keys($meta));
-        $this->assertSame(['id', 'nome', 'valor', 'atividades'], array_keys($acao));
-        $this->assertSame(['id', 'nome', 'valor'], array_keys($acao['atividades'][0]));
+        $this->assertSame(['id', 'ano', 'metas'], array_keys($exercise), 'ParExercicioSchema é { id, ano, metas }.');
+        $this->assertSame(['id', 'nome', 'valor', 'acoes'], array_keys($goal));
+        $this->assertSame(['id', 'nome', 'valor', 'atividades'], array_keys($action));
+        $this->assertSame(['id', 'nome', 'valor'], array_keys($action['atividades'][0]));
     }
 
     function testEntityIsMatchedByDocumentIgnoringPunctuation()
     {
         $tree = $this->treeOf([
             $this->entity([['id' => 'outro']], '99999999000191'),
-            $this->entity([$this->exercicio()], '12.200.176/0001-76'),
+            $this->entity([$this->exercise()], '12.200.176/0001-76'),
         ]);
 
-        $this->assertCount(1, $tree->exercicios);
-        $this->assertSame('2024', $tree->exercicios[0]->ano, 'A árvore é a do ente do token, não a do primeiro item.');
+        $this->assertCount(1, $tree->exercises);
+        $this->assertSame('2024', $tree->exercises[0]->year, 'A árvore é a do ente do token, não a do primeiro item.');
     }
 
     function testEntitiesOfAnotherDocumentAreLogged()
@@ -90,7 +90,7 @@ class ParInformationDtoTest extends TestCase
         $this->treeOf([
             $this->entity([['id' => 'a']], '99999999000191'),
             $this->entity([['id' => 'b']], '11222333000181'),
-            $this->entity([$this->exercicio()]),
+            $this->entity([$this->exercise()]),
         ]);
 
         $this->assertTrue($handler->hasWarningThatContains('2 de 3 entes'), 'Ente descartado não pode sumir em silêncio.');
@@ -100,9 +100,9 @@ class ParInformationDtoTest extends TestCase
     {
         $handler = $this->captureLog();
 
-        $tree = $this->treeOf([$this->entity([$this->exercicio()], '99999999000191')]);
+        $tree = $this->treeOf([$this->entity([$this->exercise()], '99999999000191')]);
 
-        $this->assertSame([], $tree->exercicios);
+        $this->assertSame([], $tree->exercises);
         $this->assertTrue($handler->hasWarningThatContains('1 de 1 entes'));
     }
 
@@ -115,15 +115,15 @@ class ParInformationDtoTest extends TestCase
             $this->entity([['id' => 'segundo']]),
         ]);
 
-        $this->assertSame('primeiro', $tree->exercicios[0]->id);
+        $this->assertSame('primeiro', $tree->exercises[0]->id);
         $this->assertTrue($handler->hasWarningThatContains('2 entes casaram'));
     }
 
     function testBodyWithoutDataGivesAnEmptyTree()
     {
-        $this->assertSame([], ParInformation::fromApiListResponse([], self::DOCUMENT)->exercicios);
-        $this->assertSame([], ParInformation::fromApiListResponse(['data' => []], self::DOCUMENT)->exercicios);
-        $this->assertSame([], ParInformation::fromApiListResponse(['data' => ['lixo']], self::DOCUMENT)->exercicios);
+        $this->assertSame([], ParInformation::fromApiListResponse([], self::DOCUMENT)->exercises);
+        $this->assertSame([], ParInformation::fromApiListResponse(['data' => []], self::DOCUMENT)->exercises);
+        $this->assertSame([], ParInformation::fromApiListResponse(['data' => ['lixo']], self::DOCUMENT)->exercises);
     }
 
     function testBodyWhoseDataIsNotAListDoesNotBlowUp()
@@ -131,7 +131,7 @@ class ParInformationDtoTest extends TestCase
         foreach (['texto', 7, null, ['cnpj' => self::DOCUMENT]] as $data) {
             $this->assertSame(
                 [],
-                ParInformation::fromApiListResponse(['data' => $data], self::DOCUMENT)->exercicios,
+                ParInformation::fromApiListResponse(['data' => $data], self::DOCUMENT)->exercises,
                 'JSON válido fora do contrato vira árvore vazia, não TypeError no job.',
             );
         }
@@ -139,14 +139,14 @@ class ParInformationDtoTest extends TestCase
 
     function testConsistentPathIsAccepted()
     {
-        $tree = $this->treeOf([$this->entity([$this->exercicio()])]);
+        $tree = $this->treeOf([$this->entity([$this->exercise()])]);
 
         $this->assertTrue($tree->isConsistentPath('2024', 'm1', 'a1', 'at1'));
     }
 
     function testPathIsRejectedWhenAnyLevelIsNotChildOfThePrevious()
     {
-        $tree = $this->treeOf([$this->entity([$this->exercicio()])]);
+        $tree = $this->treeOf([$this->entity([$this->exercise()])]);
 
         $this->assertFalse($tree->isConsistentPath('outro', 'm1', 'a1', 'at1'), 'exercício inexistente');
         $this->assertFalse($tree->isConsistentPath('2024', 'outra', 'a1', 'at1'), 'meta de outro exercício');
@@ -159,12 +159,12 @@ class ParInformationDtoTest extends TestCase
         return ParInformation::fromApiListResponse(['data' => $data], self::DOCUMENT);
     }
 
-    private function entity(array $exercicios, ?string $document = null): array
+    private function entity(array $exercises, ?string $document = null): array
     {
-        return ['cnpj' => $document ?? self::DOCUMENT, 'exercicios' => $exercicios];
+        return ['cnpj' => $document ?? self::DOCUMENT, 'exercicios' => $exercises];
     }
 
-    private function exercicio(): array
+    private function exercise(): array
     {
         return [
             'id' => '2024',
