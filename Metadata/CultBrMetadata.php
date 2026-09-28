@@ -35,11 +35,10 @@ final class CultBrMetadata
     const LEGAL_ENTITY_TYPES = 'conectaente_legalEntityTypes';
     const PUBLISHED_AT = 'conectaente_publishedAt';
 
-    // sem o prefixo: são as chaves que o AldirBlanc/Pnab já usam para o PAR
-    const PAR_EXERCISE_ID = 'parExercicioId';
-    const PAR_GOAL_ID = 'parMetaId';
-    const PAR_ACTION_ID = 'parAcaoId';
-    const PAR_ACTIVITY_ID = 'parAtividadeId';
+    const PAR_EXERCISE_ID = 'conectaente_parExercicioId';
+    const PAR_GOAL_ID = 'conectaente_parMetaId';
+    const PAR_ACTION_ID = 'conectaente_parAcaoId';
+    const PAR_ACTIVITY_ID = 'conectaente_parAtividadeId';
 
     const PAR_KEYS = [self::PAR_EXERCISE_ID, self::PAR_GOAL_ID, self::PAR_ACTION_ID, self::PAR_ACTIVITY_ID];
 

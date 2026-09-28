@@ -5,7 +5,7 @@ Cascata **Exercício → Meta → Ação → Atividade** do PAR do Ente Federado
 ### Propriedades
 
 - *exercises **Array** = []* : a árvore do PAR, no formato que a rota devolve — exercícios, com `metas`, `acoes` e `atividades` encaixadas. As chaves são as do contrato do CultBR, por isso ficam em português.
-- *modelValue **Object** = null* : `{ parExercicioId, parMetaId, parAcaoId, parAtividadeId }`, as chaves dos metadados da oportunidade. Usar com `v-model`.
+- *modelValue **Object** = null* : `{ conectaente_parExercicioId, conectaente_parMetaId, conectaente_parAcaoId, conectaente_parAtividadeId }`, as chaves dos metadados da oportunidade. Usar com `v-model`.
 - *emptyHint **String** = ''* : substitui a mensagem padrão de árvore vazia.
 - *readonly **Boolean** = false* : mostra os rótulos escolhidos, sem os selects.
 - *serverErrors **Object** = null* : erros do servidor por metadado, como os de `entity.__validationErrors`.

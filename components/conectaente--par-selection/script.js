@@ -1,7 +1,7 @@
 /**
  * Liga a cascata do PAR à oportunidade: lê a árvore da rota e grava os metadados sem salvar a entidade.
  */
-const PAR_SELECTION_KEYS = ['parExercicioId', 'parMetaId', 'parAcaoId', 'parAtividadeId'];
+const PAR_SELECTION_KEYS = ['conectaente_parExercicioId', 'conectaente_parMetaId', 'conectaente_parAcaoId', 'conectaente_parAtividadeId'];
 
 app.component('conectaente--par-selection', {
     template: $TEMPLATES['conectaente--par-selection'],

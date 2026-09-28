@@ -2,10 +2,10 @@
  * Cascata Exercício → Meta → Ação → Atividade do PAR, sobre a árvore que o chamador entrega.
  */
 const PAR_METADATA_KEY_BY_FIELD = {
-    exercise: 'parExercicioId',
-    goal: 'parMetaId',
-    action: 'parAcaoId',
-    activity: 'parAtividadeId',
+    exercise: 'conectaente_parExercicioId',
+    goal: 'conectaente_parMetaId',
+    action: 'conectaente_parAcaoId',
+    activity: 'conectaente_parAtividadeId',
 };
 
 app.component('conectaente--federative-entity-par', {
@@ -24,7 +24,7 @@ app.component('conectaente--federative-entity-par', {
             type: Array,
             default: () => [],
         },
-        /** `{ parExercicioId, parMetaId, parAcaoId, parAtividadeId }`, as chaves dos metadados. */
+        /** `{ conectaente_parExercicioId, conectaente_parMetaId, conectaente_parAcaoId, conectaente_parAtividadeId }`, as chaves dos metadados. */
         modelValue: {
             type: Object,
             default: null,
@@ -62,35 +62,35 @@ app.component('conectaente--federative-entity-par', {
             const boundModel = this.modelValue;
 
             return {
-                parExercicioId: boundModel?.parExercicioId != null ? String(boundModel.parExercicioId) : '',
-                parMetaId: boundModel?.parMetaId != null ? String(boundModel.parMetaId) : '',
-                parAcaoId: boundModel?.parAcaoId != null ? String(boundModel.parAcaoId) : '',
-                parAtividadeId: boundModel?.parAtividadeId != null ? String(boundModel.parAtividadeId) : '',
+                conectaente_parExercicioId: boundModel?.conectaente_parExercicioId != null ? String(boundModel.conectaente_parExercicioId) : '',
+                conectaente_parMetaId: boundModel?.conectaente_parMetaId != null ? String(boundModel.conectaente_parMetaId) : '',
+                conectaente_parAcaoId: boundModel?.conectaente_parAcaoId != null ? String(boundModel.conectaente_parAcaoId) : '',
+                conectaente_parAtividadeId: boundModel?.conectaente_parAtividadeId != null ? String(boundModel.conectaente_parAtividadeId) : '',
             };
         },
 
         exerciseHasNoGoals() {
-            return !!this.normalizedModel.parExercicioId && this.goals.length === 0;
+            return !!this.normalizedModel.conectaente_parExercicioId && this.goals.length === 0;
         },
 
         goalHasNoActions() {
-            return !!this.normalizedModel.parMetaId && this.actions.length === 0;
+            return !!this.normalizedModel.conectaente_parMetaId && this.actions.length === 0;
         },
 
         actionHasNoActivities() {
-            return !!this.normalizedModel.parAcaoId && this.activities.length === 0;
+            return !!this.normalizedModel.conectaente_parAcaoId && this.activities.length === 0;
         },
 
         exerciseId: {
             get() {
-                return this.normalizedModel.parExercicioId;
+                return this.normalizedModel.conectaente_parExercicioId;
             },
             set(selectedValue) {
                 this.$emit('update:modelValue', {
-                    parExercicioId: this.asId(selectedValue),
-                    parMetaId: '',
-                    parAcaoId: '',
-                    parAtividadeId: '',
+                    conectaente_parExercicioId: this.asId(selectedValue),
+                    conectaente_parMetaId: '',
+                    conectaente_parAcaoId: '',
+                    conectaente_parAtividadeId: '',
                 });
                 this.clearErrors();
             },
@@ -98,14 +98,14 @@ app.component('conectaente--federative-entity-par', {
 
         goalId: {
             get() {
-                return this.normalizedModel.parMetaId;
+                return this.normalizedModel.conectaente_parMetaId;
             },
             set(selectedValue) {
                 this.$emit('update:modelValue', {
                     ...this.normalizedModel,
-                    parMetaId: this.asId(selectedValue),
-                    parAcaoId: '',
-                    parAtividadeId: '',
+                    conectaente_parMetaId: this.asId(selectedValue),
+                    conectaente_parAcaoId: '',
+                    conectaente_parAtividadeId: '',
                 });
                 this.clearErrors();
             },
@@ -113,13 +113,13 @@ app.component('conectaente--federative-entity-par', {
 
         actionId: {
             get() {
-                return this.normalizedModel.parAcaoId;
+                return this.normalizedModel.conectaente_parAcaoId;
             },
             set(selectedValue) {
                 this.$emit('update:modelValue', {
                     ...this.normalizedModel,
-                    parAcaoId: this.asId(selectedValue),
-                    parAtividadeId: '',
+                    conectaente_parAcaoId: this.asId(selectedValue),
+                    conectaente_parAtividadeId: '',
                 });
                 this.clearErrors();
             },
@@ -127,69 +127,69 @@ app.component('conectaente--federative-entity-par', {
 
         activityId: {
             get() {
-                return this.normalizedModel.parAtividadeId;
+                return this.normalizedModel.conectaente_parAtividadeId;
             },
             set(selectedValue) {
                 this.$emit('update:modelValue', {
                     ...this.normalizedModel,
-                    parAtividadeId: this.asId(selectedValue),
+                    conectaente_parAtividadeId: this.asId(selectedValue),
                 });
                 this.clearErrors();
             },
         },
 
         goals() {
-            if (!this.normalizedModel.parExercicioId || !this.exercises.length) {
+            if (!this.normalizedModel.conectaente_parExercicioId || !this.exercises.length) {
                 return [];
             }
 
-            const selectedExercise = this.nodeById(this.exercises, this.normalizedModel.parExercicioId);
+            const selectedExercise = this.nodeById(this.exercises, this.normalizedModel.conectaente_parExercicioId);
 
             return Array.isArray(selectedExercise?.metas) ? selectedExercise.metas : [];
         },
 
         actions() {
-            if (!this.normalizedModel.parMetaId || !this.goals.length) {
+            if (!this.normalizedModel.conectaente_parMetaId || !this.goals.length) {
                 return [];
             }
 
-            const selectedGoal = this.nodeById(this.goals, this.normalizedModel.parMetaId);
+            const selectedGoal = this.nodeById(this.goals, this.normalizedModel.conectaente_parMetaId);
 
             return Array.isArray(selectedGoal?.acoes) ? selectedGoal.acoes : [];
         },
 
         activities() {
-            if (!this.normalizedModel.parAcaoId || !this.actions.length) {
+            if (!this.normalizedModel.conectaente_parAcaoId || !this.actions.length) {
                 return [];
             }
 
-            const selectedAction = this.nodeById(this.actions, this.normalizedModel.parAcaoId);
+            const selectedAction = this.nodeById(this.actions, this.normalizedModel.conectaente_parAcaoId);
 
             return Array.isArray(selectedAction?.atividades) ? selectedAction.atividades : [];
         },
 
         readonlyExerciseLabel() {
-            const exercise = this.nodeById(this.exercises, this.normalizedModel.parExercicioId);
+            const exercise = this.nodeById(this.exercises, this.normalizedModel.conectaente_parExercicioId);
 
-            return this.readonlyLabel(this.normalizedModel.parExercicioId, exercise?.ano);
+            return this.readonlyLabel(this.normalizedModel.conectaente_parExercicioId, exercise?.ano);
         },
 
         readonlyGoalLabel() {
-            const goal = this.nodeById(this.goals, this.normalizedModel.parMetaId);
+            const goal = this.nodeById(this.goals, this.normalizedModel.conectaente_parMetaId);
 
-            return this.readonlyLabel(this.normalizedModel.parMetaId, goal?.nome);
+            return this.readonlyLabel(this.normalizedModel.conectaente_parMetaId, goal?.nome);
         },
 
         readonlyActionLabel() {
-            const action = this.nodeById(this.actions, this.normalizedModel.parAcaoId);
+            const action = this.nodeById(this.actions, this.normalizedModel.conectaente_parAcaoId);
 
-            return this.readonlyLabel(this.normalizedModel.parAcaoId, action?.nome);
+            return this.readonlyLabel(this.normalizedModel.conectaente_parAcaoId, action?.nome);
         },
 
         readonlyActivityLabel() {
-            const activity = this.nodeById(this.activities, this.normalizedModel.parAtividadeId);
+            const activity = this.nodeById(this.activities, this.normalizedModel.conectaente_parAtividadeId);
 
-            return this.readonlyLabel(this.normalizedModel.parAtividadeId, activity?.nome);
+            return this.readonlyLabel(this.normalizedModel.conectaente_parAtividadeId, activity?.nome);
         },
     },
 
@@ -232,10 +232,10 @@ app.component('conectaente--federative-entity-par', {
 
             const selection = this.normalizedModel;
             const errors = {
-                exercise: !selection.parExercicioId,
-                goal: !selection.parMetaId || this.exerciseHasNoGoals,
-                action: !selection.parAcaoId || this.goalHasNoActions,
-                activity: !selection.parAtividadeId || this.actionHasNoActivities,
+                exercise: !selection.conectaente_parExercicioId,
+                goal: !selection.conectaente_parMetaId || this.exerciseHasNoGoals,
+                action: !selection.conectaente_parAcaoId || this.goalHasNoActions,
+                activity: !selection.conectaente_parAtividadeId || this.actionHasNoActivities,
             };
 
             this.showFieldErrors = true;

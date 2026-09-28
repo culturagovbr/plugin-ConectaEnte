@@ -432,8 +432,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $groups = [];
 
         foreach ($keys as $key) {
-            $isPluginField = str_starts_with($key, CultBrMetadata::PREFIX) || in_array($key, CultBrMetadata::PAR_KEYS, true);
-            $groups[$key] = $isPluginField ? 'plugin' : 'core';
+            $groups[$key] = str_starts_with($key, CultBrMetadata::PREFIX) ? 'plugin' : 'core';
         }
 
         return $groups;
