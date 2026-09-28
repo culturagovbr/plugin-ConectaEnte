@@ -26,6 +26,10 @@ class ConectaEnteController extends \MapasCulturais\Controller
         'registrationTo',
         'registrationProponentTypes',
         CultBrMetadata::LEGAL_ENTITY_TYPES,
+        CultBrMetadata::PAR_EXERCISE_ID,
+        CultBrMetadata::PAR_GOAL_ID,
+        CultBrMetadata::PAR_ACTION_ID,
+        CultBrMetadata::PAR_ACTIVITY_ID,
         CultBrMetadata::SEGMENTS,
         CultBrMetadata::CULTURAL_STAGES,
         CultBrMetadata::THEMATIC_AGENDAS,
@@ -419,7 +423,8 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $groups = [];
 
         foreach ($keys as $key) {
-            $groups[$key] = str_starts_with($key, CultBrMetadata::PREFIX) ? 'plugin' : 'core';
+            $isPluginField = str_starts_with($key, CultBrMetadata::PREFIX) || in_array($key, CultBrMetadata::PAR_KEYS, true);
+            $groups[$key] = $isPluginField ? 'plugin' : 'core';
         }
 
         return $groups;

@@ -242,6 +242,40 @@ class OpportunityRequirementsRouteTest extends TestCase
         );
     }
 
+    function testParPendenciesCarryLabelAnchorGroupAndOrder()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        foreach (CultBrMetadata::PAR_KEYS as $key) {
+            $opportunity->$key = '';
+        }
+        $opportunity->vacancies = 0;
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $json = $this->responseJson();
+        // a regra acusa vagas antes do PAR; a tela mostra o PAR antes — a ordem servida é a da tela
+        $this->assertSame([...CultBrMetadata::PAR_KEYS, 'vacancies'], array_keys($json['missing']));
+        $this->assertSame('Exercício do PAR', $json['labels'][CultBrMetadata::PAR_EXERCISE_ID]);
+        $this->assertSame(CultBrMetadata::PAR_ACTIVITY_ID, $json['anchors'][CultBrMetadata::PAR_ACTIVITY_ID], 'Cada nível é a própria âncora: o card publica um data-field por select.');
+        $this->assertSame(['plugin', 'plugin', 'plugin', 'plugin'], array_values(array_intersect_key($json['groups'], array_flip(CultBrMetadata::PAR_KEYS))), 'Sem prefixo, cairiam como campo do core.');
+        $this->assertSame([], $json['missing'][CultBrMetadata::PAR_EXERCISE_ID], 'A mensagem que só repete o rótulo fica de fora da lista.');
+    }
+
+    function testParChainMessageSurvivesTheLabelFilter()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID} = '999';
+        $opportunity->save(true);
+
+        $this->send($this->requirements($opportunity->id));
+
+        $this->assertNotEmpty(
+            $this->responseJson()['missing'][CultBrMetadata::PAR_ACTIVITY_ID],
+            'A mensagem de cadeia inválida diz mais que o rótulo e precisa aparecer.',
+        );
+    }
+
     private function requirements(int $opportunityId): ServerRequestInterface
     {
         return $this->requestFactory->GET('conectaente', 'opportunityRequirements', [$opportunityId], ajax: true);
