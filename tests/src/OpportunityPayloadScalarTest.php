@@ -198,11 +198,21 @@ class OpportunityPayloadScalarTest extends TestCase
 
     function testTheHookLetsAnotherStoryAddItsFields()
     {
-        $this->app->hook('conectaente.opportunityPayload', function ($opportunity, &$payload) {
-            $payload['id_exercicio'] = 42;
+        $isActive = true;
+        // desligado no fim, porque hook não sai da App
+        $this->app->hook('conectaente.opportunityPayload', function ($opportunity, &$payload) use (&$isActive) {
+            if ($isActive) {
+                $payload['campo_de_outra_historia'] = 42;
+            }
         });
 
-        $this->assertSame(42, $this->payloadOf($this->sealed())['id_exercicio']);
+        try {
+            $payload = $this->payloadOf($this->sealed());
+        } finally {
+            $isActive = false;
+        }
+
+        $this->assertSame(42, $payload['campo_de_outra_historia']);
     }
 
     private ?Opportunity $opportunity = null;
