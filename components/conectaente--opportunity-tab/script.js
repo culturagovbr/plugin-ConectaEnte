@@ -34,7 +34,8 @@ app.component('conectaente--opportunity-tab', {
 
     computed: {
         hasFederativeSeal() {
-            return (this.entity.seals || []).some((seal) => this.config.federativeSealIds.includes(seal.sealId));
+            // sem selos na resposta, o populate() do core inicializa seals como objeto, não array
+            return Object.values(this.entity.seals || {}).some((seal) => this.config.federativeSealIds.includes(seal.sealId));
         },
 
         isSealed() {
