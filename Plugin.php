@@ -12,6 +12,7 @@ use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Payload\OpportunityPayload;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Jobs\ParInformationFetchJob;
 use ConectaEnte\Jobs\ParInformationSyncJob;
 use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\ParInformationService;
@@ -128,6 +129,24 @@ class Plugin extends \MapasCulturais\Plugin
         App::i()->enqueueJob(ParInformationSyncJob::SLUG, [], "+{$this->_config['parSyncIntervalMinutes']} minutes", '', 1);
     }
 
+    /** Enfileira a busca da árvore deste ente para agora, se ele estiver ativo. */
+    function scheduleParFetch(FederativeEntity $federativeEntity): void
+    {
+        if ((int) $federativeEntity->status !== FederativeEntity::STATUS_ENABLED) {
+            return;
+        }
+
+        $app = App::i();
+        $data = ParInformationFetchJob::dataFor($federativeEntity);
+        $jobType = $app->getRegisteredJobType(ParInformationFetchJob::SLUG);
+        $scheduled = $app->repo(Job::class)->findOneBy(['id' => $jobType->generateId($data, 'now', '', 1)]);
+
+        // substituir o job no meio de uma execução derrubaria o worker que o carrega
+        if (!$scheduled || $scheduled->status === Job::STATUS_WAITING) {
+            $app->enqueueJob(ParInformationFetchJob::SLUG, $data, 'now', '', 1, true);
+        }
+    }
+
     /** Modo alternativo, para os testes exercitarem as duas faces sem trocar a configuração da instalação. */
     public ?string $mode = null;
 
@@ -159,6 +178,7 @@ class Plugin extends \MapasCulturais\Plugin
         $app = App::i();
 
         $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
+        $app->registerJobType(new ParInformationFetchJob(ParInformationFetchJob::SLUG));
 
         try {
             $this->scheduleParSync();
@@ -167,14 +187,8 @@ class Plugin extends \MapasCulturais\Plugin
         }
 
         // token novo ou trocado não espera o próximo ciclo
-        $app->hook('entity(ConectaEnte.Entities.FederativeEntity).save:after', function () use ($app) {
-            $jobType = $app->getRegisteredJobType(ParInformationSyncJob::SLUG);
-            $scheduled = $app->repo(Job::class)->findOneBy(['id' => $jobType->generateId([], 'now', '', 1)]);
-
-            // substituir o job no meio de uma execução derrubaria o worker que o carrega
-            if (!$scheduled || $scheduled->status === Job::STATUS_WAITING) {
-                $app->enqueueJob(ParInformationSyncJob::SLUG, [], 'now', '', 1, true);
-            }
+        $app->hook('entity(ConectaEnte.Entities.FederativeEntity).save:after', function () {
+            Plugin::instance()->scheduleParFetch($this);
         });
 
         // BaseV1 imprime o grupo `app`, BaseV2 o `app-v2`
