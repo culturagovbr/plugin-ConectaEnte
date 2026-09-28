@@ -246,20 +246,14 @@ class ConectaEnteController extends \MapasCulturais\Controller
     }
 
     /**
-     * Árvore do PAR (exercício/meta/ação/atividade) do ente ligado à oportunidade pelo selo.
-     * Quem pode editar a oportunidade pode ver — não é ação restrita a saasSuperAdmin.
-     * Sem selo ligado, ou API sem este caminho no ambiente, responde 200 com árvore vazia:
-     * o front trata os dois casos como "sem PAR para mostrar", não como erro.
+     * A árvore do PAR do ente ligado à oportunidade pelo selo, para a cascata da aba.
      */
     function GET_parInformation()
     {
         $this->requireAuthentication();
 
         $opportunity = $this->requestedOpportunity();
-
-        if (!$opportunity->canUser('modify')) {
-            throw new PermissionDenied(App::i()->user, $opportunity, 'modify');
-        }
+        $opportunity->checkPermission('modify');
 
         $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
 
@@ -267,8 +261,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
             $this->json(['available' => true, 'exercicios' => []]);
         }
 
-        // cache ainda vazio: o job de sincronização não rodou (ou não teve sucesso ainda)
-        // para este ente. Distinto de "sem dado": aqui não se sabe se há dado ou não.
+        // cache ainda vazio não é "ente sem dados": não se sabe se há dado ou não
         if ($result->unavailable) {
             $this->json(['available' => false, 'exercicios' => []]);
         }
