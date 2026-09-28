@@ -158,11 +158,17 @@ trait ConectaEnteFixtures
             'data' => [['cnpj' => $federativeEntity->document, 'exercicios' => $exercises]],
         ], $federativeEntity->document);
 
-        App::i()->cache->save(
+        App::i()->mscache->save(
             ParInformationService::cacheKey($federativeEntity),
             ParInformationResult::ok($tree),
             3600,
         );
+    }
+
+    /** Simula o ambiente cujo contrato reduzido não expõe `par-information`. */
+    protected function primeParInformationNotFound(FederativeEntity $federativeEntity): void
+    {
+        App::i()->mscache->save(ParInformationService::cacheKey($federativeEntity), ParInformationResult::notFound(), 3600);
     }
 
     /**

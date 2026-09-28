@@ -47,8 +47,9 @@ class ParInformationService
     public function getForFederativeEntity(FederativeEntity $federativeEntity): ParInformationResult
     {
         $app = App::i();
+        // mscache: namespace fixo — o job grava sem subsite, e a tela lê de dentro de um
         // uma leitura só, e conferindo o tipo: classe antiga no cache vira __PHP_Incomplete_Class
-        $cached = $app->cache->fetch(self::cacheKey($federativeEntity));
+        $cached = $app->mscache->fetch(self::cacheKey($federativeEntity));
 
         if ($cached instanceof ParInformationResult) {
             return $cached;

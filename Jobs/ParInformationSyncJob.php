@@ -51,7 +51,7 @@ class ParInformationSyncJob extends JobType
 
                 // falha de rede ou token rejeitado não pode grudar no cache e mascarar a correção
                 if ($result->tree || $result->notFound) {
-                    $app->cache->save(ParInformationService::cacheKey($federativeEntity), $result, $service->cacheTtl());
+                    $app->mscache->save(ParInformationService::cacheKey($federativeEntity), $result, $service->cacheTtl());
                 } else {
                     $app->log->warning("ParInformationSyncJob: falha ao atualizar o ente {$federativeEntity->id}: {$result->message}");
                 }
