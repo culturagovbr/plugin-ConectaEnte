@@ -27,13 +27,14 @@ class OpportunityPayloadCompositeTest extends TestCase
     /** As 26 chaves do edital; as outras 4 do contrato são os ids do PAR, que a história 05 acrescenta. */
     const CONTRACT_KEYS = [
         'id', 'numero_e_titulo_edital', 'forma_de_execucao', 'status', 'data_publicacao_edital',
-        'data_inicial_prazo_inscricao', 'data_final_prazo_inscricao', 'detalhamento_objeto',
-        'numero_previsto_vagas', 'valor_total_edital', 'tipos_proponentes', 'categorias_edital',
-        'links_da_pagina_pnab', 'pdf_edital', 'ente_federado', 'segmentos_artistico_culturais',
-        'segmento_artistico_cultural_especificar', 'etapas_fazer_cultural', 'etapa_fazer_cultural_especificar',
-        'pautas_especificas', 'pauta_especifica_especificar', 'recursos_territorios_prioritarios',
+        'detalhamento_objeto', 'numero_previsto_vagas', 'valor_total_edital',
+        'data_inicial_prazo_inscricao', 'data_final_prazo_inscricao', 'tipos_proponentes',
+        'segmentos_artistico_culturais', 'segmento_artistico_cultural_especificar',
+        'etapas_fazer_cultural', 'etapa_fazer_cultural_especificar',
+        'pautas_especificas', 'pauta_especifica_especificar', 'categorias_edital',
+        'recursos_territorios_prioritarios', 'links_da_pagina_pnab', 'pdf_edital',
         'recursos_outras_fontes', 'tipos_formas_inscricao', 'reserva_vagas_cotas',
-        'outras_modalidades_acoes_afirmativas',
+        'outras_modalidades_acoes_afirmativas', 'ente_federado',
     ];
 
     function testSelectedOptionsGoAsLabelsJoinedByComma()

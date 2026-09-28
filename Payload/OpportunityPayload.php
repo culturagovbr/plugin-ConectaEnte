@@ -42,33 +42,34 @@ final class OpportunityPayload
             throw new RuntimeException("A oportunidade {$opportunity->id} não é um edital selado por Ente Federado.");
         }
 
+        // na ordem do ParEditalInMapas
         $payload = [
             'id' => $opportunity->id,
             'numero_e_titulo_edital' => $opportunity->name ?: null,
             'forma_de_execucao' => $this->executionType($opportunity),
             'status' => $this->status($opportunity),
             'data_publicacao_edital' => $this->date($opportunity->{CultBrMetadata::PUBLISHED_AT}),
-            'data_inicial_prazo_inscricao' => $this->date($opportunity->registrationFrom),
-            'data_final_prazo_inscricao' => $this->date($opportunity->registrationTo),
             'detalhamento_objeto' => $this->objectDetail($opportunity),
             'numero_previsto_vagas' => $opportunity->vacancies === null ? null : (int) $opportunity->vacancies,
             'valor_total_edital' => $this->decimal($opportunity->totalResource),
+            'data_inicial_prazo_inscricao' => $this->date($opportunity->registrationFrom),
+            'data_final_prazo_inscricao' => $this->date($opportunity->registrationTo),
             'tipos_proponentes' => $this->proponentTypes($opportunity),
-            'categorias_edital' => $opportunity->registrationRanges ?: [],
-            'links_da_pagina_pnab' => $this->links($opportunity),
-            'pdf_edital' => $opportunity->getFile('rules')?->url,
-            'ente_federado' => ['cnpj' => $federativeEntity->document, 'nome' => $federativeEntity->name],
             'segmentos_artistico_culturais' => $this->targeting($opportunity, TargetingField::SEGMENT),
             'segmento_artistico_cultural_especificar' => $this->otherSpecification($opportunity, CultBrMetadata::SEGMENTS, CultBrMetadata::SEGMENTS_OTHER, Segment::OTHER->value),
             'etapas_fazer_cultural' => $this->targeting($opportunity, TargetingField::CULTURAL_STAGE),
             'etapa_fazer_cultural_especificar' => $this->otherSpecification($opportunity, CultBrMetadata::CULTURAL_STAGES, CultBrMetadata::CULTURAL_STAGES_OTHER, CulturalStage::OTHER->value),
             'pautas_especificas' => $this->targeting($opportunity, TargetingField::THEMATIC_AGENDA),
             'pauta_especifica_especificar' => $this->otherSpecification($opportunity, CultBrMetadata::THEMATIC_AGENDAS, CultBrMetadata::THEMATIC_AGENDAS_OTHER, ThematicAgenda::OTHER->value),
+            'categorias_edital' => $opportunity->registrationRanges ?: [],
             'recursos_territorios_prioritarios' => $this->targeting($opportunity, TargetingField::PRIORITY_TERRITORY),
+            'links_da_pagina_pnab' => $this->links($opportunity),
+            'pdf_edital' => $opportunity->getFile('rules')?->url,
             'recursos_outras_fontes' => $this->fundingSources($opportunity),
             'tipos_formas_inscricao' => $this->registrationChannels($opportunity),
             'reserva_vagas_cotas' => $this->quotaReservation($opportunity),
             'outras_modalidades_acoes_afirmativas' => $this->affirmativeActions($opportunity),
+            'ente_federado' => ['cnpj' => $federativeEntity->document, 'nome' => $federativeEntity->name],
         ];
 
         App::i()->applyHook('conectaente.opportunityPayload', [$opportunity, &$payload]);
