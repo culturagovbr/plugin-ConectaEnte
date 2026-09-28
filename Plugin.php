@@ -125,9 +125,12 @@ class Plugin extends \MapasCulturais\Plugin
         App::i()->enqueueJob(ParInformationSyncJob::SLUG, [], "+{$this->_config['parSyncIntervalMinutes']} minutes", '', 1);
     }
 
+    /** Modo alternativo, para os testes exercitarem as duas faces sem trocar a configuração da instalação. */
+    public ?string $mode = null;
+
     function isDevMode(): bool
     {
-        return $this->_config['mode'] === self::MODE_DEV;
+        return ($this->mode ?? $this->_config['mode']) === self::MODE_DEV;
     }
 
     function fixturesPath(): string
@@ -266,6 +269,13 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->hook('template(opportunity.edit.tabs):end', function () {
             $this->part('conectaente/opportunity-tab');
+        });
+
+        // abaixo do cabeçalho, em qualquer página: ninguém deve confundir dado de exemplo com dado do CultBR
+        $app->hook('view.partial(main-header):after', function ($template, &$html) {
+            if (Plugin::instance()->isDevMode()) {
+                $html .= $this->partialRender('conectaente/dev-mode-banner', [], true);
+            }
         });
 
         // por último: o tema registra seus hooks depois do plugin, e os erros dele também ficam no PATCH

@@ -252,3 +252,18 @@
 @import './components/affirmative-actions';
 @import './components/funding-sources';
 @import './components/federative-entity-par';
+
+// faixa de modo de desenvolvimento: logo abaixo do cabeçalho, em qualquer página
+.conectaente-dev-mode-banner {
+    background: var(--mc-attention-100, #fdecc8);
+    border-bottom: 1px solid var(--mc-attention-300, #e8c07d);
+    color: var(--mc-low-800, #3a3a3a);
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    text-align: center;
+
+    strong {
+        margin-right: 0.25rem;
+        text-transform: uppercase;
+    }
+}
