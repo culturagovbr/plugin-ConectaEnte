@@ -34,6 +34,21 @@
     .entity-seals__seals--seal {
         align-items: flex-start;
     }
+
+    // o tema estiliza esses ícones como link; o <button> traz caixa nativa e não herda a fonte,
+    // e é o font-size do tema que dá o tamanho do ícone
+    .seal-icon .icon button,
+    .cardKey__private--header .view,
+    .cardKey__private--header .copy {
+        align-items: center;
+        background: none;
+        border: 0;
+        color: inherit;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        padding: 0;
+    }
 }
 
 // o core só marca input, textarea e select em .field.error; o selo é um botão
