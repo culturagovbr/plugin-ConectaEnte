@@ -45,6 +45,10 @@ final class OpportunityPayload
         // na ordem do ParEditalInMapas
         $payload = [
             'id' => $opportunity->id,
+            'id_exercicio' => $this->parId($opportunity, CultBrMetadata::PAR_EXERCISE_ID),
+            'id_meta' => $this->parId($opportunity, CultBrMetadata::PAR_GOAL_ID),
+            'id_acao' => $this->parId($opportunity, CultBrMetadata::PAR_ACTION_ID),
+            'id_atividade' => $this->parId($opportunity, CultBrMetadata::PAR_ACTIVITY_ID),
             'numero_e_titulo_edital' => $opportunity->name ?: null,
             'forma_de_execucao' => $this->executionType($opportunity),
             'status' => $this->status($opportunity),
@@ -75,6 +79,14 @@ final class OpportunityPayload
         App::i()->applyHook('conectaente.opportunityPayload', [$opportunity, &$payload]);
 
         return $payload;
+    }
+
+    /** O contrato tipa os quatro ids do PAR como inteiros; o metadado guarda string. */
+    private function parId(Opportunity $opportunity, string $key): ?int
+    {
+        $value = (string) $opportunity->$key;
+
+        return ctype_digit($value) ? (int) $value : null;
     }
 
     private function status(Opportunity $opportunity): array

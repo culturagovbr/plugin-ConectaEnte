@@ -24,9 +24,10 @@ class OpportunityPayloadCompositeTest extends TestCase
 {
     use PublicationRequirementsFixtures;
 
-    /** As 26 chaves do edital; as outras 4 do contrato são os ids do PAR, que a história 05 acrescenta. */
+    /** As 30 chaves do `ParEditalInMapas`, na ordem do contrato. */
     const CONTRACT_KEYS = [
-        'id', 'numero_e_titulo_edital', 'forma_de_execucao', 'status', 'data_publicacao_edital',
+        'id', 'id_exercicio', 'id_meta', 'id_acao', 'id_atividade',
+        'numero_e_titulo_edital', 'forma_de_execucao', 'status', 'data_publicacao_edital',
         'detalhamento_objeto', 'numero_previsto_vagas', 'valor_total_edital',
         'data_inicial_prazo_inscricao', 'data_final_prazo_inscricao', 'tipos_proponentes',
         'segmentos_artistico_culturais', 'segmento_artistico_cultural_especificar',
@@ -184,7 +185,7 @@ class OpportunityPayloadCompositeTest extends TestCase
     {
         $payload = $this->payloadOf($this->completelyFilled());
 
-        $this->assertSame(self::CONTRACT_KEYS, array_keys($payload), 'São as 26 chaves do edital: as 30 do contrato menos as 4 do PAR.');
+        $this->assertSame(self::CONTRACT_KEYS, array_keys($payload), 'As 30 chaves do contrato, posição a posição.');
 
         foreach ($payload as $key => $value) {
             $this->assertNotNull($value, "Com a oportunidade completa, {$key} não sai nulo.");

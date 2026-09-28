@@ -215,6 +215,36 @@ class OpportunityPayloadScalarTest extends TestCase
         $this->assertSame(42, $payload['campo_de_outra_historia']);
     }
 
+    function testParIdsComeFromTheMetadataAsIntegers()
+    {
+        $payload = $this->payloadOf($this->sealed());
+
+        $this->assertSame(2024, $payload['id_exercicio'], 'O metadado guarda string; o contrato tipa integer.');
+        $this->assertSame(7, $payload['id_meta']);
+        $this->assertSame(70, $payload['id_acao']);
+        $this->assertSame(700, $payload['id_atividade']);
+    }
+
+    function testMissingParIdsGoAsNull()
+    {
+        $opportunity = $this->sealed();
+        $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID} = '';
+        $opportunity->{CultBrMetadata::PAR_ACTION_ID} = null;
+
+        $payload = $this->payloadOf($opportunity);
+
+        $this->assertNull($payload['id_atividade'], 'Dado que falta sai nulo, para o envio nomeá-lo.');
+        $this->assertNull($payload['id_acao'], 'Edital selado antes de os campos existirem não tem o metadado gravado.');
+    }
+
+    function testParIdThatIsNotAWholeNumberGoesAsNull()
+    {
+        $opportunity = $this->sealed();
+        $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID} = '700.9';
+
+        $this->assertNull($this->payloadOf($opportunity)['id_atividade'], 'Id truncado silenciosamente iria ao CultBR como se fosse a atividade escolhida.');
+    }
+
     private ?Opportunity $opportunity = null;
 
     /** Oportunidade selada e completa para o core e para a regra, relida do banco. */
