@@ -228,13 +228,6 @@ class Plugin extends \MapasCulturais\Plugin
             $this->part('conectaente/opportunity-tab');
         });
 
-        // O template core não tinha hook ali; foi adicionado um ponto novo para o card "Informações".
-        $app->hook('template(opportunity.edit.opportunity-basic-info-information-fields):end', function () {
-            /** @var \MapasCulturais\Themes\BaseV2\Theme $this */
-            $this->import('conectaente--par-selector');
-            echo '<conectaente--par-selector :entity="entity"></conectaente--par-selector>';
-        });
-
         // Não bloqueia seleção parcial nem publicação: só recusa uma cadeia de ids que não
         // existe na árvore do ente (ex. atividade de outra ação), quando os 4 estão presentes.
         $app->hook('entity(Opportunity).validationErrors', function (&$errors) use ($app) {
