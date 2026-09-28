@@ -257,12 +257,12 @@ class ConectaEnteController extends \MapasCulturais\Controller
 
         $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
 
-        if (!$result || $result->notFound) {
+        if (!$result) {
             $this->json(['available' => true, 'exercicios' => []]);
         }
 
-        // cache ainda vazio não é "ente sem dados": não se sabe se há dado ou não
-        if ($result->unavailable) {
+        // cache vazio ou caminho ausente na API não é "ente sem dados": não se sabe se há dado
+        if ($result->unavailable || $result->notFound) {
             $this->json(['available' => false, 'exercicios' => []]);
         }
 
