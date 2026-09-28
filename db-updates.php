@@ -55,4 +55,8 @@ return [
     'conectaente: lixeira do Ente Federado' => function () {
         __try("ALTER TABLE conectaente_federative_entity ADD COLUMN IF NOT EXISTS status SMALLINT NOT NULL DEFAULT 1");
     },
+
+    'conectaente: copia os metadados do PAR para as chaves prefixadas' => function () {
+        \ConectaEnte\Migrations\CopyLegacyParKeys::run();
+    },
 ];
