@@ -34,10 +34,236 @@
     .entity-seals__seals--seal {
         align-items: flex-start;
     }
+
+    // o tema estiliza esses ícones como link; <button> traz a caixa e a fonte do navegador
+    .seal-icon .icon button,
+    .cardKey__private--header .view,
+    .cardKey__private--header .copy {
+        align-items: center;
+        background: none;
+        border: 0;
+        color: inherit;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        padding: 0;
+    }
 }
 
 // o core só marca input, textarea e select em .field.error; o selo é um botão
 .conectaente--entity-form .field.error .button {
     border-color: var(--mc-error);
     color: var(--mc-error);
+}
+
+.conectaente-opportunity-tab {
+    display: grid;
+    gap: 24px;
+}
+
+// o campo do step ativo é contornado; outline não ocupa espaço, então o layout do core não muda
+.conectaente-opportunity-tab [data-field] {
+    border-radius: 0.25rem;
+    transition: outline-color .2s ease;
+    outline: 2px solid transparent;
+    outline-offset: 0.5rem;
+}
+
+.conectaente-opportunity-tab [data-field].conectaente-field--active {
+    outline-color: var(--mc-opportunities-300);
+}
+
+// o card acompanha a rolagem para a lista servir de navegação; rola por dentro quando não cabe
+.container:has(> .conectaente-opportunity-tab) > aside {
+    align-self: start;
+    position: sticky;
+    top: 1rem;
+
+    > .mc-card {
+        max-height: calc(100vh - 8rem);
+        overflow-y: auto;
+    }
+}
+
+.conectaente-opportunity-tab__quotas .conectaente-quota-reservation {
+    border-top: var(--mc-border-hairline);
+    padding-top: 1.5rem;
+}
+
+.conectaente-opportunity-tab__blocos > * + * {
+    border-top: var(--mc-border-hairline);
+    padding-top: 1.5rem;
+}
+
+// a lista de pendências precisa de largura para navegar: o contêiner cresce em vez de espremer os campos
+.container:has(> .conectaente-opportunity-tab) {
+    max-width: 1360px;
+    grid-template-columns: minmax(0, 1fr) 400px;
+
+    @media (max-width: 1400px) {
+        grid-template-columns: minmax(0, 1fr) 340px;
+    }
+
+    @media (max-width: 800px) {
+        grid-template-columns: 100%;
+    }
+}
+
+.conectaente-opportunity-requirements {
+    &--loading {
+        opacity: .6;
+    }
+
+    // a classe do tema entra no seletor para ganhar dele sem !important
+    &__timeline.timeline {
+        margin: 0;
+
+        .item {
+            padding-bottom: 1rem;
+        }
+
+        .item__dot {
+            &::before,
+            .dot {
+                background-color: var(--mc-opportunities-500);
+            }
+        }
+
+        .item__content--description p {
+            margin: 0;
+        }
+
+        .conectaente-opportunity-requirements__item--done {
+            .item__dot .dot {
+                background-color: var(--mc-gray-300);
+            }
+
+            .item__content--title {
+                color: var(--mc-gray-700);
+            }
+        }
+
+        .conectaente-opportunity-requirements__item--active {
+            // anel por outline: crescer o ponto invadiria a coluna do texto
+            .dot {
+                outline: 2px solid var(--mc-opportunities-300);
+                outline-offset: 1px;
+            }
+
+            .item__content--title {
+                color: var(--mc-opportunities-500);
+            }
+        }
+    }
+
+    &__count {
+        background: var(--mc-opportunities-500);
+        border-radius: var(--mc-border-radius-pill);
+        color: var(--mc-high-500);
+        font-size: .75rem;
+        margin-left: .5rem;
+        padding: 0 .5rem;
+    }
+
+    &__back {
+        align-items: center;
+        background: none;
+        border: 0;
+        color: inherit;
+        cursor: pointer;
+        display: flex;
+        font: inherit;
+        gap: .25rem;
+        margin-bottom: .5rem;
+        padding: 0;
+
+        &:hover,
+        &:focus-visible {
+            text-decoration: underline;
+        }
+    }
+
+    &__link {
+        background: none;
+        border: 0;
+        color: inherit;
+        cursor: pointer;
+        font: inherit;
+        padding: 0;
+        text-align: left;
+
+        &:hover,
+        &:focus-visible {
+            text-decoration: underline;
+        }
+    }
+
+    &__done,
+    &__failed {
+        margin: 0;
+    }
+
+    &__failed {
+        color: var(--mc-error);
+    }
+}
+
+.conectaente-targeting-multiselect__row {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    .conectaente-targeting-multiselect__checkboxes {
+        align-self: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .conectaente-targeting-multiselect__checkbox {
+        align-items: center;
+        cursor: pointer;
+        display: flex;
+        gap: .5rem;
+
+        input[type="checkbox"] {
+            flex-shrink: 0;
+        }
+
+        span {
+            line-height: 1.3;
+        }
+    }
+
+    .conectaente-targeting-multiselect__select,
+    .conectaente-targeting-multiselect__other {
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .conectaente-targeting-multiselect__row .conectaente-targeting-multiselect__checkboxes {
+        flex-direction: column;
+    }
+}
+
+@import './components/quota-reservation';
+@import './components/registration-channels';
+@import './components/affirmative-actions';
+@import './components/funding-sources';
+@import './components/federative-entity-par';
+
+// faixa de modo de desenvolvimento: logo abaixo do cabeçalho, em qualquer página
+.conectaente-dev-mode-banner {
+    background: var(--mc-attention-100, #fdecc8);
+    border-bottom: 1px solid var(--mc-attention-300, #e8c07d);
+    color: var(--mc-low-800, #3a3a3a);
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    text-align: center;
+
+    strong {
+        margin-right: 0.25rem;
+        text-transform: uppercase;
+    }
 }

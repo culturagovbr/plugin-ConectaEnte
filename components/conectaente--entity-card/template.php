@@ -28,7 +28,7 @@ $this->import('
                         <div v-if="!trashed" class="icon">
                             <mc-confirm-button @confirm="removeSeal()">
                                 <template #button="modal">
-                                    <mc-icon @click="modal.open()" name="delete"></mc-icon>
+                                    <button type="button" :title="'<?= i::esc_attr__('Remover selo') ?>'" @click="modal.open()"><mc-icon name="delete"></mc-icon></button>
                                 </template>
                                 <template #message>
                                     <?php i::_e('Remover o selo deste Ente Federado?') ?>
@@ -94,8 +94,8 @@ $this->import('
         <div class="cardKey__private">
             <div class="cardKey__private--header">
                 <div class="label"><?= i::__('Token do CultBR:') ?></div>
-                <a v-if="!trashed" class="view" @click="toggleToken()"><mc-icon name="eye-view"></mc-icon></a>
-                <a v-if="!trashed" class="copy" @click="run('copy')"><mc-icon name="copy"></mc-icon></a>
+                <button v-if="!trashed" type="button" class="view" :title="'<?= i::esc_attr__('Revelar o token') ?>'" @click="toggleToken()"><mc-icon name="eye-view"></mc-icon></button>
+                <button v-if="!trashed" type="button" class="copy" :title="'<?= i::esc_attr__('Copiar o token') ?>'" @click="run('copy')"><mc-icon name="copy"></mc-icon></button>
             </div>
             <div class="cardKey__private--content"><span>{{ shownToken }}</span></div>
         </div>

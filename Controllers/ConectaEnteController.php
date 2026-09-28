@@ -7,14 +7,45 @@ use ConectaEnte\Dto\FederativeEntityCard;
 use ConectaEnte\Dto\SealOption;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
+use ConectaEnte\Http\ParInformationResult;
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\PublicationRequirements;
 use MapasCulturais\App;
+use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\PermissionDenied;
 use MapasCulturais\i;
 
 class ConectaEnteController extends \MapasCulturais\Controller
 {
+    /** A ordem de leitura da aba, de cima para baixo, card a card. */
+    const SCREEN_ORDER = [
+        CultBrMetadata::PAR_EXERCISE_ID,
+        CultBrMetadata::PAR_GOAL_ID,
+        CultBrMetadata::PAR_ACTION_ID,
+        CultBrMetadata::PAR_ACTIVITY_ID,
+        CultBrMetadata::EXECUTION_TYPE,
+        'rules',
+        'registrationFrom',
+        'registrationTo',
+        'registrationProponentTypes',
+        CultBrMetadata::LEGAL_ENTITY_TYPES,
+        CultBrMetadata::SEGMENTS,
+        CultBrMetadata::CULTURAL_STAGES,
+        CultBrMetadata::THEMATIC_AGENDAS,
+        CultBrMetadata::PRIORITY_TERRITORIES,
+        'vacancies',
+        'totalResource',
+        'registrationRanges',
+        CultBrMetadata::QUOTA_RESERVATION,
+        CultBrMetadata::FUNDING_SOURCES,
+        CultBrMetadata::REGISTRATION_CHANNELS,
+        PublicationRequirements::REGISTRATION_CHANNELS_EMAIL,
+        CultBrMetadata::AFFIRMATIVE_ACTIONS,
+        CultBrMetadata::PUBLISHED_AT,
+    ];
+
     function __construct()
     {
         $this->layout = 'panel';
@@ -196,6 +227,61 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->json(true);
     }
 
+    /**
+     * O que falta para publicar a oportunidade selada, com o rótulo de cada campo.
+     */
+    function GET_opportunityRequirements()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $opportunity->checkPermission('modify');
+
+        $isSealed = Plugin::instance()->sealedOpportunity()->isSealed($opportunity);
+        $missing = $isSealed ? $this->inScreenOrder($this->publicationErrors($opportunity)) : [];
+
+        $this->json([
+            'sealed' => $isSealed,
+            'missing' => $this->withoutPlainRequiredMessages($missing),
+            'labels' => $this->fieldLabels($opportunity, array_keys($missing)),
+            'anchors' => $this->fieldAnchors(array_keys($missing)),
+            'groups' => $this->fieldGroups(array_keys($missing)),
+        ]);
+    }
+
+    /**
+     * A árvore do PAR do ente ligado à oportunidade pelo selo, para a cascata da aba.
+     */
+    function GET_parInformation()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $opportunity->checkPermission('modify');
+
+        $result = Plugin::instance()->parInformationService()->getForOpportunity($opportunity);
+
+        if (!$result) {
+            $this->json(['available' => true, 'exercicios' => []]);
+        }
+
+        // sem árvore a tela precisa do motivo: token recusado não se resolve esperando, falha do CultBR sim
+        if (!$result->tree) {
+            $this->json(['available' => false, 'reason' => $this->parUnavailableReason($result), 'exercicios' => []]);
+        }
+
+        $this->json(['available' => true, 'simulated' => Plugin::instance()->isDevMode()] + $result->tree->jsonSerialize());
+    }
+
+    private function parUnavailableReason(ParInformationResult $result): string
+    {
+        return match (true) {
+            $result->notFound => 'notFound',
+            $result->unreachable => 'unreachable',
+            default => 'rejected',
+        };
+    }
+
     /** @return SealOption[] selos habilitados que nenhum Ente Federado usa, nem na lixeira */
     private function availableSeals(): array
     {
@@ -269,6 +355,124 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
 
         return $federativeEntity;
+    }
+
+    private function requestedOpportunity(): Opportunity
+    {
+        $opportunity = App::i()->repo(Opportunity::class)->find($this->urlData['id'] ?? 0);
+
+        if (!$opportunity) {
+            App::i()->pass();
+        }
+
+        return $opportunity;
+    }
+
+    // os mesmos erros que a publicação devolveria agora, sem publicar
+    private function publicationErrors(Opportunity $opportunity): array
+    {
+        $context = Plugin::instance()->publicationContext();
+        $context->simulate($opportunity);
+
+        try {
+            return $opportunity->validationErrors;
+        } finally {
+            $context->leave();
+        }
+    }
+
+    private function fieldLabels(Opportunity $opportunity, array $keys): array
+    {
+        $description = $opportunity::getPropertiesMetadata();
+        $labels = [];
+
+        foreach ($keys as $key) {
+            $labels[$key] = $this->fieldLabel($description, $key);
+        }
+
+        return $labels;
+    }
+
+    /** A ordem em que a aba exibe os campos; chave de fora vai para o fim. */
+    private function inScreenOrder(array $missing): array
+    {
+        $order = array_flip(self::SCREEN_ORDER);
+        $last = count($order);
+
+        uksort($missing, fn($a, $b) => ($order[$a] ?? $last) <=> ($order[$b] ?? $last));
+
+        return $missing;
+    }
+
+    /**
+     * As mensagens que só repetem o rótulo saem: a tela mostra o nome do campo e basta.
+     *
+     * Reconhece a fórmula em pt-br, que é a língua das mensagens de publicação; a que traz
+     * regra além da obrigatoriedade fica.
+     */
+    private function withoutPlainRequiredMessages(array $missing): array
+    {
+        foreach ($missing as $key => $messages) {
+            $missing[$key] = array_values(array_filter(
+                $messages,
+                fn($message) => !preg_match('/\bé obrigatóri[ao]\.?$/u', trim((string) $message)),
+            ));
+        }
+
+        return $missing;
+    }
+
+    /**
+     * A origem de cada chave pendente: campo do plugin ou campo do core que ele exige.
+     *
+     * @return array<string, string>
+     */
+    private function fieldGroups(array $keys): array
+    {
+        $groups = [];
+
+        foreach ($keys as $key) {
+            $groups[$key] = str_starts_with($key, CultBrMetadata::PREFIX) ? 'plugin' : 'core';
+        }
+
+        return $groups;
+    }
+
+    /**
+     * O `data-field` que a tela usa para rolar até o campo, por chave pendente.
+     *
+     * @return array<string, string>
+     */
+    private function fieldAnchors(array $keys): array
+    {
+        $anchors = [];
+
+        foreach ($keys as $key) {
+            $anchors[$key] = $this->fieldAnchor($key);
+        }
+
+        return $anchors;
+    }
+
+    /** A chave é o próprio `data-field`, salvo quando a pendência não tem campo só dela. */
+    private function fieldAnchor(string $key): string
+    {
+        return match ($key) {
+            PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => CultBrMetadata::REGISTRATION_CHANNELS,
+            default => $key,
+        };
+    }
+
+    // chaves sem rótulo na descrição da entidade levam o texto da tela do core
+    private function fieldLabel(array $description, string $key): string
+    {
+        return match ($key) {
+            'rules' => i::__('Regulamento'),
+            'term-area' => i::__('Área de Interesse'),
+            'registrationRanges' => i::__('Faixas/linhas'),
+            PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => $description[CultBrMetadata::REGISTRATION_CHANNELS]['label'],
+            default => ($description[$key]['label'] ?? '') ?: $key,
+        };
     }
 
     private function requestedSeal(): ?Seal

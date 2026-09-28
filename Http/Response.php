@@ -34,8 +34,16 @@ final class Response
      */
     public function json(): array
     {
+        return $this->decoded() ?? [];
+    }
+
+    /**
+     * Corpo decodificado, ou nulo quando não é JSON — distingue o corpo imprestável do JSON vazio.
+     */
+    public function decoded(): ?array
+    {
         $decoded = json_decode($this->body, true);
 
-        return is_array($decoded) ? $decoded : [];
+        return is_array($decoded) ? $decoded : null;
     }
 }

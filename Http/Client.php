@@ -2,6 +2,7 @@
 
 namespace ConectaEnte\Http;
 
+use ConectaEnte\Dto\ParInformation;
 use ConectaEnte\Http\Transport\CurlTransport;
 use ConectaEnte\Http\Transport\TransportInterface;
 use MapasCulturais\i;
@@ -12,8 +13,12 @@ class Client
 
     private TransportInterface $transport;
 
-    public function __construct(private string $host, ?TransportInterface $transport = null)
-    {
+    public function __construct(
+        private string $host,
+        ?TransportInterface $transport = null,
+        // em modo dev a fixture é uma só, e precisa servir a qualquer ente cadastrado
+        private bool $acceptsAnyEnte = false,
+    ) {
         $this->transport = $transport ?? new CurlTransport;
     }
 
@@ -49,6 +54,39 @@ class Client
         return $this->transport->get($this->url('/health'))->status === 200;
     }
 
+    /**
+     * A árvore do PAR do ente dono do token, casada pelo cnpj na lista que a resposta devolve.
+     */
+    public function getParInformation(string $token, string $document): ParInformationResult
+    {
+        $response = $this->transport->get($this->url('/api/v1/par-information'), ['token' => $token]);
+
+        if (!$response->reachedServer()) {
+            return ParInformationResult::unreachable();
+        }
+
+        if ($response->status === 200) {
+            $body = $response->decoded();
+
+            // corpo imprestável não pode virar árvore vazia: o job gravaria "ente sem PAR" no cache
+            if ($body === null) {
+                return ParInformationResult::unreachable(i::__('A resposta da API não é um JSON válido.'));
+            }
+
+            return ParInformationResult::ok(ParInformation::fromApiListResponse($body, $this->enteDocument($body, $document)));
+        }
+
+        if ($response->status === 404) {
+            return ParInformationResult::notFound();
+        }
+
+        if ($response->status >= 500) {
+            return ParInformationResult::unreachable();
+        }
+
+        return ParInformationResult::rejected($this->readDetail($response->json(), $response->status));
+    }
+
     private function readValidation(array $body): TokenValidation
     {
         if (($body['tipo'] ?? null) !== self::TYPE_SYSTEM) {
@@ -67,6 +105,11 @@ class Client
     /**
      * `detail` é texto em 400, 401, 403 e 404, e lista de erros de campo em 422.
      */
+    private function enteDocument(array $body, string $document): string
+    {
+        return $this->acceptsAnyEnte ? (string) ($body['data'][0]['cnpj'] ?? $document) : $document;
+    }
+
     private function readDetail(array $body, int $status): string
     {
         $detail = $body['detail'] ?? null;
