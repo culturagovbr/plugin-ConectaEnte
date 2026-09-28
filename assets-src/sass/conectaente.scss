@@ -35,8 +35,7 @@
         align-items: flex-start;
     }
 
-    // o tema estiliza esses ícones como link; o <button> traz caixa nativa e não herda a fonte,
-    // e é o font-size do tema que dá o tamanho do ícone
+    // o tema estiliza esses ícones como link; <button> traz a caixa e a fonte do navegador
     .seal-icon .icon button,
     .cardKey__private--header .view,
     .cardKey__private--header .copy {
