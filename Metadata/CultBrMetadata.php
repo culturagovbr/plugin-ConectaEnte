@@ -42,6 +42,11 @@ final class CultBrMetadata
 
     const PAR_KEYS = [self::PAR_EXERCISE_ID, self::PAR_GOAL_ID, self::PAR_ACTION_ID, self::PAR_ACTIVITY_ID];
 
+    // internos: nenhuma aba lê estas chaves ainda — placeholder mínimo até #22 (registro de tentativas)
+    const SEND_STATUS = 'conectaente_sendStatus';
+    const SEND_REASON = 'conectaente_sendReason';
+    const SEND_AT = 'conectaente_sendAt';
+
     /**
      * Registra na oportunidade os campos que o CultBR exige; quem os torna obrigatórios é a regra de publicação.
      */
@@ -83,6 +88,10 @@ final class CultBrMetadata
         self::registerText($plugin, self::PAR_GOAL_ID, i::__('Meta do PAR'));
         self::registerText($plugin, self::PAR_ACTION_ID, i::__('Ação do PAR'));
         self::registerText($plugin, self::PAR_ACTIVITY_ID, i::__('Atividade do PAR'));
+
+        self::registerText($plugin, self::SEND_STATUS, i::__('Situação do envio ao CultBR'));
+        self::registerText($plugin, self::SEND_REASON, i::__('Motivo da situação do envio ao CultBR'));
+        self::registerText($plugin, self::SEND_AT, i::__('Data da última tentativa de envio ao CultBR'));
     }
 
     private static function serializeDateTime(mixed $value): ?string

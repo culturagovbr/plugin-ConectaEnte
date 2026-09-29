@@ -14,13 +14,16 @@ use ConectaEnte\Payload\OpportunityPayload;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Jobs\ParInformationFetchJob;
 use ConectaEnte\Jobs\ParInformationSyncJob;
+use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Services\FundingSourceName;
+use ConectaEnte\Services\OpportunitySender;
 use ConectaEnte\Services\ParInformationService;
 use ConectaEnte\Services\PublicationContext;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\SealedOpportunity;
+use ConectaEnte\Services\SendEligibility;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -34,6 +37,8 @@ class Plugin extends \MapasCulturais\Plugin
     const DEFAULT_PASSWORD_WINDOW = 120;
     const DEFAULT_PAR_SYNC_INTERVAL_MINUTES = 30;
     const DEFAULT_PAR_CACHE_TTL_MINUTES = 10;
+    const DEFAULT_SEND_MAX_ATTEMPTS = 3;
+    const DEFAULT_SEND_RETRY_DELAY_SECONDS = 30;
 
     /** Em `dev` nenhuma rota do CultBR é chamada: a resposta vem de `fixtures/<rota>.json`. */
     const MODE_LIVE = 'live';
@@ -46,6 +51,8 @@ class Plugin extends \MapasCulturais\Plugin
             'passwordWindow' => (int) env('CONECTAENTE_PASSWORD_WINDOW', self::DEFAULT_PASSWORD_WINDOW),
             'parSyncIntervalMinutes' => (int) env('CONECTAENTE_PAR_SYNC_INTERVAL_MINUTES', self::DEFAULT_PAR_SYNC_INTERVAL_MINUTES),
             'parCacheTtlMinutes' => (int) env('CONECTAENTE_PAR_CACHE_TTL_MINUTES', self::DEFAULT_PAR_CACHE_TTL_MINUTES),
+            'sendMaxAttempts' => (int) env('CONECTAENTE_SEND_MAX_ATTEMPTS', self::DEFAULT_SEND_MAX_ATTEMPTS),
+            'sendRetryDelaySeconds' => (int) env('CONECTAENTE_SEND_RETRY_DELAY_SECONDS', self::DEFAULT_SEND_RETRY_DELAY_SECONDS),
             // enquanto o CultBR não estabiliza, a instalação nasce em dev e declara CONECTAENTE_MODE=live para valer
             'mode' => env('CONECTAENTE_MODE', self::MODE_DEV),
         ];
@@ -118,6 +125,46 @@ class Plugin extends \MapasCulturais\Plugin
         return new PublicationRequirements($this->publicationStamp(), $this->parInformationService());
     }
 
+    function sendEligibility(): SendEligibility
+    {
+        return new SendEligibility($this->sealedOpportunity(), $this->publicationRequirements());
+    }
+
+    function opportunitySender(): OpportunitySender
+    {
+        return new OpportunitySender($this, $this->sealedOpportunity());
+    }
+
+    function sendMaxAttempts(): int
+    {
+        return (int) $this->_config['sendMaxAttempts'];
+    }
+
+    function sendRetryDelaySeconds(): int
+    {
+        return (int) $this->_config['sendRetryDelaySeconds'];
+    }
+
+    /**
+     * Enfileira o envio da oportunidade, se ela for raiz e estiver elegível agora.
+     */
+    function scheduleSend(Opportunity $opportunity, int $attempt = 1, string $start = 'now'): void
+    {
+        // sem selo de ente, nem vale perguntar o resto: é o caso comum de toda oportunidade da
+        // instalação, e logar isso a cada save encheria o log sem dizer nada de novo
+        if ($opportunity->parent || !$this->sealedOpportunity()->federativeEntityOf($opportunity)) {
+            return;
+        }
+
+        if (!$this->sendEligibility()->isEligible($opportunity)) {
+            App::i()->log->info("ConectaEnte: oportunidade {$opportunity->id} não elegível para envio: {$this->sendEligibility()->ineligibilityReason($opportunity)}");
+
+            return;
+        }
+
+        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt), $start, '', 1, true);
+    }
+
     /**
      * Agenda a próxima sincronização do PAR, uma iteração por vez.
      *
@@ -179,6 +226,7 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
         $app->registerJobType(new ParInformationFetchJob(ParInformationFetchJob::SLUG));
+        $app->registerJobType(new SendOpportunityJob(SendOpportunityJob::SLUG));
 
         try {
             $this->scheduleParSync();
@@ -299,6 +347,17 @@ class Plugin extends \MapasCulturais\Plugin
         $app->hook('entity(Opportunity).validationErrors', function (&$errors) {
             Plugin::instance()->requirePublicationFields($this, $errors);
         }, 1000);
+
+        // publicar dispara o envio, e editar uma já publicada reenvia — insert nunca vê publicada,
+        // porque toda oportunidade nasce rascunho
+        $app->hook('entity(Opportunity).update:finish', function () {
+            Plugin::instance()->scheduleSend($this);
+        });
+
+        // selar uma oportunidade já publicada não passa pelo save da oportunidade: é outra entidade
+        $app->hook('entity(OpportunitySealRelation).save:after', function () {
+            Plugin::instance()->scheduleSend($this->owner);
+        });
     }
 
     private function requiresPublicationFields(Opportunity $opportunity): bool

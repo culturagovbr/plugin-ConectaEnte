@@ -87,6 +87,24 @@ class Client
         return ParInformationResult::rejected($this->readDetail($response->json(), $response->status));
     }
 
+    /**
+     * Envia o edital selado; 5xx e falha de conexão são a única faixa retentável.
+     */
+    public function sendOpportunity(string $token, int $opportunityId, array $payload): SendResult
+    {
+        $response = $this->transport->put($this->url("/api/v1/oportunidades/{$opportunityId}"), $payload, ['token' => $token]);
+
+        if (!$response->reachedServer() || $response->status >= 500) {
+            return SendResult::unreachable();
+        }
+
+        if ($response->status === 200) {
+            return SendResult::ok($response->decoded() ?? []);
+        }
+
+        return SendResult::rejected($this->readDetail($response->json(), $response->status));
+    }
+
     private function readValidation(array $body): TokenValidation
     {
         if (($body['tipo'] ?? null) !== self::TYPE_SYSTEM) {
