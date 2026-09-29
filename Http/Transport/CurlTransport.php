@@ -47,7 +47,9 @@ class CurlTransport implements TransportInterface
             CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT,
             CURLOPT_TIMEOUT => self::TIMEOUT,
             CURLOPT_CUSTOMREQUEST => 'PUT',
-            CURLOPT_POSTFIELDS => json_encode($body),
+            // json_encode devolve false em silêncio com UTF-8 inválido/NAN/INF: sem a flag, o corpo
+            // sairia vazio e a API recusaria com 422, mascarando um bug local como recusa do CultBR
+            CURLOPT_POSTFIELDS => json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
