@@ -11,6 +11,7 @@ use ConectaEnte\Http\Transport\TransportInterface;
 class QueueTransport implements TransportInterface
 {
     public array $requestedUrls = [];
+    public array $sentBodies = [];
 
     /** @param array<Response|\Throwable> $queue */
     public function __construct(private array $queue)
@@ -25,6 +26,20 @@ class QueueTransport implements TransportInterface
     public function get(string $url, array $headers = []): Response
     {
         $this->requestedUrls[] = $url;
+
+        return $this->next();
+    }
+
+    public function put(string $url, array $body, array $headers = []): Response
+    {
+        $this->requestedUrls[] = $url;
+        $this->sentBodies[] = $body;
+
+        return $this->next();
+    }
+
+    private function next(): Response
+    {
         $next = array_shift($this->queue);
 
         if ($next instanceof \Throwable) {

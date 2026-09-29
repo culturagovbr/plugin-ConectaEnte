@@ -36,4 +36,31 @@ class CurlTransport implements TransportInterface
 
         return Response::received((int) $status, (string) $body);
     }
+
+    public function put(string $url, array $body, array $headers = []): Response
+    {
+        $curl = curl_init($url);
+        $headers['Content-Type'] = 'application/json';
+
+        curl_setopt_array($curl, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::TIMEOUT,
+            CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_POSTFIELDS => json_encode($body),
+            CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
+        ]);
+
+        $responseBody = curl_exec($curl);
+        $error = curl_error($curl);
+        $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+        curl_close($curl);
+
+        if ($responseBody === false || $error) {
+            return Response::failed($error ?: 'falha de transporte');
+        }
+
+        return Response::received((int) $status, (string) $responseBody);
+    }
 }
