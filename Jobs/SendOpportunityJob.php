@@ -46,12 +46,24 @@ class SendOpportunityJob extends JobType
             if ($outcome->isRetryable()) {
                 $this->retryOrGiveUp($opportunity, $attempt);
             }
-        } catch (\Throwable $e) {
-            // _execute nunca pode lançar: o core prende a linha em status=1 (processando) para sempre
-            $app->log->error("SendOpportunityJob: exceção ao enviar a oportunidade {$opportunity->id}: {$e->getMessage()}");
+        } catch (\Throwable $error) {
+            $this->recordFailure($opportunity, $error);
         }
 
         return true;
+    }
+
+    // nem o registro pode escapar: _execute que lança prende a linha do job em processamento para sempre
+    private function recordFailure(Opportunity $opportunity, \Throwable $error): void
+    {
+        $app = App::i();
+        $app->log->error("SendOpportunityJob: exceção ao enviar a oportunidade {$opportunity->id}: {$error->getMessage()}");
+
+        try {
+            Plugin::instance()->opportunitySender()->recordFailure($opportunity);
+        } catch (\Throwable $failure) {
+            $app->log->error("SendOpportunityJob: falha ao registrar o desfecho da oportunidade {$opportunity->id}: {$failure->getMessage()}");
+        }
     }
 
     private function retryOrGiveUp(Opportunity $opportunity, int $attempt): void

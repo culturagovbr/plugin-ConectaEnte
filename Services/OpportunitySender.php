@@ -58,6 +58,12 @@ final class OpportunitySender
         $this->recordOutcome($opportunity, SendOutcome::error(i::__('A Plataforma CultBR não respondeu após todas as tentativas.')));
     }
 
+    // o motivo é público na API da oportunidade: mensagem de exceção fica no log, não aqui
+    public function recordFailure(Opportunity $opportunity): void
+    {
+        $this->recordOutcome($opportunity, SendOutcome::error(i::__('Falha ao enviar o edital ao CultBR.')));
+    }
+
     // via saveMetadata(), nunca save(): salvar a oportunidade de novo reacionaria o próprio gatilho de envio
     private function recordOutcome(Opportunity $opportunity, SendOutcome $outcome): void
     {

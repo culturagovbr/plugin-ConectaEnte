@@ -117,6 +117,31 @@ class SendOpportunityJobTest extends TestCase
         $this->assertTrue($finished, 'Job que não termina fica preso em processamento para sempre.');
     }
 
+    function testATransportExceptionIsRecordedAsFailure()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = QueueTransport::replying(new RuntimeException('estouro no envio'));
+
+        $this->executeSend($opportunity->id);
+
+        $reloaded = $this->reloaded($opportunity);
+        $reason = (string) $reloaded->getMetadata(CultBrMetadata::SEND_REASON);
+        $this->assertSame('error', $reloaded->getMetadata(CultBrMetadata::SEND_STATUS), 'Envio que morre por exceção não pode ficar indistinguível de nunca tentado.');
+        $this->assertNotSame('', $reason);
+        $this->assertStringNotContainsString('estouro no envio', $reason, 'O motivo sai na API sem sessão: mensagem de exceção fica no log, não no metadado.');
+    }
+
+    function testAnErrorThatTheCoreWouldNotCatchIsAlsoRecorded()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = QueueTransport::replying(new \TypeError('tipo errado no envio'));
+
+        $finished = $this->executeSend($opportunity->id);
+
+        $this->assertTrue($finished, 'O catch do core pega só Exception: um Error escaparia e derrubaria o worker.');
+        $this->assertSame('error', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS));
+    }
+
     function testEachOpportunityHasItsOwnJobId()
     {
         $first = $this->liveSealedOpportunity();
