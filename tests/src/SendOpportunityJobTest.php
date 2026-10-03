@@ -70,7 +70,7 @@ class SendOpportunityJobTest extends TestCase
         $this->executeSend($opportunity->id, attempt: Plugin::instance()->sendMaxAttempts());
 
         $this->assertSame([], $this->enqueuedSendJobs(), 'Esgotadas as tentativas, a fila não pode continuar reagendando para sempre.');
-        $this->assertSame('rejected', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS));
+        $this->assertSame('error', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS), 'Não respondeu é falha, não recusa: `rejected` é só para o que o CultBR negou.');
     }
 
     function testDevModeRecordsSimulatedWithoutTouchingTheTransport()

@@ -10,11 +10,12 @@ final class SendOutcome
     const SUCCESS = 'success';
     const SIMULATED = 'simulated';
     const REJECTED = 'rejected';
-    const UNREACHABLE = 'unreachable';
+    const ERROR = 'error';
 
     private function __construct(
         public readonly string $status,
         public readonly ?string $reason = null,
+        private readonly bool $retryable = false,
     ) {
     }
 
@@ -33,13 +34,20 @@ final class SendOutcome
         return new self(self::REJECTED, $reason);
     }
 
-    public static function unreachable(): self
+    /** Falha definitiva: tentativas esgotadas, ou exceção no caminho do envio. */
+    public static function error(string $reason): self
     {
-        return new self(self::UNREACHABLE);
+        return new self(self::ERROR, $reason);
+    }
+
+    /** Vale repetir, então não é gravado ainda; esgotadas as tentativas, o que sobra é `error`. */
+    public static function unavailable(): self
+    {
+        return new self(self::ERROR, retryable: true);
     }
 
     public function isRetryable(): bool
     {
-        return $this->status === self::UNREACHABLE;
+        return $this->retryable;
     }
 }

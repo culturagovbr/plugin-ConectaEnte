@@ -40,7 +40,7 @@ final class OpportunitySender
         $result = $this->plugin->client()->sendOpportunity($federativeEntity->token, $opportunity->id, $payload);
 
         $outcome = match (true) {
-            $result->unreachable => SendOutcome::unreachable(),
+            $result->unreachable => SendOutcome::unavailable(),
             $result->accepted => SendOutcome::success(),
             default => SendOutcome::rejected($result->message ?? i::__('A Plataforma CultBR recusou o envio.')),
         };
@@ -53,12 +53,9 @@ final class OpportunitySender
         return $outcome;
     }
 
-    /**
-     * Grava o desfecho final quando a fila esgota as tentativas sem a API responder.
-     */
     public function recordExhausted(Opportunity $opportunity): void
     {
-        $this->recordOutcome($opportunity, SendOutcome::rejected(i::__('A Plataforma CultBR não respondeu após todas as tentativas.')));
+        $this->recordOutcome($opportunity, SendOutcome::error(i::__('A Plataforma CultBR não respondeu após todas as tentativas.')));
     }
 
     // via saveMetadata(), nunca save(): salvar a oportunidade de novo reacionaria o próprio gatilho de envio
