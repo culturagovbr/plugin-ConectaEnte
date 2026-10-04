@@ -137,7 +137,7 @@ class Client
         }
 
         if (is_array($detail)) {
-            $messages = array_filter(array_map(fn($error) => $error['msg'] ?? null, $detail));
+            $messages = array_filter(array_map(fn($error) => $this->fieldError($error), $detail));
 
             if ($messages) {
                 return implode('; ', $messages);
@@ -145,6 +145,32 @@ class Client
         }
 
         return sprintf($refusal, $status);
+    }
+
+    // item que não é objeto não pode derrubar a leitura: `validateToken` roda na requisição do administrador
+    private function fieldError(mixed $error): ?string
+    {
+        $message = is_array($error) ? ($error['msg'] ?? null) : null;
+
+        if (!is_string($message) || $message === '') {
+            return null;
+        }
+
+        $field = $this->fieldName($error['loc'] ?? null);
+
+        return $field ? "{$field}: {$message}" : $message;
+    }
+
+    // só erro no corpo é campo do edital: `header` é a credencial e `query` é a rota, e nomeá-los confundiria
+    private function fieldName(mixed $loc): ?string
+    {
+        if (!is_array($loc) || ($loc[0] ?? null) !== 'body') {
+            return null;
+        }
+
+        $path = array_slice($loc, 1);
+
+        return $path ? implode('.', $path) : null;
     }
 
     /**

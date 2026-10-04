@@ -58,7 +58,7 @@ class ClientSendOpportunityTest extends TestCase
 
         $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
 
-        $this->assertSame('Field required', $result->message);
+        $this->assertSame('ente_federado: Field required', $result->message);
     }
 
     // o fallback é por fluxo: o do envio não pode dizer que o CultBR "recusou a verificação"
