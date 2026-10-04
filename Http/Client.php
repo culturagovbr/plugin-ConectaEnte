@@ -43,7 +43,7 @@ class Client
             return TokenValidation::unreachable();
         }
 
-        return TokenValidation::reject($this->readDetail($body, $response->status));
+        return TokenValidation::reject($this->readDetail($body, $response->status, i::__('A Plataforma CultBR recusou a verificação do token (HTTP %d).')));
     }
 
     /**
@@ -84,7 +84,7 @@ class Client
             return ParInformationResult::unreachable();
         }
 
-        return ParInformationResult::rejected($this->readDetail($response->json(), $response->status));
+        return ParInformationResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou a consulta ao Plano de Ação e Referência (HTTP %d).')));
     }
 
     /**
@@ -102,7 +102,7 @@ class Client
             return SendResult::ok($response->decoded() ?? []);
         }
 
-        return SendResult::rejected($this->readDetail($response->json(), $response->status));
+        return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));
     }
 
     private function readValidation(array $body): TokenValidation
@@ -128,7 +128,7 @@ class Client
         return $this->acceptsAnyEnte ? (string) ($body['data'][0]['cnpj'] ?? $document) : $document;
     }
 
-    private function readDetail(array $body, int $status): string
+    private function readDetail(array $body, int $status, string $refusal): string
     {
         $detail = $body['detail'] ?? null;
 
@@ -144,7 +144,7 @@ class Client
             }
         }
 
-        return sprintf(i::__('A Plataforma CultBR recusou a verificação (HTTP %d).'), $status);
+        return sprintf($refusal, $status);
     }
 
     /**
