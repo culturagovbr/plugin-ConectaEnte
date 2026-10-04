@@ -177,8 +177,7 @@ class SendOpportunityJobTest extends TestCase
         );
     }
 
-    // criar a oportunidade selada já publicada dispara o próprio gatilho de envio (AC de #18):
-    // o job daquele disparo precisa saltar fora, ou os testes contariam o job errado
+    // selar a publicada dispara o gatilho: sem tirar esse job da fila, os testes contariam o envio errado
     private function liveSealedOpportunity(): Opportunity
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
