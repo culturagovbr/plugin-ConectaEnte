@@ -73,6 +73,16 @@ class ParInformationClientTest extends TestCase
         $this->assertStringContainsString('Token inválido', $result->message);
     }
 
+    // sem este caso, trocar as frases de recusa entre os fluxos do token e do PAR passaria despercebido
+    function testRefusalWithoutUsableBodySaysItWasTheParQuery()
+    {
+        $result = $this->get(400, 'Bad Request');
+
+        $this->assertFalse($result->unreachable);
+        $this->assertStringContainsString('400', $result->message, 'Sem o status, o motivo não diz o que aconteceu.');
+        $this->assertStringContainsString('Plano de Ação e Referência', $result->message, 'A frase precisa nomear a consulta ao PAR, não outro fluxo.');
+    }
+
     function testServerErrorIsUnreachableSoTheCacheIsKept()
     {
         $result = $this->get(500, ['detail' => 'Internal Server Error']);

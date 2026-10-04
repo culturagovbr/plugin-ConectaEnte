@@ -61,6 +61,19 @@ class ClientSendOpportunityTest extends TestCase
         $this->assertSame('Field required', $result->message);
     }
 
+    // o fallback é por fluxo: o do envio não pode dizer que o CultBR "recusou a verificação"
+    function testClientErrorWithoutUsableBodyKeepsTheStatusAndSaysItWasTheSend()
+    {
+        $transport = FakeTransport::replying(400, 'Bad Request');
+
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+
+        $this->assertFalse($result->unreachable, '4xx não é indisponibilidade: não se retenta.');
+        $this->assertStringContainsString('400', $result->message, 'Sem o status, o motivo não diz o que aconteceu.');
+        $this->assertStringContainsString('envio', $result->message, 'O motivo gravado no edital precisa falar do envio, não da verificação de token.');
+        $this->assertStringNotContainsString('verificação', $result->message);
+    }
+
     function testServerErrorIsUnreachableAndRetryable()
     {
         $transport = FakeTransport::replying(500, 'Internal Server Error');
