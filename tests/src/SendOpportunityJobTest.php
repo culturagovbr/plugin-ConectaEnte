@@ -84,6 +84,18 @@ class SendOpportunityJobTest extends TestCase
         $this->assertStringContainsString('500', $reason, 'Sem o status, erro do CultBR fica indistinguível de queda de conexão.');
     }
 
+    function testExhaustionWithoutResponseSaysSoWithoutLeakingTheTransportError()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::unreachable();
+
+        $this->executeSend($opportunity->id, attempt: Plugin::instance()->sendMaxAttempts());
+
+        $reason = (string) $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_REASON);
+        $this->assertStringNotContainsString('Could not resolve host', $reason, 'O motivo sai na API sem sessão: erro de transporte revela host e DNS.');
+        $this->assertStringContainsString('não respondeu', $reason, 'Sem resposta não há status: "HTTP 0" seria invenção.');
+    }
+
     function testDevModeRecordsSimulatedWithoutTouchingTheTransport()
     {
         $opportunity = $this->liveSealedOpportunity();
