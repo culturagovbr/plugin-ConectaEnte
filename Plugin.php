@@ -354,8 +354,8 @@ class Plugin extends \MapasCulturais\Plugin
             Plugin::instance()->scheduleSend($this);
         });
 
-        // selar uma oportunidade já publicada não passa pelo save da oportunidade: é outra entidade
-        $app->hook('entity(OpportunitySealRelation).save:after', function () {
+        // selar não passa pelo save da oportunidade, e tem que ser pós-flush: a elegibilidade lê o selo no banco
+        $app->hook('entity(OpportunitySealRelation).save:finish', function () {
             Plugin::instance()->scheduleSend($this->owner);
         });
     }
