@@ -6,12 +6,13 @@ use ConectaEnte\Http\Response;
 
 class CurlTransport implements TransportInterface
 {
-    /**
-     * Tempos curtos de propósito: a verificação roda no caminho de uma requisição do
-     * administrador, e API lenta não pode virar tela travada.
-     */
-    const CONNECT_TIMEOUT = 5;
-    const TIMEOUT = 10;
+    // teto ditado pelo uso interativo deste par: a verificação de token responde na requisição do administrador
+    const GET_CONNECT_TIMEOUT = 5;
+    const GET_TIMEOUT = 10;
+
+    // o PUT só roda na fila, onde ninguém espera: teto curto esgota as tentativas contra um CultBR que só demorou
+    const PUT_CONNECT_TIMEOUT = 30;
+    const PUT_TIMEOUT = 60;
 
     public function get(string $url, array $headers = []): Response
     {
@@ -19,8 +20,8 @@ class CurlTransport implements TransportInterface
 
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT,
-            CURLOPT_TIMEOUT => self::TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => self::GET_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::GET_TIMEOUT,
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
@@ -44,8 +45,8 @@ class CurlTransport implements TransportInterface
 
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT,
-            CURLOPT_TIMEOUT => self::TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => self::PUT_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::PUT_TIMEOUT,
             CURLOPT_CUSTOMREQUEST => 'PUT',
             // json_encode devolve false em silêncio com UTF-8 inválido/NAN/INF: sem a flag, o corpo
             // sairia vazio e a API recusaria com 422, mascarando um bug local como recusa do CultBR
