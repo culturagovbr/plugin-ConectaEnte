@@ -61,6 +61,70 @@ class ClientSendOpportunityTest extends TestCase
         $this->assertSame('ente_federado: Field required', $result->message);
     }
 
+    function testEveryRejectedFieldIsNamedInOneLine()
+    {
+        $transport = FakeTransport::replying(422, ['detail' => [
+            ['loc' => ['body', 'ente_federado'], 'msg' => 'Field required', 'type' => 'missing'],
+            ['loc' => ['body', 'forma_de_execucao'], 'msg' => 'Input should be a valid string', 'type' => 'string_type'],
+        ]]);
+
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+
+        $this->assertSame(
+            'ente_federado: Field required; forma_de_execucao: Input should be a valid string',
+            $result->message,
+            'Os erros saem numa linha só, na ordem da resposta, cada um prefixado pelo campo.',
+        );
+    }
+
+    // `loc` aninhado nomeia o item da lista; só o último segmento perderia de qual fonte se trata
+    function testNestedFieldKeepsThePathWithoutTheOrigin()
+    {
+        $transport = FakeTransport::replying(422, ['detail' => [
+            ['loc' => ['body', 'fontes_de_recurso', 0, 'valor'], 'msg' => 'Input should be a valid number', 'type' => 'float_parsing'],
+        ]]);
+
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+
+        $this->assertSame('fontes_de_recurso.0.valor: Input should be a valid number', $result->message);
+    }
+
+    function testFieldErrorWithoutLocationFallsBackToTheMessageAlone()
+    {
+        $transport = FakeTransport::replying(422, ['detail' => [['msg' => 'Erro sem campo', 'type' => 'value_error']]]);
+
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+
+        $this->assertSame('Erro sem campo', $result->message, 'Sem `loc` não se inventa nome de campo: sobra a mensagem.');
+    }
+
+    // o CultBR pode devolver `detail` fora do formato declarado, e isso não pode virar erro de tipo
+    function testMalformedDetailItemsFallBackInsteadOfBreaking()
+    {
+        $esperado = 'A Plataforma CultBR recusou o envio do edital (HTTP 422).';
+
+        foreach ([['texto solto'], [null], [42], [[]]] as $detail) {
+            $transport = FakeTransport::replying(422, ['detail' => $detail]);
+
+            $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+
+            $this->assertFalse($result->accepted, 'Corpo malformado não vira aceite.');
+            $this->assertSame($esperado, $result->message, 'Item ilegível cai no motivo do fluxo, com o status preservado.');
+        }
+    }
+
+    // erro de cabeçalho não é campo do edital: nomeá-lo mandaria o gestor procurar "token" no formulário
+    function testHeaderErrorsAreNotNamedAsEditalFields()
+    {
+        $transport = FakeTransport::replying(422, ['detail' => [
+            ['loc' => ['header', 'token'], 'msg' => 'Field required', 'type' => 'missing'],
+        ]]);
+
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+
+        $this->assertSame('Field required', $result->message);
+    }
+
     // o fallback é por fluxo: o do envio não pode dizer que o CultBR "recusou a verificação"
     function testClientErrorWithoutUsableBodyKeepsTheStatusAndSaysItWasTheSend()
     {
