@@ -73,6 +73,17 @@ class SendOpportunityJobTest extends TestCase
         $this->assertSame('error', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS), 'Não respondeu é falha, não recusa: `rejected` é só para o que o CultBR negou.');
     }
 
+    function testExhaustionKeepsTheHttpStatusInTheRecordedReason()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(500, 'Internal Server Error');
+
+        $this->executeSend($opportunity->id, attempt: Plugin::instance()->sendMaxAttempts());
+
+        $reason = (string) $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_REASON);
+        $this->assertStringContainsString('500', $reason, 'Sem o status, erro do CultBR fica indistinguível de queda de conexão.');
+    }
+
     function testDevModeRecordsSimulatedWithoutTouchingTheTransport()
     {
         $opportunity = $this->liveSealedOpportunity();
