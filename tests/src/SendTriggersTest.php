@@ -25,6 +25,14 @@ class SendTriggersTest extends TestCase
         $this->assertSame($opportunity->id, (int) $jobs[0]->opportunityId);
     }
 
+    // o gatilho dispara em toda relação de selo; quem barra o envio é a elegibilidade
+    function testSealingAnUnpublishedOpportunityEnqueuesNothing()
+    {
+        $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+
+        $this->assertSame([], $this->enqueuedSendJobs(), 'Edital em rascunho não pode ir ao CultBR só porque ganhou o selo.');
+    }
+
     /** @return Job[] */
     private function enqueuedSendJobs(): array
     {
