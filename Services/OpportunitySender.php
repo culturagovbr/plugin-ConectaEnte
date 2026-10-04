@@ -2,9 +2,11 @@
 
 namespace ConectaEnte\Services;
 
+use ConectaEnte\Http\SendResult;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use DateTime;
+use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\i;
 use RuntimeException;
@@ -40,22 +42,42 @@ final class OpportunitySender
         $result = $this->plugin->client()->sendOpportunity($federativeEntity->token, $opportunity->id, $payload);
 
         $outcome = match (true) {
-            $result->unreachable => SendOutcome::unavailable(),
+            $result->unreachable => SendOutcome::unavailable($this->unavailableReason($result)),
             $result->accepted => SendOutcome::success(),
             default => SendOutcome::rejected($result->message ?? i::__('A Plataforma CultBR recusou o envio.')),
         };
 
         // indisponível não é desfecho final: quem decide reenfileirar é o job, que sabe a tentativa atual
-        if (!$outcome->isRetryable()) {
+        if ($outcome->isRetryable()) {
+            $this->logUnavailable($opportunity, $result);
+        } else {
             $this->recordOutcome($opportunity, $outcome);
         }
 
         return $outcome;
     }
 
-    public function recordExhausted(Opportunity $opportunity): void
+    /** Grava o desfecho final do esgotamento, preservando o motivo da última tentativa. */
+    public function recordExhausted(Opportunity $opportunity, SendOutcome $lastAttempt): void
     {
-        $this->recordOutcome($opportunity, SendOutcome::error(i::__('A Plataforma CultBR não respondeu após todas as tentativas.')));
+        $reason = trim(($lastAttempt->reason ?? '') . ' ' . i::__('Tentativas esgotadas.'));
+
+        $this->recordOutcome($opportunity, SendOutcome::error($reason));
+    }
+
+    // o status é inócuo e identifica a falha; o erro do curl nomeia host e DNS, e o motivo sai na API sem sessão
+    private function unavailableReason(SendResult $result): string
+    {
+        return $result->status > 0
+            ? sprintf(i::__('A Plataforma CultBR respondeu com erro HTTP %d.'), $result->status)
+            : i::__('A Plataforma CultBR não respondeu.');
+    }
+
+    private function logUnavailable(Opportunity $opportunity, SendResult $result): void
+    {
+        $detail = $result->transportError ?? "HTTP {$result->status}";
+
+        App::i()->log->error("ConectaEnte: oportunidade {$opportunity->id} indisponível no envio ({$detail}).");
     }
 
     // o motivo é público na API da oportunidade: mensagem de exceção fica no log, não aqui

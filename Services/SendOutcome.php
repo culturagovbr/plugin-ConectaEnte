@@ -40,10 +40,10 @@ final class SendOutcome
         return new self(self::ERROR, $reason);
     }
 
-    /** Vale repetir, então não é gravado ainda; esgotadas as tentativas, o que sobra é `error`. */
-    public static function unavailable(): self
+    /** Vale repetir, então não é gravado ainda; o motivo sobrevive para o registro do esgotamento. */
+    public static function unavailable(string $reason): self
     {
-        return new self(self::ERROR, retryable: true);
+        return new self(self::ERROR, $reason, retryable: true);
     }
 
     public function isRetryable(): bool

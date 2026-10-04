@@ -3,6 +3,7 @@
 namespace ConectaEnte\Jobs;
 
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\App;
 use MapasCulturais\Definitions\JobType;
 use MapasCulturais\Entities\Job;
@@ -44,7 +45,7 @@ class SendOpportunityJob extends JobType
             $outcome = Plugin::instance()->opportunitySender()->send($opportunity);
 
             if ($outcome->isRetryable()) {
-                $this->retryOrGiveUp($opportunity, $attempt);
+                $this->retryOrGiveUp($opportunity, $attempt, $outcome);
             }
         } catch (\Throwable $error) {
             $this->recordFailure($opportunity, $error);
@@ -66,12 +67,12 @@ class SendOpportunityJob extends JobType
         }
     }
 
-    private function retryOrGiveUp(Opportunity $opportunity, int $attempt): void
+    private function retryOrGiveUp(Opportunity $opportunity, int $attempt, SendOutcome $lastAttempt): void
     {
         $plugin = Plugin::instance();
 
         if ($attempt >= $plugin->sendMaxAttempts()) {
-            $plugin->opportunitySender()->recordExhausted($opportunity);
+            $plugin->opportunitySender()->recordExhausted($opportunity, $lastAttempt);
 
             return;
         }
