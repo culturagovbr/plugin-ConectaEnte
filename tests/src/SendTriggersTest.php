@@ -36,9 +36,44 @@ class SendTriggersTest extends TestCase
         $this->assertSame([], $this->enqueuedSendJobs(), 'Edital em rascunho não pode ir ao CultBR só porque ganhou o selo.');
     }
 
+    function testPublishingASealedOpportunityEnqueuesTheSend()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->purgeSendJobs();
+        $this->assertSame([], $this->enqueuedSendJobs(), 'Premissa do teste: a fila precisa começar vazia.');
+
+        $opportunity->status = Opportunity::STATUS_ENABLED;
+        $opportunity->save(true);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Publicar o edital selado é o gatilho principal do envio.');
+        $this->assertSame($opportunity->id, (int) $jobs[0]->opportunityId);
+        $this->assertSame(Opportunity::STATUS_ENABLED, (int) $this->reloaded($opportunity)->status, 'Premissa do teste: a publicação precisa ter sido gravada.');
+    }
+
+    function testEditingAPublishedSealedOpportunityEnqueuesAgain()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->purgeSendJobs();
+        $this->assertSame([], $this->enqueuedSendJobs(), 'Premissa do teste: a fila precisa começar vazia.');
+
+        $opportunity->shortDescription = 'Edital revisado depois de publicado';
+        $opportunity->save(true);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Editar um edital já publicado precisa reenviar o que mudou.');
+        $this->assertSame($opportunity->id, (int) $jobs[0]->opportunityId);
+        $this->assertSame('Edital revisado depois de publicado', $this->reloaded($opportunity)->shortDescription, 'Premissa do teste: a edição precisa ter sido gravada.');
+    }
+
     /** @return Job[] */
     private function enqueuedSendJobs(): array
     {
         return $this->app->repo(Job::class)->findBy(['type' => SendOpportunityJob::SLUG]);
+    }
+
+    private function purgeSendJobs(): void
+    {
+        $this->app->em->getConnection()->delete('job', ['name' => SendOpportunityJob::SLUG]);
     }
 }
