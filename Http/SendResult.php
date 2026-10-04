@@ -13,6 +13,8 @@ final class SendResult
         public readonly bool $unreachable,
         public readonly ?array $response = null,
         public readonly ?string $message = null,
+        public readonly int $status = 0,
+        public readonly ?string $transportError = null,
     ) {
     }
 
@@ -26,8 +28,8 @@ final class SendResult
         return new self(accepted: false, unreachable: false, message: $message);
     }
 
-    public static function unreachable(): self
+    public static function unreachable(int $status = 0, ?string $transportError = null): self
     {
-        return new self(accepted: false, unreachable: true);
+        return new self(accepted: false, unreachable: true, status: $status, transportError: $transportError);
     }
 }

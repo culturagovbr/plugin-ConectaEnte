@@ -95,7 +95,7 @@ class Client
         $response = $this->transport->put($this->url("/api/v1/oportunidades/{$opportunityId}"), $payload, ['token' => $token]);
 
         if (!$response->reachedServer() || $response->status >= 500) {
-            return SendResult::unreachable();
+            return SendResult::unreachable($response->status, $response->transportError);
         }
 
         if ($response->status === 200) {
