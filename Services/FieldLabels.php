@@ -39,6 +39,7 @@ final class FieldLabels
             'rules' => i::__('Regulamento'),
             'term-area' => i::__('Área de Interesse'),
             'registrationRanges' => i::__('Faixas/linhas'),
+            'links' => i::__('Links'),
             PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => $description[CultBrMetadata::REGISTRATION_CHANNELS]['label'],
             default => ($description[$key]['label'] ?? '') ?: $key,
         };
