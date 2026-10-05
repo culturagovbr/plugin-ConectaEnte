@@ -92,7 +92,7 @@ class Plugin extends \MapasCulturais\Plugin
 
     function opportunityPayload(): OpportunityPayload
     {
-        return new OpportunityPayload($this->sealedOpportunity());
+        return new OpportunityPayload($this->sealedOpportunity(), $this->publicationStamp());
     }
 
     function coreFieldsDescription(): CoreFieldsDescription
