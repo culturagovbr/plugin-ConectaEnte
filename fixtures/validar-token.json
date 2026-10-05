@@ -1,7 +1,7 @@
 {
-    "valido": true,
-    "tipo": "SISTEMA",
-    "cnpj": "00000000000191",
-    "nome_ente": "ENTE DE DESENVOLVIMENTO",
-    "id_token": "dev"
+  "valido": true,
+  "tipo": "SISTEMA",
+  "cnpj": "00000000000191",
+  "nome_ente": "ENTE DE DESENVOLVIMENTO",
+  "id_token": 1
 }
