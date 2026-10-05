@@ -73,6 +73,21 @@ class SendEligibilityTest extends TestCase
 
         $this->assertNotNull($reason);
         $this->assertStringContainsString('campo', mb_strtolower($reason));
+        $this->assertStringNotContainsString('conectaente_', $reason, 'O motivo vai para o log e para quem procura o campo na tela: ali ele tem rótulo, não chave de metadado.');
+        $this->assertStringContainsString('Tipo de Edital', $reason, 'A fixture incompleta é justamente a que não tem esse campo, e é o rótulo dele que o gestor procura.');
+    }
+
+    // a chave do e-mail é sintética e não é metadado registrado: era por onde o prefixo escapava
+    function testTheSyntheticEmailKeyAlsoBecomesALabel()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $opportunity->conectaente_registrationChannels = ['previstasNoEdital' => 'sim', 'formas' => [['tipo' => 'email', 'descricao' => 'secretaria de cultura']]];
+        $opportunity->save(true);
+
+        $reason = Plugin::instance()->sendEligibility()->ineligibilityReason($this->reloaded($opportunity));
+
+        $this->assertNotNull($reason, 'Premissa do teste: o e-mail inválido precisa tornar a oportunidade inelegível.');
+        $this->assertStringNotContainsString('conectaente_', $reason, 'Nenhuma chave escapa como nome de campo, nem a que não é metadado registrado.');
     }
 
     function testPhaseIsNeverEligible()
