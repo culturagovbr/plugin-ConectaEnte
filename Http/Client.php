@@ -147,7 +147,7 @@ class Client
         return sprintf($refusal, $status);
     }
 
-    // item que não é objeto não pode derrubar a leitura: `validateToken` roda na requisição do administrador
+    // o formato de `detail` é do CultBR: item fora dele não pode derrubar a leitura de nenhum dos fluxos
     private function fieldError(mixed $error): ?string
     {
         $message = is_array($error) ? ($error['msg'] ?? null) : null;
