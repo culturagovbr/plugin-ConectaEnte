@@ -34,6 +34,9 @@ class SendOpportunityJobTest extends TestCase
         $reloaded = $this->reloaded($opportunity);
         $this->assertSame('success', $reloaded->getMetadata(CultBrMetadata::SEND_STATUS));
         $this->assertSame([], $this->enqueuedSendJobs());
+        $sendAt = (string) $reloaded->getMetadata(CultBrMetadata::SEND_AT);
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $sendAt, 'O formato é o que o histórico vai ler.');
+        $this->assertEqualsWithDelta(time(), strtotime($sendAt), 5, 'A data é a do envio que acabou de acontecer, não uma data fixa nem a de publicação.');
     }
 
     function testClientErrorIsRejectedAndDoesNotRetry()
@@ -64,6 +67,40 @@ class SendOpportunityJobTest extends TestCase
             $jobs[0]->nextExecutionTimestamp->getTimestamp() - time() + 1,
         );
         $this->assertNull($this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS), 'Indisponível não é desfecho final: nada é gravado enquanto pode retentar.');
+    }
+
+    // o número literal, não o acessor: comparar com sendMaxAttempts() tornaria a asserção tautológica
+    function testTheSecondAttemptStillRetriesWithoutRecordingAnOutcome()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(500, 'Internal Server Error');
+
+        $this->executeSend($opportunity->id, attempt: 2);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Com limite de três, a segunda tentativa ainda reagenda.');
+        $this->assertSame(3, (int) $jobs[0]->attempt);
+        $this->assertNull($this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS), 'Enquanto há tentativa pela frente, nada é gravado.');
+    }
+
+    function testTheRetryIsScheduledForTheConfiguredDelay()
+    {
+        // o literal trava o valor acordado; a janela, o mecanismo. Só a constante seria tautológico
+        $this->assertSame(30, Plugin::DEFAULT_SEND_RETRY_DELAY_SECONDS, 'O atraso padrão acordado é de trinta segundos.');
+
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(500, 'Internal Server Error');
+        $earliest = time() + Plugin::DEFAULT_SEND_RETRY_DELAY_SECONDS;
+
+        $this->executeSend($opportunity->id, attempt: 1);
+
+        $latest = time() + Plugin::DEFAULT_SEND_RETRY_DELAY_SECONDS;
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Premissa do teste: a retentativa precisa ter sido agendada.');
+
+        $scheduled = $jobs[0]->nextExecutionTimestamp->getTimestamp();
+        $this->assertGreaterThanOrEqual($earliest, $scheduled, 'Atraso menor que o configurado bate na API antes da hora.');
+        $this->assertLessThanOrEqual($latest, $scheduled, 'Atraso maior adia o edital sem motivo; a janela é a duração da própria execução.');
     }
 
     function testGivesUpAfterTheAttemptLimit()
