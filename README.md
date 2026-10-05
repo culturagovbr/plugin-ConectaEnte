@@ -34,7 +34,7 @@ O ambiente é lido na criação do container: **editar o `.env` com a instalaç�
 
 # Modo de trabalho
 
-Em `dev`, toda requisição ao CultBR é resolvida por um arquivo de exemplo: a rota `{host}/nome-da-rota` procura `fixtures/nome-da-rota.json`, e sem o arquivo a resposta é uma falha registrada no log. Serve para trabalhar com o CultBR indisponível ou sem credencial. O envio do edital não chega ao transporte em `dev`: o desfecho é `simulated` direto, porque a fixture não representaria o edital enviado. Nesse modo o cabeçalho de toda página ganha uma faixa dizendo que os dados são simulados — ninguém deve confundir exemplo com dado do CultBR. Em `live`, o filtro por CNPJ volta a valer e a árvore do PAR é a do ente autenticado.
+Em `dev`, toda requisição ao CultBR é resolvida por um arquivo de exemplo: a rota `{host}/nome-da-rota` procura `fixtures/nome-da-rota.json`, e sem o arquivo a resposta é uma falha registrada no log. Serve para trabalhar com o CultBR indisponível ou sem credencial. O envio do edital não chega ao transporte em `dev`, mas o payload é **montado e conferido** antes de a simulação ser decidida: é em dev que o campo faltando precisa aparecer, e pular a conferência o esconderia justamente no ambiente que existe para encontrá-lo. Edital incompleto fica com desfecho `error` em vez de `simulated`. Nesse modo o cabeçalho de toda página ganha uma faixa dizendo que os dados são simulados — ninguém deve confundir exemplo com dado do CultBR. Em `live`, o filtro por CNPJ volta a valer e a árvore do PAR é a do ente autenticado.
 
 # A aba CultBR
 
