@@ -11,6 +11,7 @@ use ConectaEnte\Http\Transport\FixtureTransport;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Payload\OpportunityPayload;
+use ConectaEnte\Payload\PayloadValidation;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Jobs\ParInformationFetchJob;
 use ConectaEnte\Jobs\ParInformationSyncJob;
@@ -93,6 +94,11 @@ class Plugin extends \MapasCulturais\Plugin
     function opportunityPayload(): OpportunityPayload
     {
         return new OpportunityPayload($this->sealedOpportunity(), $this->publicationStamp());
+    }
+
+    function payloadValidation(): PayloadValidation
+    {
+        return new PayloadValidation($this->fieldLabels());
     }
 
     function coreFieldsDescription(): CoreFieldsDescription
