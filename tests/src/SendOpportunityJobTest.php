@@ -269,6 +269,8 @@ class SendOpportunityJobTest extends TestCase
         }
 
         Plugin::instance()->parInformationService = null;
+        Plugin::instance()->transport = null;
+        Plugin::instance()->mode = null;
 
         parent::tearDown();
     }
