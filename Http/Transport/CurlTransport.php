@@ -6,13 +6,13 @@ use ConectaEnte\Http\Response;
 
 class CurlTransport implements TransportInterface
 {
-    // teto ditado pelo uso interativo deste par: a verificação de token responde na requisição do administrador
-    const GET_CONNECT_TIMEOUT = 5;
-    const GET_TIMEOUT = 10;
+    // qualquer leitura pode estar rodando com alguém esperando na tela, inclusive a árvore do PAR
+    const INTERACTIVE_CONNECT_TIMEOUT = 5;
+    const INTERACTIVE_TIMEOUT = 10;
 
-    // o PUT só roda na fila, onde ninguém espera: teto curto esgota as tentativas contra um CultBR que só demorou
-    const PUT_CONNECT_TIMEOUT = 30;
-    const PUT_TIMEOUT = 60;
+    // escrever só acontece na fila: teto curto esgota as tentativas contra um CultBR que só demorou
+    const QUEUED_CONNECT_TIMEOUT = 30;
+    const QUEUED_TIMEOUT = 60;
 
     public function get(string $url, array $headers = []): Response
     {
@@ -20,8 +20,8 @@ class CurlTransport implements TransportInterface
 
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => self::GET_CONNECT_TIMEOUT,
-            CURLOPT_TIMEOUT => self::GET_TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => self::INTERACTIVE_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::INTERACTIVE_TIMEOUT,
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
@@ -45,11 +45,10 @@ class CurlTransport implements TransportInterface
 
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => self::PUT_CONNECT_TIMEOUT,
-            CURLOPT_TIMEOUT => self::PUT_TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => self::QUEUED_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::QUEUED_TIMEOUT,
             CURLOPT_CUSTOMREQUEST => 'PUT',
-            // sem a flag, UTF-8 inválido vira corpo vazio e um bug local chega como recusa do CultBR
-            CURLOPT_POSTFIELDS => json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+            CURLOPT_POSTFIELDS => JsonBody::encode($body),
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
