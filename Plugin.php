@@ -140,9 +140,12 @@ class Plugin extends \MapasCulturais\Plugin
         return new SendEligibility($this->sealedOpportunity(), $this->publicationRequirements(), $this->fieldLabels());
     }
 
+    /** Serviço alternativo, para os testes exercitarem o que acontece quando o envio falha. */
+    public ?OpportunitySender $opportunitySender = null;
+
     function opportunitySender(): OpportunitySender
     {
-        return new OpportunitySender($this, $this->sealedOpportunity());
+        return $this->opportunitySender ?? new OpportunitySender($this, $this->sealedOpportunity());
     }
 
     function sendMaxAttempts(): int
