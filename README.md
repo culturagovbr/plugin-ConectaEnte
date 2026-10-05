@@ -84,7 +84,7 @@ Três metadados na oportunidade registram o desfecho da última tentativa:
 
 Só indisponibilidade retenta: 5xx e falha de conexão. Recusa do CultBR encerra na primeira tentativa, porque repetir não mudaria a resposta. São três tentativas com trinta segundos entre elas (`CONECTAENTE_SEND_MAX_ATTEMPTS` e `CONECTAENTE_SEND_RETRY_DELAY_SECONDS`); esgotadas, o desfecho vira `error` e a fila para.
 
-O `PUT` do envio tem tempos próprios — 30 s para conectar, 60 no total —, mais largos que os do `GET`, que desiste em 10 s porque qualquer um dos seus fluxos pode estar rodando dentro da requisição, com alguém esperando na tela. O envio roda só na fila, onde ninguém espera, e desistir cedo demais registraria falha num edital que o CultBR apenas demorou a processar.
+O envio tem tempos próprios — 30 s para conectar, 60 no total —, mais largos que os da leitura, que desiste em 10 s porque qualquer consulta pode estar rodando dentro da requisição, com alguém esperando na tela. Escrever no CultBR só acontece na fila, onde ninguém espera, e desistir cedo demais registraria falha num edital que ele apenas demorou a processar.
 
 ## Antes de enviar
 
