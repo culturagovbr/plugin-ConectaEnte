@@ -114,8 +114,7 @@ class SendTriggersTest extends TestCase
         $this->assertSame([], $this->enqueuedSendJobs(), 'Oportunidade sem selo de Ente Federado não é edital do CultBR.');
     }
 
-    // a fase é completa e selada de propósito: incompleta ou sem selo, ela não enfileiraria de
-    // qualquer jeito, e o teste passaria sem exercitar o guard de fase
+    // a fase é completa e selada de propósito: sem isso o teste passaria sem tocar o guard de fase
     function testNeitherSealingNorSavingACompleteSealedPhaseEnqueues()
     {
         $rootId = $this->sealedOpportunity(Opportunity::STATUS_ENABLED)->id;
@@ -143,8 +142,7 @@ class SendTriggersTest extends TestCase
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
 
-        // antes de qualquer reloaded(): o em->clear() dele desanexa o usuário e a gravação falharia.
-        // O motivo de uma recusa anterior tem que sumir no sucesso, e sumir é diferente de nunca ter existido
+        // antes de qualquer reloaded(): o em->clear() dele desanexa o usuário e a gravação falharia
         $this->writeRawMetadata($opportunity, CultBrMetadata::SEND_REASON, 'recusa anterior');
 
         $token = $this->resolveFederativeEntity($opportunity)->token;
@@ -173,8 +171,7 @@ class SendTriggersTest extends TestCase
         $this->assertSame([], $this->enqueuedSendJobs(), 'Job executado sai da fila; se ficar, o edital é reenviado para sempre.');
     }
 
-    // dois jobs do PAR disputam a vez com o envio: o sync vem do dump com data antiga, e o fetch entra no
-    // mesmo segundo pelo ente da fixture. Ambos consomem o transporte falso e corrompem o cache do PAR
+    // os jobs do PAR disputam a vez com o envio: consomem o transporte falso e corrompem o cache da árvore
     private function leaveOnlySendJobsQueued(): void
     {
         $this->app->em->getConnection()->executeStatement('DELETE FROM job WHERE name <> ?', [SendOpportunityJob::SLUG]);
