@@ -22,8 +22,7 @@ class SendOpportunityJob extends JobType
         return ['opportunityId' => $opportunity->id, 'attempt' => $attempt];
     }
 
-    // dedupe só pelo id da oportunidade: um novo save, ou a própria retentativa, substitui
-    // o que estava na fila — do mesmo jeito que ParInformationFetchJob dedupe por ente
+    // dedupe só pelo id da oportunidade: um novo save, ou a própria retentativa, substitui o que está na fila
     protected function _generateId(array $data, string $start_string, string $interval_string, int $iterations)
     {
         return (string) $data['opportunityId'];
@@ -31,21 +30,25 @@ class SendOpportunityJob extends JobType
 
     public function _execute(Job $job)
     {
-        $app = App::i();
-        $opportunity = $app->repo(Opportunity::class)->find($job->opportunityId);
+        // decidir e enviar falham por motivos diferentes: só a falha do envio vira desfecho gravado
+        try {
+            $opportunity = App::i()->repo(Opportunity::class)->find($job->opportunityId);
 
-        // entre enfileirar e executar a oportunidade pode ter ido para a lixeira, ou deixado de ser elegível
-        if (!$opportunity || !Plugin::instance()->sendEligibility()->isEligible($opportunity)) {
+            // entre enfileirar e executar a oportunidade pode ter ido para a lixeira, ou deixado de ser elegível
+            if (!$opportunity || !Plugin::instance()->sendEligibility()->isEligible($opportunity)) {
+                return true;
+            }
+        } catch (\Throwable $error) {
+            App::i()->log->error("SendOpportunityJob: exceção ao decidir sobre a oportunidade {$job->opportunityId}: {$error->getMessage()}");
+
             return true;
         }
-
-        $attempt = (int) ($job->attempt ?? 1);
 
         try {
             $outcome = Plugin::instance()->opportunitySender()->send($opportunity);
 
             if ($outcome->isRetryable()) {
-                $this->retryOrGiveUp($opportunity, $attempt, $outcome);
+                $this->retryOrGiveUp($opportunity, (int) ($job->attempt ?? 1), $outcome);
             }
         } catch (\Throwable $error) {
             $this->recordFailure($opportunity, $error);
