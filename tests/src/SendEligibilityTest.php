@@ -98,6 +98,21 @@ class SendEligibilityTest extends TestCase
         $this->assertNotEligible($phase);
     }
 
+    // o terceiro motivo (campos faltando) já é travado em testPublishedIncompleteIsNotEligibleAndNamesWhatIsMissing
+    function testTheReasonForNoSealDiffersFromTheReasonForDraft()
+    {
+        $withoutSeal = $this->completeOpportunity(Opportunity::STATUS_ENABLED);
+        $draft = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+
+        $eligibility = Plugin::instance()->sendEligibility();
+        $withoutSealReason = (string) $eligibility->ineligibilityReason($this->reloaded($withoutSeal));
+        $draftReason = (string) $eligibility->ineligibilityReason($this->reloaded($draft));
+
+        $this->assertStringContainsString('selo', mb_strtolower($withoutSealReason));
+        $this->assertStringContainsString('publicada', mb_strtolower($draftReason));
+        $this->assertNotSame($withoutSealReason, $draftReason, 'Sem selo e em rascunho pedem condutas diferentes do gestor.');
+    }
+
     private function assertNotEligible(Opportunity $opportunity): void
     {
         $reloaded = $this->reloaded($opportunity);
