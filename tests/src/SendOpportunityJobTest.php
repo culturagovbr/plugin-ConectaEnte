@@ -5,8 +5,10 @@ namespace Tests\ConectaEnte;
 use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
+use MapasCulturais\App;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
+use Monolog\Handler\TestHandler;
 use RuntimeException;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
@@ -124,20 +126,30 @@ class SendOpportunityJobTest extends TestCase
     {
         $this->loginAsSaasSuperAdmin();
         Plugin::instance()->mode = Plugin::MODE_LIVE;
+        Plugin::instance()->transport = $transport = FakeTransport::replying(200, []);
+        $handler = $this->captureLog();
 
         $finished = $this->executeSend($this->vanishedOpportunityId());
 
         $this->assertTrue($finished);
+        $this->assertSame([], $transport->requestedUrls, 'Oportunidade que sumiu não pode virar PUT ao CultBR.');
+        $this->assertFalse($handler->hasErrorRecords(), 'Edital apagado entre o enfileiramento e a execução é rotina, não incidente para investigar no log.');
     }
 
     function testATransportExceptionIsLoggedAndTheJobStillEnds()
     {
         $opportunity = $this->liveSealedOpportunity();
         Plugin::instance()->transport = QueueTransport::replying(new RuntimeException('estouro no envio'));
+        $handler = $this->captureLog();
 
         $finished = $this->executeSend($opportunity->id);
 
         $this->assertTrue($finished, 'Job que não termina fica preso em processamento para sempre.');
+        $this->assertTrue(
+            $handler->hasErrorThatContains("exceção ao enviar a oportunidade {$opportunity->id}"),
+            'Sem o log, a exceção fica só na frase estável do metadado e ninguém descobre a causa.',
+        );
+        $this->assertTrue($handler->hasErrorThatContains('estouro no envio'), 'O log é o lugar onde a mensagem da exceção pode aparecer.');
     }
 
     function testATransportExceptionIsRecordedAsFailure()
@@ -190,6 +202,26 @@ class SendOpportunityJobTest extends TestCase
     private function purgeSendJobs(): void
     {
         $this->app->em->getConnection()->delete('job', ['name' => SendOpportunityJob::SLUG]);
+    }
+
+    private ?TestHandler $logHandler = null;
+
+    private function captureLog(): TestHandler
+    {
+        App::i()->log->pushHandler($this->logHandler = new TestHandler());
+
+        return $this->logHandler;
+    }
+
+    // o logger da App sobrevive ao teste: o handler precisa sair junto com ele
+    protected function tearDown(): void
+    {
+        if ($this->logHandler) {
+            App::i()->log->popHandler();
+            $this->logHandler = null;
+        }
+
+        parent::tearDown();
     }
 
     private function executeSend(int $opportunityId, int $attempt = 1): bool
