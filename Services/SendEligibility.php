@@ -35,12 +35,27 @@ final class SendEligibility
         $missing = $this->publicationRequirements->missing($opportunity);
 
         if ($missing) {
-            // quem lê este motivo procura o campo na tela, e lá ele tem rótulo, não chave de metadado
-            $labels = $this->fieldLabels->forKeys($opportunity, array_keys($missing));
-
-            return sprintf(i::__('Faltam %d campo(s) obrigatório(s): %s'), count($missing), implode(', ', $labels));
+            return implode(' ', $this->reasonsFor($opportunity, $missing));
         }
 
         return null;
+    }
+
+    /**
+     * A razão de cada validação reprovada, com o campo nomeado como o gestor o vê na tela.
+     */
+    private function reasonsFor(Opportunity $opportunity, array $missing): array
+    {
+        $labels = $this->fieldLabels->forKeys($opportunity, array_keys($missing));
+        $reasons = [];
+
+        foreach ($missing as $key => $messages) {
+            $label = $labels[$key] ?? $key;
+            $reason = implode(' ', (array) $messages);
+            // a maioria das mensagens já nomeia o campo; prefixar todas repetiria o rótulo
+            $reasons[] = str_contains($reason, $label) ? $reason : "{$label}: {$reason}";
+        }
+
+        return $reasons;
     }
 }
