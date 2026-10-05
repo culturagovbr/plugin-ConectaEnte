@@ -19,15 +19,14 @@ final class OpportunitySender
     ) {
     }
 
-    /**
-     * Uma tentativa de envio. Em modo dev não chama a API — a fixture não representa o
-     * edital enviado, então o desfecho é `simulated` direto, sem passar pelo transporte.
-     */
+    /** Uma tentativa de envio; em modo dev o desfecho é `simulated`, sem passar pelo transporte. */
     public function send(Opportunity $opportunity): SendOutcome
     {
         if ($this->plugin->isDevMode()) {
             $outcome = SendOutcome::simulated();
             $this->recordOutcome($opportunity, $outcome);
+            // a faixa na página não alcança quem drena a fila: sem este registro, o worker simula em silêncio
+            App::i()->log->warning("ConectaEnte em modo dev: o edital {$opportunity->id} não foi enviado ao CultBR.");
 
             return $outcome;
         }
