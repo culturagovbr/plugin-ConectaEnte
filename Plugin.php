@@ -162,8 +162,10 @@ class Plugin extends \MapasCulturais\Plugin
             return;
         }
 
-        if (!$this->sendEligibility()->isEligible($opportunity)) {
-            App::i()->log->info("ConectaEnte: oportunidade {$opportunity->id} não elegível para envio: {$this->sendEligibility()->ineligibilityReason($opportunity)}");
+        $reason = $this->sendEligibility()->ineligibilityReason($opportunity);
+
+        if ($reason) {
+            App::i()->log->info("ConectaEnte: oportunidade {$opportunity->id} não elegível para envio: {$reason}");
 
             return;
         }
