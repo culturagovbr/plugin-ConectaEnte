@@ -2,7 +2,9 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\PublicationStamp;
 use DateTime;
 use MapasCulturais\Definitions\Metadata;
 use MapasCulturais\Entities\Opportunity;
@@ -10,11 +12,13 @@ use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\User;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
+use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 use Tests\Traits\RequestFactory;
 
 class PublicationStampTest extends TestCase
 {
     use ConectaEnteFixtures;
+    use PublicationRequirementsFixtures;
     use RequestFactory;
 
     const OLD_DATE = '2025-03-10 09:00:00';
@@ -122,6 +126,85 @@ class PublicationStampTest extends TestCase
         $this->reloaded($phase)->save(true);
 
         $this->assertNull($this->reloaded($phase)->getMetadata('conectaente_publishedAt'));
+    }
+
+    // o gatilho do selo nao salva a oportunidade, entao o stamp() do save:before nao roda:
+    // a data fica so na linha herdavel do Pnab, e o payload le outra chave
+    function testSealingAPublishedOpportunityWithOnlyTheInheritableDateStillSends()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->completeOpportunity(Opportunity::STATUS_ENABLED);
+        $this->forgetPluginDate($opportunity);
+        $this->writeRawMetadata($opportunity, PublicationStamp::INHERITED_KEY, self::LEGACY_DATE);
+
+        $opportunity = $this->reloaded($opportunity);
+        $opportunity->createSealRelation($this->federativeSeal());
+
+        $stamp = Plugin::instance()->publicationStamp();
+        $this->assertTrue($stamp->hasPublicationDate($opportunity), 'Premissa: o gate aceita a data que ainda está só na linha herdável.');
+        $this->assertNull($opportunity->getMetadata(CultBrMetadata::PUBLISHED_AT), 'Premissa: selar não passa pelo save:before, então nada carimbou.');
+
+        $payload = Plugin::instance()->opportunityPayload()->build($opportunity);
+
+        $this->assertNotNull(
+            $payload['data_publicacao_edital'],
+            'O gate deixou passar por causa da data herdável, e o payload tem que resolvê-la pela mesma regra.',
+        );
+    }
+
+    // sem isto, fazer publicationDate() ignorar a data gravada e olhar so a herdavel
+    // nao quebra nenhum teste deste arquivo — quem pegava era o teste do payload
+    function testTheStampedDateWinsOverTheInheritableOne()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->completeOpportunity(Opportunity::STATUS_ENABLED);
+        $this->writeRawMetadata($opportunity, PublicationStamp::INHERITED_KEY, self::LEGACY_DATE);
+
+        $date = Plugin::instance()->publicationStamp()->publicationDate($this->reloaded($opportunity));
+
+        $this->assertNotNull($date, 'A data gravada pela fixture é a que vale.');
+        $this->assertNotSame(self::LEGACY_DATE, $date->format('Y-m-d H:i:s'), 'A herdável só entra quando não há data gravada.');
+    }
+
+    // este metodo roda no save, pelo gate de envio: ler pela propriedade magica faria o unserialize
+    // lancar com data corrompida, e o gestor perderia o salvamento do edital
+    function testACorruptedStampedDateDoesNotBreakTheSave()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->forgetPluginDate($opportunity);
+        $this->writeRawMetadata($opportunity, CultBrMetadata::PUBLISHED_AT, 'isto nao e uma data');
+
+        $stamp = Plugin::instance()->publicationStamp();
+        $opportunity = $this->reloaded($opportunity);
+
+        $this->assertNull($stamp->publicationDate($opportunity), 'Data ilegível é data ausente, não exceção.');
+        $this->assertFalse($stamp->hasPublicationDate($opportunity), 'E o gate reprova por falta de data, que é o motivo verdadeiro.');
+        $this->assertNull(
+            Plugin::instance()->opportunityPayload()->build($opportunity)['data_publicacao_edital'],
+            'O payload também não pode explodir: a chave sai nula e o gate já barrou o envio.',
+        );
+    }
+
+    function testWithoutAnyDateThereIsNothingToResolve()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->completeOpportunity(Opportunity::STATUS_DRAFT);
+        $this->forgetPluginDate($opportunity);
+
+        $stamp = Plugin::instance()->publicationStamp();
+        $opportunity = $this->reloaded($opportunity);
+
+        $this->assertNull($stamp->publicationDate($opportunity), 'Sem data gravada nem herdável, não há o que resolver.');
+        $this->assertFalse($stamp->hasPublicationDate($opportunity), 'E o gate tem que concordar com isso.');
+    }
+
+    // a linha tem que deixar de existir: linha com null e data apagada, que nao se herda
+    private function forgetPluginDate(Opportunity $opportunity): void
+    {
+        $this->app->em->getConnection()->executeStatement(
+            'DELETE FROM opportunity_meta WHERE object_id = ? AND "key" = ?',
+            [$opportunity->id, CultBrMetadata::PUBLISHED_AT],
+        );
     }
 
     function testCopyOfAStampedOpportunityGetsItsOwnDateWhenPublished()
