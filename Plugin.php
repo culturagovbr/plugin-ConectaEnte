@@ -15,6 +15,7 @@ use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Jobs\ParInformationFetchJob;
 use ConectaEnte\Jobs\ParInformationSyncJob;
 use ConectaEnte\Jobs\SendOpportunityJob;
+use ConectaEnte\Services\FieldLabels;
 use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\OpportunitySender;
 use ConectaEnte\Services\ParInformationService;
@@ -125,9 +126,14 @@ class Plugin extends \MapasCulturais\Plugin
         return new PublicationRequirements($this->publicationStamp(), $this->parInformationService());
     }
 
+    function fieldLabels(): FieldLabels
+    {
+        return new FieldLabels();
+    }
+
     function sendEligibility(): SendEligibility
     {
-        return new SendEligibility($this->sealedOpportunity(), $this->publicationRequirements());
+        return new SendEligibility($this->sealedOpportunity(), $this->publicationRequirements(), $this->fieldLabels());
     }
 
     function opportunitySender(): OpportunitySender

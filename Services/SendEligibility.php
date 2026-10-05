@@ -10,6 +10,7 @@ final class SendEligibility
     public function __construct(
         private SealedOpportunity $sealedOpportunity,
         private PublicationRequirements $publicationRequirements,
+        private FieldLabels $fieldLabels,
     ) {
     }
 
@@ -34,7 +35,10 @@ final class SendEligibility
         $missing = $this->publicationRequirements->missing($opportunity);
 
         if ($missing) {
-            return sprintf(i::__('Faltam %d campo(s) obrigatório(s): %s'), count($missing), implode(', ', array_keys($missing)));
+            // quem lê este motivo procura o campo na tela, e lá ele tem rótulo, não chave de metadado
+            $labels = $this->fieldLabels->forKeys($opportunity, array_keys($missing));
+
+            return sprintf(i::__('Faltam %d campo(s) obrigatório(s): %s'), count($missing), implode(', ', $labels));
         }
 
         return null;
