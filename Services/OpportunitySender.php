@@ -11,26 +11,19 @@ use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\i;
 use RuntimeException;
 
-final class OpportunitySender
+class OpportunitySender
 {
+    const MAX_PENDING_REASONS = 3;
+
     public function __construct(
         private Plugin $plugin,
         private SealedOpportunity $sealedOpportunity,
     ) {
     }
 
-    /** Uma tentativa de envio; em modo dev o desfecho é `simulated`, sem passar pelo transporte. */
+    /** Uma tentativa de envio; o payload é montado e conferido antes de a simulação ser decidida. */
     public function send(Opportunity $opportunity): SendOutcome
     {
-        if ($this->plugin->isDevMode()) {
-            $outcome = SendOutcome::simulated();
-            $this->recordOutcome($opportunity, $outcome);
-            // a faixa na página não alcança quem drena a fila: sem este registro, o worker simula em silêncio
-            App::i()->log->warning("ConectaEnte em modo dev: o edital {$opportunity->id} não foi enviado ao CultBR.");
-
-            return $outcome;
-        }
-
         $federativeEntity = $this->sealedOpportunity->federativeEntityOf($opportunity);
 
         if (!$federativeEntity) {
@@ -38,6 +31,22 @@ final class OpportunitySender
         }
 
         $payload = $this->plugin->opportunityPayload()->build($opportunity);
+        $pending = $this->plugin->payloadValidation()->errors($opportunity, $payload);
+
+        // conferir antes do desvio de modo: em dev, pular a conferência esconderia o campo faltando
+        if ($pending) {
+            App::i()->log->error("ConectaEnte: payload do edital {$opportunity->id} incompleto: " . implode(' ', $pending));
+
+            return $this->recorded($opportunity, SendOutcome::error($this->pendingReason($pending)));
+        }
+
+        if ($this->plugin->isDevMode()) {
+            // a faixa na página não alcança quem drena a fila: sem este registro, o worker simula em silêncio
+            App::i()->log->warning("ConectaEnte em modo dev: o edital {$opportunity->id} não foi enviado ao CultBR.");
+
+            return $this->recorded($opportunity, SendOutcome::simulated());
+        }
+
         $result = $this->plugin->client()->sendOpportunity($federativeEntity->token, $opportunity->id, $payload);
 
         $outcome = match (true) {
@@ -52,6 +61,22 @@ final class OpportunitySender
         } else {
             $this->recordOutcome($opportunity, $outcome);
         }
+
+        return $outcome;
+    }
+
+    // o motivo é público na API sem sessão: muitas pendências indicam defeito no build, e aí o log é o lugar
+    private function pendingReason(array $pending): string
+    {
+        $shown = array_slice($pending, 0, self::MAX_PENDING_REASONS);
+        $rest = count($pending) - count($shown);
+
+        return trim(implode(' ', $shown) . ($rest > 0 ? ' ' . sprintf(i::__('E outros %d campos.'), $rest) : ''));
+    }
+
+    private function recorded(Opportunity $opportunity, SendOutcome $outcome): SendOutcome
+    {
+        $this->recordOutcome($opportunity, $outcome);
 
         return $outcome;
     }
