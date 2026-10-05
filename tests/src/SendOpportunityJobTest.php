@@ -16,6 +16,7 @@ use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Doubles\QueueTransport;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
+use Tests\ConectaEnte\Traits\SendQueue;
 
 /**
  * O job que envia o edital selado ao CultBR, com retentativa só para indisponibilidade.
@@ -23,6 +24,7 @@ use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 class SendOpportunityJobTest extends TestCase
 {
     use PublicationRequirementsFixtures;
+    use SendQueue;
 
     function testSuccessIsRecordedAndDoesNotRequeue()
     {
@@ -298,11 +300,6 @@ class SendOpportunityJobTest extends TestCase
         return $opportunity;
     }
 
-    private function purgeSendJobs(): void
-    {
-        $this->app->em->getConnection()->delete('job', ['name' => SendOpportunityJob::SLUG]);
-    }
-
     private ?TestHandler $logHandler = null;
 
     private function captureLog(): TestHandler
@@ -335,12 +332,6 @@ class SendOpportunityJobTest extends TestCase
         $job->attempt = $attempt;
 
         return $jobType->_execute($job);
-    }
-
-    /** @return Job[] */
-    private function enqueuedSendJobs(): array
-    {
-        return $this->app->repo(Job::class)->findBy(['type' => SendOpportunityJob::SLUG]);
     }
 
     private function vanishedOpportunityId(): int

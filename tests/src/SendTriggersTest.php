@@ -6,12 +6,12 @@ use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\SendOutcome;
-use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
+use Tests\ConectaEnte\Traits\SendQueue;
 
 /**
  * Os gatilhos que enfileiram o envio do edital ao CultBR.
@@ -19,6 +19,7 @@ use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 class SendTriggersTest extends TestCase
 {
     use PublicationRequirementsFixtures;
+    use SendQueue;
 
     // `mode` é override opcional sobre a config: o neutro é null, não a string do modo
     protected function tearDown(): void
@@ -175,16 +176,5 @@ class SendTriggersTest extends TestCase
     private function leaveOnlySendJobsQueued(): void
     {
         $this->app->em->getConnection()->executeStatement('DELETE FROM job WHERE name <> ?', [SendOpportunityJob::SLUG]);
-    }
-
-    /** @return Job[] */
-    private function enqueuedSendJobs(): array
-    {
-        return $this->app->repo(Job::class)->findBy(['type' => SendOpportunityJob::SLUG]);
-    }
-
-    private function purgeSendJobs(): void
-    {
-        $this->app->em->getConnection()->delete('job', ['name' => SendOpportunityJob::SLUG]);
     }
 }
