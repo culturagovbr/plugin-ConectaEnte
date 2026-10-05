@@ -42,7 +42,7 @@ final class CultBrMetadata
 
     const PAR_KEYS = [self::PAR_EXERCISE_ID, self::PAR_GOAL_ID, self::PAR_ACTION_ID, self::PAR_ACTIVITY_ID];
 
-    // internos: nenhuma aba lê estas chaves ainda — placeholder mínimo até #22 (registro de tentativas)
+    // o desfecho da última tentativa de envio; nenhuma aba lê estas chaves ainda
     const SEND_STATUS = 'conectaente_sendStatus';
     const SEND_REASON = 'conectaente_sendReason';
     const SEND_AT = 'conectaente_sendAt';

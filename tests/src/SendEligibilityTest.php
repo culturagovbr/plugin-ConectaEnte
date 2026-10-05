@@ -8,7 +8,7 @@ use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 
 /**
- * As nove ACs de #18: quais oportunidades disparam o envio.
+ * Quais oportunidades estão aptas a ir ao CultBR, e por que as outras não vão.
  */
 class SendEligibilityTest extends TestCase
 {
