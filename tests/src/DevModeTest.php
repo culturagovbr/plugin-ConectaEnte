@@ -44,6 +44,64 @@ class DevModeTest extends TestCase
 
     // o override da suite declara CONECTAENTE_MODE=dev, entao afirmar o singleton provaria o declarado,
     // nao o default. Aqui a variavel sai do ambiente para o default aparecer
+    // o envio nao deveria chegar aqui: quem decide e o sender, que grava `simulated` sem passar
+    // pelo transporte. Se chegar, nao pode ser confundido com sucesso
+    function testTheFixtureTransportRefusesToWriteAndSaysSo()
+    {
+        $log = $this->captureLog();
+
+        $response = $this->fixtureTransport()->put('https://cultbr.exemplo/api/v1/oportunidades/7366', ['id' => 7366]);
+
+        $this->assertFalse($response->reachedServer(), 'Escrita simulada não pode responder como se o CultBR tivesse aceitado.');
+        $this->assertTrue($log->hasWarningThatContains('put()'), 'E o desvio tem que deixar rastro: chegar aqui é defeito de fluxo.');
+    }
+
+    function testTheMissingFixtureIsAnnouncedInTheLogToo()
+    {
+        $log = $this->captureLog();
+
+        $this->fixtureTransport()->get('https://cultbr.exemplo/api/v1/rota-que-nao-existe');
+
+        $this->assertTrue(
+            $log->hasWarningThatContains('rota-que-nao-existe'),
+            'Sem o aviso, quem trabalha em dev não descobre que falta a fixture da rota que acabou de criar.',
+        );
+    }
+
+    // a fixture ensina o formato da API a quem trabalha em dev: tipo errado aqui vira bug em live
+    function testTheParFixtureReproducesTheTypesTheApiReturns()
+    {
+        $tree = json_decode((string) file_get_contents(Plugin::instance()->fixturesPath() . '/par-information.json'), true);
+        $exercise = $tree['data'][0]['exercicios'][0];
+
+        $this->assertIsInt($exercise['id'], 'A API devolve os ids como inteiro, e o contrato os tipa assim.');
+        $this->assertIsInt($exercise['ano']);
+
+        foreach ($exercise['metas'] as $goal) {
+            $this->assertIsInt($goal['id']);
+            $this->assertArrayHasKey('valor', $goal, 'A árvore real traz valor em meta, ação e atividade.');
+
+            foreach ($goal['acoes'] as $action) {
+                $this->assertIsInt($action['id']);
+                $this->assertArrayHasKey('valor', $action);
+
+                foreach ($action['atividades'] as $activity) {
+                    $this->assertIsInt($activity['id']);
+                    $this->assertArrayHasKey('valor', $activity);
+                }
+            }
+        }
+    }
+
+    function testTheTokenFixtureReproducesTheTypesTheApiReturns()
+    {
+        $token = json_decode((string) file_get_contents(Plugin::instance()->fixturesPath() . '/validar-token.json'), true);
+
+        $this->assertIsInt($token['id_token'], 'A resposta real traz id_token inteiro; a string "dev" ensinava o formato errado.');
+        $this->assertIsBool($token['valido']);
+        $this->assertSame(14, strlen($token['cnpj']), 'O cnpj vem com 14 dígitos, sem pontuação.');
+    }
+
     function testDevIsTheDefaultWhileTheCultBrDoesNotSettle()
     {
         $declared = $_ENV['CONECTAENTE_MODE'] ?? null;

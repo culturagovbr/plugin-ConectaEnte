@@ -20,6 +20,29 @@ class JsonBodyTest extends TestCase
         JsonBody::encode(['detalhamento_objeto' => "\xB1\x31"]);
     }
 
+    // a mensagem do json_encode nao diz a chave: sem isto, quem le o log sabe que o corpo
+    // falhou e nao sabe onde, num payload de 30 campos
+    function testTheFailureNamesTheOffendingField()
+    {
+        try {
+            JsonBody::encode(['numero_e_titulo_edital' => 'Edital', 'detalhamento_objeto' => "\xB1\x31"]);
+            $this->fail('UTF-8 inválido tem que lançar.');
+        } catch (JsonException $error) {
+            $this->assertStringContainsString('detalhamento_objeto', $error->getMessage(), 'O campo culpado tem que estar na mensagem.');
+            $this->assertStringNotContainsString('numero_e_titulo_edital', $error->getMessage(), 'E só ele: acusar os íntegros manda procurar no lugar errado.');
+        }
+    }
+
+    function testTheOriginalFailureIsKeptAsTheCause()
+    {
+        try {
+            JsonBody::encode(['detalhamento_objeto' => "\xB1\x31"]);
+            $this->fail('UTF-8 inválido tem que lançar.');
+        } catch (JsonException $error) {
+            $this->assertInstanceOf(JsonException::class, $error->getPrevious(), 'A exceção original fica como causa, para o rastro não se perder.');
+        }
+    }
+
     function testNanAndInfinityAlsoThrow()
     {
         $this->expectException(JsonException::class);
