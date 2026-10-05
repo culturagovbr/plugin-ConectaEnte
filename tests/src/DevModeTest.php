@@ -191,8 +191,13 @@ class DevModeTest extends TestCase
     private function pluginBuiltWith(array $config): Plugin
     {
         $built = null;
-        $this->app->hook(self::BUILD_HOOK, function () use (&$built) {
-            $built = $this;
+        // o alvo e desligado por referencia, nao por clearHooks(): o clear() do core nao invalida
+        // o _hookCache, entao um hook ja aplicado continua sendo chamado depois de removido
+        $target = &$built;
+        $this->app->hook(self::BUILD_HOOK, function () use (&$target) {
+            if ($target !== false) {
+                $target = $this;
+            }
         });
         $launched = false;
 
@@ -201,16 +206,16 @@ class DevModeTest extends TestCase
         } catch (\Exception $error) {
             $launched = true;
             $this->assertStringContainsString('already registered', $error->getMessage(), 'Premissa do teste: a exceção esperada é a do job type.');
-        } finally {
-            $this->app->clearHooks(self::BUILD_HOOK);
         }
 
         // o registro de job type vem antes dos hooks no _init(): se ele deixar de relancar, cada chamada
         // daqui passa a registrar os ~20 hooks do plugin de novo, e a suite suja em silencio
         $this->assertTrue($launched, 'Premissa do teste: o _init() precisa ter relançado antes de registrar hook nenhum.');
         $this->assertInstanceOf(Plugin::class, $built, 'Premissa do teste: o hook do core precisa ter entregado a instância.');
+        $plugin = $built;
+        $target = false;
 
-        return $built;
+        return $plugin;
     }
 
     private function modeFor(mixed $declared): string
