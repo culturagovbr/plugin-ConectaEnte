@@ -133,6 +133,68 @@ class DevModeTest extends TestCase
         );
     }
 
+    // a mutacao "defaultTransport() devolve sempre FixtureTransport" faria uma instalacao live
+    // simular em silencio, e nenhum edital chegaria ao CultBR. `.invalid` nunca resolve (RFC 2606)
+    function testLiveResolvesTheNetworkTransport()
+    {
+        $plugin = $this->pluginBuiltWith(['mode' => Plugin::MODE_LIVE, 'host' => 'https://cultbr.invalid']);
+
+        $this->assertFalse(
+            $plugin->client()->isHealthy(),
+            'Em live o transporte vai à rede: host inexistente falha, e o de fixture responderia 200 para /health.',
+        );
+    }
+
+    function testDevResolvesTheFixtureTransportEvenWithAnUnreachableHost()
+    {
+        $plugin = $this->pluginBuiltWith(['mode' => Plugin::MODE_DEV, 'host' => 'https://cultbr.invalid']);
+
+        $this->assertTrue(
+            $plugin->client()->isHealthy(),
+            'Em dev o host não é usado: a resposta sai de fixtures/health.json.',
+        );
+    }
+
+    // trocar o `+=` por `=` no construtor descartaria em silencio host, modo e intervalos declarados
+    function testTheConfigDeclaredByTheInstallationSurvivesTheDefaults()
+    {
+        $plugin = $this->pluginBuiltWith(['mode' => Plugin::MODE_LIVE, 'host' => 'https://cultbr.declarado']);
+
+        $config = $plugin->getConfig();
+        $this->assertSame(Plugin::MODE_LIVE, $config['mode'], 'O modo declarado pela instalação prevalece sobre o default.');
+        $this->assertSame('https://cultbr.declarado', $config['host']);
+        $this->assertSame(Plugin::DEFAULT_SEND_MAX_ATTEMPTS, $config['sendMaxAttempts'], 'E o que a instalação não declarou continua vindo do default.');
+    }
+
+    const BUILD_HOOK = 'module(ConectaEnte\Plugin).init:before';
+
+    // o _init() relanca contra o singleton da suite; o hook do core entrega a instancia com o config
+    // ja montado, porque ele dispara depois do `$this->_config = $config` e antes do _init()
+    private function pluginBuiltWith(array $config): Plugin
+    {
+        $built = null;
+        $this->app->hook(self::BUILD_HOOK, function () use (&$built) {
+            $built = $this;
+        });
+        $launched = false;
+
+        try {
+            new Plugin($config);
+        } catch (\Exception $error) {
+            $launched = true;
+            $this->assertStringContainsString('already registered', $error->getMessage(), 'Premissa do teste: a exceção esperada é a do job type.');
+        } finally {
+            $this->app->clearHooks(self::BUILD_HOOK);
+        }
+
+        // o registro de job type vem antes dos hooks no _init(): se ele deixar de relancar, cada chamada
+        // daqui passa a registrar os ~20 hooks do plugin de novo, e a suite suja em silencio
+        $this->assertTrue($launched, 'Premissa do teste: o _init() precisa ter relançado antes de registrar hook nenhum.');
+        $this->assertInstanceOf(Plugin::class, $built, 'Premissa do teste: o hook do core precisa ter entregado a instância.');
+
+        return $built;
+    }
+
     private function modeFor(mixed $declared): string
     {
         $plugin = Plugin::instance();
@@ -143,6 +205,42 @@ class DevModeTest extends TestCase
         } finally {
             $plugin->mode = null;
         }
+    }
+
+    // sem passar por defaultTransport(), a mutacao "devolve sempre FixtureTransport" nao quebra nada
+    // e uma instalacao live simularia em silencio. Aqui $transport fica null de proposito
+    function testDevResolvesTheFixtureTransportWithoutTouchingTheNetwork()
+    {
+        $plugin = Plugin::instance();
+        $plugin->mode = Plugin::MODE_DEV;
+        $plugin->transport = null;
+
+        try {
+            $this->assertTrue(
+                $plugin->client()->isHealthy(),
+                'Em dev o /health vem de fixtures/health.json; um transporte de rede não responderia 200 aqui.',
+            );
+        } finally {
+            $plugin->mode = null;
+        }
+    }
+
+    function testDevServesAnyEnteAndLiveDoesNot()
+    {
+        $plugin = Plugin::instance();
+        $plugin->transport = null;
+        $plugin->mode = Plugin::MODE_DEV;
+
+        try {
+            $anotherEnte = $plugin->client()->getParInformation('token', '99999999999999');
+        } finally {
+            $plugin->mode = null;
+        }
+
+        $this->assertNotNull(
+            $anotherEnte->tree->exercises[0] ?? null,
+            'A fixture do PAR é uma só e precisa servir a qualquer ente cadastrado em dev.',
+        );
     }
 
     function testTheEnteFilterHoldsWithARealTransport()
