@@ -204,7 +204,31 @@ class Plugin extends \MapasCulturais\Plugin
 
     function isDevMode(): bool
     {
-        return ($this->mode ?? $this->_config['mode']) === self::MODE_DEV;
+        return $this->mode() === self::MODE_DEV;
+    }
+
+    /** O modo em vigor: `live` só quando declarado assim, porque tudo o mais não pode virar envio real. */
+    function mode(): string
+    {
+        return $this->declaredMode() === self::MODE_LIVE ? self::MODE_LIVE : self::MODE_DEV;
+    }
+
+    /** Avisa quando o modo declarado não é reconhecido: cair em dev é o lado seguro, mas em silêncio ninguém descobre o erro. */
+    function warnOnUnknownMode(): void
+    {
+        $declared = $this->declaredMode();
+
+        if (in_array($declared, [self::MODE_DEV, self::MODE_LIVE], true)) {
+            return;
+        }
+
+        App::i()->log->warning("ConectaEnte: CONECTAENTE_MODE=\"{$declared}\" não é um modo conhecido; a instalação fica em dev e não fala com o CultBR.");
+    }
+
+    // variável declarada vazia chega como '', e o env() do core ainda converte `1` em float e `true` em bool
+    private function declaredMode(): string
+    {
+        return strtolower(trim((string) ($this->mode ?? $this->_config['mode'])));
     }
 
     function fixturesPath(): string
@@ -227,6 +251,8 @@ class Plugin extends \MapasCulturais\Plugin
 
     public function _init(){
         $app = App::i();
+
+        $this->warnOnUnknownMode();
 
         $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
         $app->registerJobType(new ParInformationFetchJob(ParInformationFetchJob::SLUG));
