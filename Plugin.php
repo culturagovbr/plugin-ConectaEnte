@@ -105,17 +105,15 @@ class Plugin extends \MapasCulturais\Plugin
         return new FundingSourceName();
     }
 
+    // uma instância por requisição: as duas guardam o que a requisição em curso está fazendo
     private ?PublicationStamp $publicationStamp = null;
+    private ?PublicationContext $publicationContext = null;
 
-    // uma instância por requisição: ela guarda a marca da duplicação em curso
     function publicationStamp(): PublicationStamp
     {
         return $this->publicationStamp ??= new PublicationStamp($this->sealedOpportunity());
     }
 
-    private ?PublicationContext $publicationContext = null;
-
-    // uma instância por requisição: ela guarda o status pedido pela requisição em curso
     function publicationContext(): PublicationContext
     {
         return $this->publicationContext ??= new PublicationContext();
@@ -156,8 +154,7 @@ class Plugin extends \MapasCulturais\Plugin
      */
     function scheduleSend(Opportunity $opportunity, int $attempt = 1, string $start = 'now'): void
     {
-        // sem selo de ente, nem vale perguntar o resto: é o caso comum de toda oportunidade da
-        // instalação, e logar isso a cada save encheria o log sem dizer nada de novo
+        // sem selo de ente não se pergunta o resto: é o caso comum, e logar a cada save encheria o log
         if ($opportunity->parent || !$this->sealedOpportunity()->federativeEntityOf($opportunity)) {
             return;
         }
@@ -225,7 +222,6 @@ class Plugin extends \MapasCulturais\Plugin
 
     function parInformationService(): ParInformationService
     {
-        // TTL curto: o CultBR muda o PAR em intervalo imprevisível, e árvore vencida faz o gestor escolher o que não existe
         return $this->parInformationService ?? new ParInformationService($this->_config['parCacheTtlMinutes'] * 60, $this->client());
     }
 
@@ -251,7 +247,6 @@ class Plugin extends \MapasCulturais\Plugin
         $app->view->enqueueStyle('app', 'conectaente', 'css/conectaente.css');
         $app->view->enqueueStyle('app-v2', 'conectaente', 'css/conectaente.css');
 
-        // o core religa o $this dos hooks ao objeto que os dispara
         $app->hook('auth.logout:before', fn() => Plugin::instance()->passwordWindow()->close());
 
         $app->hook('panel.nav', function (&$nav) use ($app) {
@@ -344,7 +339,6 @@ class Plugin extends \MapasCulturais\Plugin
             $this->part('conectaente/opportunity-tab');
         });
 
-        // abaixo do cabeçalho, em qualquer página: ninguém deve confundir dado de exemplo com dado do CultBR
         $app->hook('view.partial(main-header):after', function ($template, &$html) {
             if (Plugin::instance()->isDevMode()) {
                 $html .= $this->partialRender('conectaente/dev-mode-banner', [], true);
@@ -356,8 +350,7 @@ class Plugin extends \MapasCulturais\Plugin
             Plugin::instance()->requirePublicationFields($this, $errors);
         }, 1000);
 
-        // publicar dispara o envio, e editar uma já publicada reenvia — insert nunca vê publicada,
-        // porque toda oportunidade nasce rascunho
+        // `update:finish` cobre publicar e reeditar; `insert` nunca vê publicada, porque toda oportunidade nasce rascunho
         $app->hook('entity(Opportunity).update:finish', function () {
             Plugin::instance()->scheduleSend($this);
         });
