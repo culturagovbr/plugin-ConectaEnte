@@ -80,6 +80,26 @@ class SendTriggersTest extends TestCase
         $this->assertSame('Edital revisado depois de publicado', $this->reloaded($opportunity)->shortDescription, 'Premissa do teste: a edição precisa ter sido gravada.');
     }
 
+    // sem dedupe por oportunidade, cada save do gestor viraria um envio na fila
+    function testTwoSavesInARowLeaveASingleJobQueued()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->purgeSendJobs();
+        $this->assertSame([], $this->enqueuedSendJobs(), 'Premissa do teste: a fila precisa começar vazia.');
+
+        $opportunity->shortDescription = 'Primeira revisão';
+        $opportunity->save(true);
+        $firstPk = (int) $this->enqueuedSendJobs()[0]->pk;
+
+        $opportunity->shortDescription = 'Segunda revisão';
+        $opportunity->save(true);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Dois saves da mesma oportunidade substituem o job, não acumulam.');
+        $this->assertNotSame($firstPk, (int) $jobs[0]->pk, 'A linha é nova: contar um só não distingue substituição de segundo save que não disparou.');
+        $this->assertSame('Segunda revisão', $this->reloaded($opportunity)->shortDescription, 'Premissa do teste: o segundo save precisa ter sido gravado.');
+    }
+
     function testPublishingAnOpportunityWithoutAFederativeSealEnqueuesNothing()
     {
         $opportunity = $this->completeOpportunity(Opportunity::STATUS_DRAFT);

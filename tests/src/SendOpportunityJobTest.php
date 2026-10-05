@@ -83,6 +83,21 @@ class SendOpportunityJobTest extends TestCase
         $this->assertNull($this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS), 'Enquanto há tentativa pela frente, nada é gravado.');
     }
 
+    // a retentativa troca de tentativa, então é ela que prova o dedupe: por oportunidade, não por tentativa
+    function testTheRetryReplacesTheQueuedJobInsteadOfAddingOne()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        Plugin::instance()->mode = Plugin::MODE_LIVE;
+        Plugin::instance()->transport = FakeTransport::replying(500, 'Internal Server Error');
+        $this->assertCount(1, $this->enqueuedSendJobs(), 'Premissa do teste: o gatilho deixou um job de primeira tentativa na fila.');
+
+        $this->executeSend($opportunity->id, attempt: 1);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'A retentativa substitui o job do mesmo edital; somar linhas faria a fila crescer a cada falha.');
+        $this->assertSame(2, (int) $jobs[0]->attempt);
+    }
+
     function testTheRetryIsScheduledForTheConfiguredDelay()
     {
         // o literal trava o valor acordado; a janela, o mecanismo. Só a constante seria tautológico
