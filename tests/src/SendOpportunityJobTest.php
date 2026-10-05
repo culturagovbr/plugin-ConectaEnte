@@ -6,7 +6,9 @@ use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Http\ParInformationResult;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\OpportunitySender;
 use ConectaEnte\Services\ParInformationService;
+use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
@@ -308,6 +310,117 @@ class SendOpportunityJobTest extends TestCase
     }
 
     // selar a publicada dispara o gatilho: sem tirar esse job da fila, os testes contariam o envio errado
+    // o payload e conferido ANTES do desvio de modo: em dev, pular a conferencia esconderia
+    // o campo faltando justamente no ambiente que existe para encontra-lo
+    function testAnIncompletePayloadIsRefusedInDevModeInsteadOfSimulated()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        Plugin::instance()->mode = Plugin::MODE_DEV;
+        Plugin::instance()->transport = $transport = FakeTransport::unreachable();
+        $this->removeFromPayload('numero_previsto_vagas');
+
+        $this->executeSend($opportunity->id);
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $reloaded->getMetadata(CultBrMetadata::SEND_STATUS), 'Payload incompleto não é simulação bem-sucedida.');
+        $this->assertStringContainsString('Total de vagas', (string) $reloaded->getMetadata(CultBrMetadata::SEND_REASON), 'O motivo nomeia o campo pelo rótulo de tela.');
+        $this->assertSame([], $transport->requestedUrls, 'E nada vai à rede.');
+    }
+
+    function testAnIncompletePayloadIsRefusedBeforeReachingTheApi()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['id_par_edital' => 1]);
+        $this->removeFromPayload('pdf_edital');
+
+        $this->executeSend($opportunity->id);
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $reloaded->getMetadata(CultBrMetadata::SEND_STATUS));
+        $this->assertStringContainsString('Regulamento', (string) $reloaded->getMetadata(CultBrMetadata::SEND_REASON));
+        $this->assertSame([], $transport->requestedUrls, 'Conferir depois de enviar não evitaria a recusa do CultBR.');
+    }
+
+    function testACompletePayloadStillReachesTheApiInLiveMode()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = $transport = FakeTransport::replying(200, ['id_par_edital' => 1]);
+
+        $this->executeSend($opportunity->id);
+
+        $this->assertCount(1, $transport->requestedUrls, 'Premissa: a conferência não pode barrar edital completo.');
+        $this->assertSame(SendOutcome::SUCCESS, $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS));
+    }
+
+    // o motivo vai para metadado publico: muitas pendencias indicam defeito no build, nao edital
+    // incompleto — o gate barraria antes. Ai o muro de texto fica no log, e no metadado vai o resumo
+    function testManyPendingFieldsAreSummarizedInThePublicReasonAndWholeInTheLog()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, []);
+        $log = $this->captureLog();
+        $this->emptyThePayload();
+
+        $this->executeSend($opportunity->id);
+
+        $reason = (string) $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_REASON);
+        $this->assertStringContainsString('E outros', $reason, 'Trinta frases num metadado público não ajudam ninguém.');
+        $this->assertLessThan(400, mb_strlen($reason), "O motivo público ficou com {$reason}");
+        $this->assertTrue($log->hasErrorThatContains('payload do edital'), 'O detalhe completo tem que estar no log, onde cabe.');
+    }
+
+    // divida declarada ao fechar a adequacao do PR 34: o try/catch interno do recordFailure nao tinha
+    // como ser coberto sem ponto de injecao no sender. Apaga-lo prendia a linha do job em processamento
+    function testTheJobSurvivesASenderThatAlsoFailsToRecordTheOutcome()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        $log = $this->captureLog();
+        Plugin::instance()->opportunitySender = new class (Plugin::instance(), Plugin::instance()->sealedOpportunity()) extends OpportunitySender {
+            public function send(Opportunity $opportunity): SendOutcome
+            {
+                throw new RuntimeException('estouro no envio');
+            }
+
+            public function recordFailure(Opportunity $opportunity): void
+            {
+                throw new RuntimeException('estouro ao gravar o desfecho');
+            }
+        };
+
+        try {
+            $finished = $this->executeSend($opportunity->id);
+        } finally {
+            Plugin::instance()->opportunitySender = null;
+        }
+
+        $this->assertTrue($finished, 'Job que não termina fica preso em processamento para sempre.');
+        $this->assertTrue($log->hasErrorThatContains('estouro no envio'), 'A causa primeira vai ao log.');
+        $this->assertTrue($log->hasErrorThatContains('falha ao registrar o desfecho'), 'E a falha do próprio registro também, senão ela desaparece.');
+    }
+
+    // desligado por flag no tearDown, nao por clearHooks(): o clear() do core nao invalida o _hookCache
+    private function removeFromPayload(string $contractKey): void
+    {
+        $this->removingFromPayload = true;
+        $this->app->hook('conectaente.opportunityPayload', function ($opportunity, &$payload) use ($contractKey) {
+            if ($this->removingFromPayload) {
+                unset($payload[$contractKey]);
+            }
+        });
+    }
+
+    private function emptyThePayload(): void
+    {
+        $this->removingFromPayload = true;
+        $this->app->hook('conectaente.opportunityPayload', function ($opportunity, &$payload) {
+            if ($this->removingFromPayload) {
+                $payload = [];
+            }
+        });
+    }
+
+    private bool $removingFromPayload = false;
+
     private function liveSealedOpportunity(): Opportunity
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
@@ -329,6 +442,8 @@ class SendOpportunityJobTest extends TestCase
     // o logger da App sobrevive ao teste: o handler precisa sair junto com ele
     protected function tearDown(): void
     {
+        $this->removingFromPayload = false;
+
         if ($this->logHandler) {
             App::i()->log->popHandler();
             $this->logHandler = null;
