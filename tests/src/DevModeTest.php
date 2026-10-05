@@ -42,9 +42,27 @@ class DevModeTest extends TestCase
         $this->assertStringContainsString('rota-que-nao-existe', (string) $response->transportError);
     }
 
+    // o override da suite declara CONECTAENTE_MODE=dev, entao afirmar o singleton provaria o declarado,
+    // nao o default. Aqui a variavel sai do ambiente para o default aparecer
     function testDevIsTheDefaultWhileTheCultBrDoesNotSettle()
     {
-        $this->assertTrue(Plugin::instance()->isDevMode(), 'A instalação declara CONECTAENTE_MODE=live para falar com o CultBR de verdade.');
+        $declared = $_ENV['CONECTAENTE_MODE'] ?? null;
+        unset($_ENV['CONECTAENTE_MODE']);
+
+        try {
+            $plugin = $this->pluginBuiltWith([]);
+        } finally {
+            if ($declared !== null) {
+                $_ENV['CONECTAENTE_MODE'] = $declared;
+            }
+        }
+
+        $this->assertSame(
+            Plugin::MODE_DEV,
+            $plugin->getConfig()['mode'],
+            'Sem nada declarado, a instalação nasce em dev: é ela que declara CONECTAENTE_MODE=live para falar com o CultBR de verdade.',
+        );
+        $this->assertTrue(Plugin::instance()->isDevMode(), 'E a suíte roda em dev, agora por declaração do override e não por acidente.');
     }
 
     // o env() do core testa `isset`, e string vazia está setada: o default nunca entra, e '' não é 'dev'

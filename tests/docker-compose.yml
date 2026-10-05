@@ -1,5 +1,9 @@
 services:
   mapas:
+    environment:
+      # fixa o que a suíte assumia pelo default: os testes de envio real declaram MODE_LIVE na instância
+      CONECTAENTE_MODE: dev
+
     volumes:
       # Monta o diretório, não o arquivo — bind mount de arquivo dentro de bind mount falha no virtiofs.
       # "zz-" garante que este config.d ordene depois do config.d do core.

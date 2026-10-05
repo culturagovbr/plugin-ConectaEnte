@@ -166,6 +166,23 @@ class SendOpportunityJobTest extends TestCase
         $this->assertSame('simulated', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS));
     }
 
+    // a faixa na pagina nao alcanca quem drena a fila: o worker precisa deixar rastro do que nao enviou
+    function testTheSimulatedSendLeavesATraceInTheLog()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->mode = Plugin::MODE_DEV;
+        Plugin::instance()->transport = FakeTransport::unreachable();
+        $log = $this->captureLog();
+
+        $this->executeSend($opportunity->id);
+
+        $this->assertTrue(
+            $log->hasWarningThatContains("edital {$opportunity->id} não foi enviado"),
+            'Sem o registro, uma instalação em dev não envia nada e o único aviso é uma faixa que o worker não vê.',
+        );
+        $this->assertFalse($log->hasErrorRecords(), 'Simular é o comportamento pedido pela configuração, não incidente para investigar.');
+    }
+
     function testIneligibleOpportunityIsSkippedWithoutCallingTheTransport()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
