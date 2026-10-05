@@ -17,6 +17,13 @@ class PublicationRequirementsParFieldsTest extends TestCase
 {
     use PublicationRequirementsFixtures;
 
+    protected function tearDown(): void
+    {
+        Plugin::instance()->transport = null;
+
+        parent::tearDown();
+    }
+
     function testSealedOpportunityWithoutAnySelectionIsMissingAllFourLevels()
     {
         $opportunity = $this->withoutParSelection($this->sealedOpportunity(Opportunity::STATUS_DRAFT));

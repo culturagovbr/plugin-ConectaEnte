@@ -16,6 +16,13 @@ class ParInformationServiceTest extends TestCase
 {
     use PublicationRequirementsFixtures;
 
+    protected function tearDown(): void
+    {
+        Plugin::instance()->transport = null;
+
+        parent::tearDown();
+    }
+
     function testOpportunityWithoutASealGivesNull()
     {
         $opportunity = $this->coreCompleteOpportunity(Opportunity::STATUS_DRAFT);

@@ -21,6 +21,13 @@ class ParInformationSyncJobTest extends TestCase
 {
     use ConectaEnteFixtures;
 
+    protected function tearDown(): void
+    {
+        Plugin::instance()->transport = null;
+
+        parent::tearDown();
+    }
+
     function testEnqueuesOneFetchPerEntitySealingALiveOpportunity()
     {
         $this->loginAsSaasSuperAdmin();
