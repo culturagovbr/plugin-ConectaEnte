@@ -4,7 +4,9 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Http\ParInformationResult;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\ParInformationService;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
@@ -171,6 +173,32 @@ class SendOpportunityJobTest extends TestCase
         $this->assertStringNotContainsString('Could not resolve host', $reason, 'E o que está no log não pode estar também no metadado, que sai na API sem sessão.');
     }
 
+    // falhar ao decidir não é falhar ao enviar: gravar desfecho aqui publicaria um envio que não houve
+    function testAnExceptionWhileDecidingIsLoggedWithoutRecordingAnOutcome()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->parInformationService = new class extends ParInformationService {
+            public function __construct()
+            {
+            }
+
+            public function cachedForOpportunity(Opportunity $opportunity): ?ParInformationResult
+            {
+                throw new RuntimeException('estouro ao decidir');
+            }
+        };
+        $handler = $this->captureLog();
+
+        $finished = $this->executeSend($opportunity->id);
+
+        $this->assertTrue($finished, 'Exceção ao decidir não pode prender a linha do job em processamento.');
+        $this->assertTrue($handler->hasErrorThatContains('exceção ao decidir'), 'A falha precisa deixar rastro no log.');
+        $this->assertNull(
+            $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS),
+            'O envio nem foi tentado: gravar desfecho diria ao gestor, em metadado público, que o edital falhou no CultBR.',
+        );
+    }
+
     function testATransportExceptionIsRecordedAsFailure()
     {
         $opportunity = $this->liveSealedOpportunity();
@@ -239,6 +267,8 @@ class SendOpportunityJobTest extends TestCase
             App::i()->log->popHandler();
             $this->logHandler = null;
         }
+
+        Plugin::instance()->parInformationService = null;
 
         parent::tearDown();
     }
