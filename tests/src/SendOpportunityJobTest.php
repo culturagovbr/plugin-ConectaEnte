@@ -152,6 +152,25 @@ class SendOpportunityJobTest extends TestCase
         $this->assertTrue($handler->hasErrorThatContains('estouro no envio'), 'O log é o lugar onde a mensagem da exceção pode aparecer.');
     }
 
+    // o erro do curl nomeia host e DNS: o log é o único lugar onde ele pode aparecer
+    function testUnavailabilityPutsTheTransportErrorInTheLogOnly()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::unreachable();
+        $handler = $this->captureLog();
+
+        $this->executeSend($opportunity->id, attempt: Plugin::instance()->sendMaxAttempts());
+
+        $this->assertTrue(
+            $handler->hasErrorThatContains('Could not resolve host'),
+            'Sem este registro, uma indisponibilidade não deixa rastro de causa em lugar nenhum.',
+        );
+
+        $reason = (string) $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_REASON);
+        $this->assertNotSame('', $reason, 'Premissa do teste: motivo vazio tornaria a asserção seguinte trivial.');
+        $this->assertStringNotContainsString('Could not resolve host', $reason, 'E o que está no log não pode estar também no metadado, que sai na API sem sessão.');
+    }
+
     function testATransportExceptionIsRecordedAsFailure()
     {
         $opportunity = $this->liveSealedOpportunity();
