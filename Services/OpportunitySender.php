@@ -47,13 +47,15 @@ class OpportunitySender
             return $this->recorded($opportunity, SendOutcome::simulated());
         }
 
-        $result = $this->plugin->client()->sendOpportunity($federativeEntity->token, $opportunity->id, $payload);
+        $result = $this->plugin->client()->sendOpportunity($federativeEntity->token, $payload);
 
         $outcome = match (true) {
             $result->unreachable => SendOutcome::unavailable($this->unavailableReason($result)),
             $result->accepted => SendOutcome::success(),
             default => SendOutcome::rejected($result->message ?? i::__('A Plataforma CultBR recusou o envio.')),
         };
+
+        $this->keepParEditalId($opportunity, $result);
 
         // indisponível não é desfecho final: quem decide reenfileirar é o job, que sabe a tentativa atual
         if ($outcome->isRetryable()) {
@@ -72,6 +74,17 @@ class OpportunitySender
         $rest = count($pending) - count($shown);
 
         return trim(implode(' ', $shown) . ($rest > 0 ? ' ' . sprintf(i::__('E outros %d campos.'), $rest) : ''));
+    }
+
+    // a resposta aceita traz o id do edital no CultBR: guardá-lo é o que permite correlacionar os dois lados
+    private function keepParEditalId(Opportunity $opportunity, SendResult $result): void
+    {
+        $id = $result->response['id_par_edital'] ?? null;
+
+        if ($id !== null) {
+            $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, (string) $id);
+            $opportunity->saveMetadata();
+        }
     }
 
     private function recorded(Opportunity $opportunity, SendOutcome $outcome): SendOutcome

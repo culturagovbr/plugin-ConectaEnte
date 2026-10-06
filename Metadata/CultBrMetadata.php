@@ -44,6 +44,8 @@ final class CultBrMetadata
 
     // o desfecho da última tentativa de envio; nenhuma aba lê estas chaves ainda
     const SEND_STATUS = 'conectaente_sendStatus';
+    // o id do edital no CultBR, devolvido pelo envio aceito: a única chave de correlação entre os dois lados
+    const PAR_EDITAL_ID = 'conectaente_parEditalId';
     const SEND_REASON = 'conectaente_sendReason';
     const SEND_AT = 'conectaente_sendAt';
 
@@ -92,6 +94,7 @@ final class CultBrMetadata
         self::registerText($plugin, self::SEND_STATUS, i::__('Situação do envio ao CultBR'));
         self::registerText($plugin, self::SEND_REASON, i::__('Motivo da situação do envio ao CultBR'));
         self::registerText($plugin, self::SEND_AT, i::__('Data da última tentativa de envio ao CultBR'));
+        self::registerText($plugin, self::PAR_EDITAL_ID, i::__('Id do edital no CultBR'));
     }
 
     private static function serializeDateTime(mixed $value): ?string
