@@ -164,10 +164,11 @@ class SendTriggersTest extends TestCase
         $this->assertNull($reloaded->getMetadata(CultBrMetadata::SEND_REASON), 'Envio aceito precisa apagar o motivo da recusa anterior, que é metadado público.');
 
         $this->assertCount(1, $transport->requestedUrls, 'O ciclo precisa ter chamado a API uma vez, nem zero nem duas.');
-        $this->assertStringEndsWith("/api/v1/oportunidades/{$opportunity->id}", $transport->requestedUrls[0], 'O PUT vai para o id da própria oportunidade.');
+        $this->assertStringEndsWith('/api/v1/oportunidades/', $transport->requestedUrls[0], 'O envio vai para a coleção: é o POST que cria e atualiza.');
         $this->assertSame($token, $transport->sentHeaders[0]['token'] ?? null, 'O worker precisa enviar com o token do Ente Federado, não sem credencial.');
         $this->assertArrayHasKey('numero_e_titulo_edital', $transport->sentBodies[0], 'Sem conferir o corpo, trocar o payload por array vazio passaria despercebido.');
-        $this->assertSame($opportunity->id, $transport->sentBodies[0]['id'] ?? null, 'O corpo precisa descrever a oportunidade enviada, não outra.');
+        $this->assertSame($opportunity->id, $transport->sentBodies[0]['id'] ?? null, 'O id viaja no corpo, e é por ele que a API sabe de qual edital se trata.');
+        $this->assertSame('1', $reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'O id do edital no CultBR é a única chave de correlação entre os dois lados.');
 
         $this->assertSame([], $this->enqueuedSendJobs(), 'Job executado sai da fila; se ficar, o edital é reenviado para sempre.');
     }

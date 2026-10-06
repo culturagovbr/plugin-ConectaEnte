@@ -14,7 +14,7 @@ class ClientSendOpportunityTest extends TestCase
     {
         $transport = FakeTransport::replying(200, ['id_par_edital' => 42, 'status' => 'aberto']);
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, ['id' => 7]);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', ['id' => 7]);
 
         $this->assertTrue($result->accepted);
         $this->assertSame(42, $result->response['id_par_edital']);
@@ -24,11 +24,23 @@ class ClientSendOpportunityTest extends TestCase
     {
         $transport = FakeTransport::replying(200, ['id_par_edital' => 1]);
 
-        (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, ['id' => 7, 'numero_e_titulo_edital' => 'Edital 1']);
+        (new Client(self::HOST, $transport))->sendOpportunity('um-token', ['id' => 7, 'numero_e_titulo_edital' => 'Edital 1']);
 
         $this->assertSame(['id' => 7, 'numero_e_titulo_edital' => 'Edital 1'], $transport->sentBodies[0]);
         $this->assertSame(['token' => 'um-token'], $transport->sentHeaders[0]);
-        $this->assertSame(self::HOST . '/api/v1/oportunidades/7', $transport->requestedUrls[0]);
+    }
+
+    // o contrato da o upsert ao POST na colecao, e so atualizacao ao PUT no recurso:
+    // um verbo cobre criar e atualizar, e o id do edital viaja no corpo
+    function testTheSendGoesAsAPostToTheCollection()
+    {
+        $transport = FakeTransport::replying(200, ['id_par_edital' => 1]);
+
+        (new Client(self::HOST, $transport))->sendOpportunity('um-token', ['id' => 7]);
+
+        $this->assertSame('POST', $transport->sentVerbs[0], 'O PUT só atualiza: com ele, edital novo nunca é criado.');
+        $this->assertSame(self::HOST . '/api/v1/oportunidades/', $transport->requestedUrls[0], 'A rota é a da coleção, sem o id no caminho.');
+        $this->assertSame(7, $transport->sentBodies[0]['id'], 'E o id do edital vai no corpo, que é de onde a API o lê.');
     }
 
     /**
@@ -39,7 +51,7 @@ class ClientSendOpportunityTest extends TestCase
         foreach ([400, 401, 403, 422] as $status) {
             $transport = FakeTransport::replying($status, ['detail' => 'motivo']);
 
-            $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+            $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
             $this->assertFalse($result->accepted);
             $this->assertFalse($result->unreachable, "status {$status} não pode virar unreachable");
@@ -56,7 +68,7 @@ class ClientSendOpportunityTest extends TestCase
             ['loc' => ['body', 'ente_federado'], 'msg' => 'Field required', 'type' => 'missing'],
         ]]);
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
         $this->assertSame('ente_federado: Field required', $result->message);
     }
@@ -68,7 +80,7 @@ class ClientSendOpportunityTest extends TestCase
             ['loc' => ['body', 'forma_de_execucao'], 'msg' => 'Input should be a valid string', 'type' => 'string_type'],
         ]]);
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
         $this->assertSame(
             'ente_federado: Field required; forma_de_execucao: Input should be a valid string',
@@ -84,7 +96,7 @@ class ClientSendOpportunityTest extends TestCase
             ['loc' => ['body', 'fontes_de_recurso', 0, 'valor'], 'msg' => 'Input should be a valid number', 'type' => 'float_parsing'],
         ]]);
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
         $this->assertSame('fontes_de_recurso.0.valor: Input should be a valid number', $result->message);
     }
@@ -93,7 +105,7 @@ class ClientSendOpportunityTest extends TestCase
     {
         $transport = FakeTransport::replying(422, ['detail' => [['msg' => 'Erro sem campo', 'type' => 'value_error']]]);
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
         $this->assertSame('Erro sem campo', $result->message, 'Sem `loc` não se inventa nome de campo: sobra a mensagem.');
     }
@@ -106,7 +118,7 @@ class ClientSendOpportunityTest extends TestCase
         foreach ([['texto solto'], [null], [42], [[]]] as $detail) {
             $transport = FakeTransport::replying(422, ['detail' => $detail]);
 
-            $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+            $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
             $this->assertFalse($result->accepted, 'Corpo malformado não vira aceite.');
             $this->assertSame($esperado, $result->message, 'Item ilegível cai no motivo do fluxo, com o status preservado.');
@@ -120,7 +132,7 @@ class ClientSendOpportunityTest extends TestCase
             ['loc' => ['header', 'token'], 'msg' => 'Field required', 'type' => 'missing'],
         ]]);
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
         $this->assertSame('Field required', $result->message);
     }
@@ -130,7 +142,7 @@ class ClientSendOpportunityTest extends TestCase
     {
         $transport = FakeTransport::replying(400, 'Bad Request');
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
         $this->assertFalse($result->unreachable, '4xx não é indisponibilidade: não se retenta.');
         $this->assertStringContainsString('400', $result->message, 'Sem o status, o motivo não diz o que aconteceu.');
@@ -142,7 +154,7 @@ class ClientSendOpportunityTest extends TestCase
     {
         $transport = FakeTransport::replying(500, 'Internal Server Error');
 
-        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', []);
 
         $this->assertTrue($result->unreachable);
         $this->assertFalse($result->accepted);
@@ -150,7 +162,7 @@ class ClientSendOpportunityTest extends TestCase
 
     function testTransportFailureIsUnreachable()
     {
-        $result = (new Client(self::HOST, FakeTransport::unreachable()))->sendOpportunity('um-token', 7, []);
+        $result = (new Client(self::HOST, FakeTransport::unreachable()))->sendOpportunity('um-token', []);
 
         $this->assertTrue($result->unreachable);
     }

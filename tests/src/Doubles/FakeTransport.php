@@ -14,6 +14,10 @@ class FakeTransport implements TransportInterface
     public array $sentHeaders = [];
     public array $sentBodies = [];
 
+    /** Um por requisição, alinhado com $requestedUrls e $sentHeaders; $sentBodies conta só as escritas.
+     * @var string[] */
+    public array $sentVerbs = [];
+
     public function __construct(private Response $response)
     {
     }
@@ -30,6 +34,7 @@ class FakeTransport implements TransportInterface
 
     public function get(string $url, array $headers = []): Response
     {
+        $this->sentVerbs[] = 'GET';
         $this->requestedUrls[] = $url;
         $this->sentHeaders[] = $headers;
 
@@ -38,6 +43,17 @@ class FakeTransport implements TransportInterface
 
     public function put(string $url, array $body, array $headers = []): Response
     {
+        return $this->recorded('PUT', $url, $body, $headers);
+    }
+
+    public function post(string $url, array $body, array $headers = []): Response
+    {
+        return $this->recorded('POST', $url, $body, $headers);
+    }
+
+    private function recorded(string $verb, string $url, array $body, array $headers): Response
+    {
+        $this->sentVerbs[] = $verb;
         $this->requestedUrls[] = $url;
         $this->sentHeaders[] = $headers;
         $this->sentBodies[] = $body;

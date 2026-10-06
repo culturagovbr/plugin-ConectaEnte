@@ -32,6 +32,16 @@ class QueueTransport implements TransportInterface
 
     public function put(string $url, array $body, array $headers = []): Response
     {
+        return $this->recorded($url, $body);
+    }
+
+    public function post(string $url, array $body, array $headers = []): Response
+    {
+        return $this->recorded($url, $body);
+    }
+
+    private function recorded(string $url, array $body): Response
+    {
         $this->requestedUrls[] = $url;
         $this->sentBodies[] = $body;
 

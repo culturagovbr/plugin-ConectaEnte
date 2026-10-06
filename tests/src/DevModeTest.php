@@ -5,6 +5,7 @@ namespace Tests\ConectaEnte;
 use ConectaEnte\Http\Transport\FixtureTransport;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use ConectaEnte\Plugin;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\CapturesLog;
 
@@ -44,16 +45,22 @@ class DevModeTest extends TestCase
 
     // o override da suite declara CONECTAENTE_MODE=dev, entao afirmar o singleton provaria o declarado,
     // nao o default. Aqui a variavel sai do ambiente para o default aparecer
+    public static function writingVerbs(): array
+    {
+        return ['put' => ['put'], 'post' => ['post']];
+    }
+
     // o envio nao deveria chegar aqui: quem decide e o sender, que grava `simulated` sem passar
-    // pelo transporte. Se chegar, nao pode ser confundido com sucesso
-    function testTheFixtureTransportRefusesToWriteAndSaysSo()
+    // pelo transporte. Se chegar, por qualquer verbo, nao pode ser confundido com sucesso
+    #[DataProvider('writingVerbs')]
+    function testTheFixtureTransportRefusesToWriteAndSaysSo(string $verb)
     {
         $log = $this->captureLog();
 
-        $response = $this->fixtureTransport()->put('https://cultbr.exemplo/api/v1/oportunidades/7366', ['id' => 7366]);
+        $response = $this->fixtureTransport()->$verb('https://cultbr.exemplo/api/v1/oportunidades/', ['id' => 7366]);
 
-        $this->assertFalse($response->reachedServer(), 'Escrita simulada não pode responder como se o CultBR tivesse aceitado.');
-        $this->assertTrue($log->hasWarningThatContains('put()'), 'E o desvio tem que deixar rastro: chegar aqui é defeito de fluxo.');
+        $this->assertFalse($response->reachedServer(), "Escrita simulada por {$verb} não pode responder como se o CultBR tivesse aceitado.");
+        $this->assertTrue($log->hasWarningThatContains("{$verb}()"), 'E o desvio tem que deixar rastro: chegar aqui é defeito de fluxo.');
     }
 
     function testTheMissingFixtureIsAnnouncedInTheLogToo()
