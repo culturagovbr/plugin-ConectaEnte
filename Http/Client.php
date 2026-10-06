@@ -90,9 +90,10 @@ class Client
     /**
      * Envia o edital selado; 5xx e falha de conexão são a única faixa retentável.
      */
-    public function sendOpportunity(string $token, int $opportunityId, array $payload): SendResult
+    public function sendOpportunity(string $token, array $payload): SendResult
     {
-        $response = $this->transport->put($this->url("/api/v1/oportunidades/{$opportunityId}"), $payload, ['token' => $token]);
+        // o contrato dá o upsert ao POST, e só atualização ao PUT: um verbo cobre criar e atualizar
+        $response = $this->transport->post($this->url('/api/v1/oportunidades/'), $payload, ['token' => $token]);
 
         if (!$response->reachedServer() || $response->status >= 500) {
             return SendResult::unreachable($response->status, $response->transportError);

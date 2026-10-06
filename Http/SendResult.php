@@ -3,7 +3,7 @@
 namespace ConectaEnte\Http;
 
 /**
- * Desfecho de `PUT /api/v1/oportunidades/{id}`: aceito, recusado sem retentativa (4xx),
+ * Desfecho de `POST /api/v1/oportunidades/`: aceito, recusado sem retentativa (4xx),
  * ou indisponível (5xx/falha de conexão) — este último é o único retentável.
  */
 final class SendResult
