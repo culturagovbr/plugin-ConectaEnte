@@ -34,7 +34,17 @@ class FixtureTransport implements TransportInterface
      */
     public function put(string $url, array $body, array $headers = []): Response
     {
-        App::i()->log->warning("ConectaEnte em modo dev: put() não deveria ser chamado, rota {$this->routeOf($url)}");
+        return $this->refuseWriting('put', $url);
+    }
+
+    public function post(string $url, array $body, array $headers = []): Response
+    {
+        return $this->refuseWriting('post', $url);
+    }
+
+    private function refuseWriting(string $verb, string $url): Response
+    {
+        App::i()->log->warning("ConectaEnte em modo dev: {$verb}() não deveria ser chamado, rota {$this->routeOf($url)}");
 
         return Response::failed('envio real não roda em modo simulado');
     }

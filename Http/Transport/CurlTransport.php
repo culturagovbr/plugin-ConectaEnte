@@ -40,6 +40,16 @@ class CurlTransport implements TransportInterface
 
     public function put(string $url, array $body, array $headers = []): Response
     {
+        return $this->write('PUT', $url, $body, $headers);
+    }
+
+    public function post(string $url, array $body, array $headers = []): Response
+    {
+        return $this->write('POST', $url, $body, $headers);
+    }
+
+    private function write(string $verb, string $url, array $body, array $headers): Response
+    {
         $curl = curl_init($url);
         $headers['Content-Type'] = 'application/json';
 
@@ -47,7 +57,7 @@ class CurlTransport implements TransportInterface
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => self::QUEUED_CONNECT_TIMEOUT,
             CURLOPT_TIMEOUT => self::QUEUED_TIMEOUT,
-            CURLOPT_CUSTOMREQUEST => 'PUT',
+            CURLOPT_CUSTOMREQUEST => $verb,
             CURLOPT_POSTFIELDS => JsonBody::encode($body),
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);

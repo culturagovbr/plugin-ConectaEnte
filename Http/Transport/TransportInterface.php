@@ -4,21 +4,17 @@ namespace ConectaEnte\Http\Transport;
 
 use ConectaEnte\Http\Response;
 
+/**
+ * Executa a requisição ao CultBR. Servidor que não respondeu devolve resposta de
+ * indisponibilidade, não exceção; o corpo das escritas vai como JSON.
+ */
 interface TransportInterface
 {
-    /**
-     * Executa a requisição e devolve a resposta, ou uma resposta de indisponibilidade
-     * quando o servidor não respondeu.
-     *
-     * @param array<string,string> $headers
-     */
     public function get(string $url, array $headers = []): Response;
 
-    /**
-     * Envia o corpo como JSON via PUT e devolve a resposta, ou uma resposta de indisponibilidade
-     * quando o servidor não respondeu.
-     *
-     * @param array<string,string> $headers
-     */
+    /** Atualiza o recurso da url. */
     public function put(string $url, array $body, array $headers = []): Response;
+
+    /** Cria na coleção da url, ou atualiza quando o corpo traz um id que o CultBR já conhece. */
+    public function post(string $url, array $body, array $headers = []): Response;
 }
