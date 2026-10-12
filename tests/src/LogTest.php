@@ -6,12 +6,15 @@ use ConectaEnte\Entities\Log;
 use ConectaEnte\Entities\LogAttempt;
 use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Exceptions\PermissionDenied;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
 
 class LogTest extends TestCase
 {
     use ConectaEnteFixtures;
+
+    private const ACTION_OUTSIDE_THE_LIST = 'archive';
 
     function testLogKeepsItsAttemptsInOrder()
     {
@@ -141,6 +144,66 @@ class LogTest extends TestCase
         $this->assertStringContainsString('(log_id, id)', $definition);
     }
 
+    function testNoUserReachesALogThroughTheEntity()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->createLog();
+
+        $this->assertEveryActionIsDenied($log);
+
+        $this->login($this->userDirector->createUser());
+
+        $this->assertEveryActionIsDenied($log);
+    }
+
+    function testNoUserReachesAnAttemptThroughTheEntity()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $attempt = $this->createAttempt($this->createLog());
+
+        $this->assertEveryActionIsDenied($attempt);
+
+        $this->login($this->userDirector->createUser());
+
+        $this->assertEveryActionIsDenied($attempt);
+    }
+
+    function testSavingANewLogIsDenied()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $log = new Log;
+        $log->uuid = 'c0ffee00-0000-4000-8000-000000000000';
+        $log->opportunityId = 1;
+        $log->outcome = SendOutcome::SUCCESS;
+
+        $this->expectException(PermissionDenied::class);
+
+        $log->save(true);
+    }
+
+    function testSavingAStoredLogIsDenied()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->createLog();
+
+        $log->outcome = SendOutcome::ERROR;
+
+        $this->expectException(PermissionDenied::class);
+
+        $log->save(true);
+    }
+
+    function testDeletingALogIsDenied()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->createLog();
+
+        $this->expectException(PermissionDenied::class);
+
+        $log->delete(true);
+    }
+
     private function createLog(?int $opportunityId = null, ?int $parEditalId = null): Log
     {
         $log = new Log;
@@ -192,6 +255,15 @@ class LogTest extends TestCase
             'SELECT count(*) FROM conectaente_log_attempt WHERE log_id = ?',
             [$log->id]
         );
+    }
+
+    private function assertEveryActionIsDenied(Log|LogAttempt $entity): void
+    {
+        $actions = array_merge($entity::getPermissionsList(), [self::ACTION_OUTSIDE_THE_LIST]);
+
+        foreach ($actions as $action) {
+            $this->assertFalse($entity->canUser($action), $action);
+        }
     }
 
     private function indexDefinitionOf(string $indexName): string
