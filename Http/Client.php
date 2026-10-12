@@ -13,6 +13,9 @@ class Client
 
     private TransportInterface $transport;
 
+    /** @var HttpExchange[] */
+    private array $exchanges = [];
+
     public function __construct(
         private string $host,
         ?TransportInterface $transport = null,
@@ -92,8 +95,12 @@ class Client
      */
     public function sendOpportunity(string $token, array $payload): SendResult
     {
+        $url = $this->url('/api/v1/oportunidades/');
+
         // o contrato dá o upsert ao POST, e só atualização ao PUT: um verbo cobre criar e atualizar
-        $response = $this->transport->post($this->url('/api/v1/oportunidades/'), $payload, ['token' => $token]);
+        $response = $this->transport->post($url, $payload, ['token' => $token]);
+
+        $this->exchanges[] = $this->exchangeOf('POST', $url, $payload, $response);
 
         if (!$response->reachedServer() || $response->status >= 500) {
             return SendResult::unreachable($response->status, $response->transportError);
@@ -104,6 +111,32 @@ class Client
         }
 
         return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));
+    }
+
+    /**
+     * As trocas desta execução, na ordem em que aconteceram.
+     *
+     * @return HttpExchange[]
+     */
+    public function exchanges(): array
+    {
+        return $this->exchanges;
+    }
+
+    // acumular, nunca sobrescrever: duas requisições numa execução são duas linhas do histórico
+    private function exchangeOf(string $method, string $url, array $payload, Response $response): HttpExchange
+    {
+        return new HttpExchange(
+            endpoint: $url,
+            method: $method,
+            status: $response->reachedServer() ? $response->status : null,
+            requestPayload: $payload,
+            responseBody: $response->body === '' ? null : $response->body,
+            responseHeaders: $response->headers ?: null,
+            requestId: $response->headers['x-request-id'] ?? null,
+            errorMessage: $response->transportError,
+            durationMs: $response->durationMs,
+        );
     }
 
     private function readValidation(array $body): TokenValidation
