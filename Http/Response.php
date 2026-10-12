@@ -11,17 +11,19 @@ final class Response
         public readonly int $status,
         public readonly string $body,
         public readonly ?string $transportError = null,
+        public readonly array $headers = [],
+        public readonly ?int $durationMs = null,
     ) {
     }
 
-    public static function received(int $status, string $body): self
+    public static function received(int $status, string $body, array $headers = [], ?int $durationMs = null): self
     {
-        return new self($status, $body);
+        return new self($status, $body, null, $headers, $durationMs);
     }
 
-    public static function failed(string $error): self
+    public static function failed(string $error, ?int $durationMs = null): self
     {
-        return new self(0, '', $error);
+        return new self(0, '', $error, [], $durationMs);
     }
 
     public function reachedServer(): bool
