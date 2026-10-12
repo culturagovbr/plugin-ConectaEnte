@@ -98,6 +98,27 @@ class SendLogger
     }
 
     /**
+     * Grava uma tentativa por troca da execução, na ordem em que aconteceram.
+     *
+     * @param HttpExchange[] $exchanges
+     * @return LogAttempt[] as que foram gravadas
+     */
+    public function recordAttempts(Log $log, array $exchanges, string $outcome, int $attempt, int $maxAttempts): array
+    {
+        $stored = [];
+
+        foreach ($exchanges as $exchange) {
+            $recorded = $this->recordAttempt($log, $exchange, $outcome, $attempt, $maxAttempts);
+
+            if ($recorded) {
+                $stored[] = $recorded;
+            }
+        }
+
+        return $stored;
+    }
+
+    /**
      * Fecha o envelope com o desfecho, se ele ainda estiver em andamento.
      *
      * @return bool false quando outro processo já fechou, ou quando a guarda recusa o desfecho
