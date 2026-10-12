@@ -21,6 +21,8 @@ class SendLogger
     const MAX_STORED_BYTES = 65536;
     const MAX_REQUEST_ID_BYTES = 255;
 
+    private const JSON_FLAGS = JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+
     private const FINAL_OUTCOMES = [
         SendOutcome::SUCCESS,
         SendOutcome::SIMULATED,
@@ -203,9 +205,25 @@ class SendLogger
             return null;
         }
 
-        $json = json_encode($value, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $json = json_encode($this->withShortenedTexts($value), self::JSON_FLAGS);
 
-        return $json === false ? null : $this->sanitized($json);
+        if ($json === false) {
+            return null;
+        }
+
+        // cortar JSON por bytes devolve texto que ninguém consegue ler de volta: o que não couber vira marcador
+        return strlen($json) <= self::MAX_STORED_BYTES
+            ? $json
+            : json_encode(['truncated' => true, 'bytes' => strlen($json)], self::JSON_FLAGS);
+    }
+
+    private function withShortenedTexts(array $value): array
+    {
+        return array_map(fn ($item) => match (true) {
+            is_array($item) => $this->withShortenedTexts($item),
+            is_string($item) => $this->sanitized($item),
+            default => $item,
+        }, $value);
     }
 
     // o Postgres recusa byte inválido até em coluna text; mb_scrub lê o substituto da configuração global do mbstring
