@@ -17,4 +17,18 @@ trait SendQueue
     {
         $this->app->em->getConnection()->delete('job', ['name' => SendOpportunityJob::SLUG]);
     }
+
+    /** Põe a linha no estado em que o cron a entrega a um worker. */
+    protected function markAsRunning(Job $job): void
+    {
+        $job->status = Job::STATUS_PROCESSING;
+        $this->app->em->flush();
+    }
+
+    /** O worker morreu com a linha na mão: o core só a recolhe depois de cinco minutos. */
+    protected function markAsStuck(Job $job): void
+    {
+        $job->createTimestamp = new \DateTime('-6 minutes');
+        $this->markAsRunning($job);
+    }
 }

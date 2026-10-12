@@ -6,6 +6,7 @@ use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\SendOutcome;
+use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
 use Tests\Abstract\TestCase;
@@ -96,9 +97,61 @@ class SendTriggersTest extends TestCase
         $opportunity->save(true);
 
         $jobs = $this->enqueuedSendJobs();
-        $this->assertCount(1, $jobs, 'Dois saves da mesma oportunidade substituem o job, não acumulam.');
-        $this->assertNotSame($firstPk, (int) $jobs[0]->pk, 'A linha é nova: contar um só não distingue substituição de segundo save que não disparou.');
+        $this->assertCount(1, $jobs, 'Dois saves da mesma oportunidade compartilham um job, não acumulam.');
+        $this->assertSame($firstPk, (int) $jobs[0]->pk, 'A linha que espera é a mesma: o job guarda só o id, e o payload é montado na execução.');
         $this->assertSame('Segunda revisão', $this->reloaded($opportunity)->shortDescription, 'Premissa do teste: o segundo save precisa ter sido gravado.');
+    }
+
+    // a linha em PROCESSING é de um worker vivo: substituí-la deixa dois enviando o mesmo edital
+    function testASaveWhileTheSendIsRunningDoesNotQueueASecondOne()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $running = $this->enqueuedSendJobs();
+        $this->assertCount(1, $running, 'Premissa do teste: o gatilho precisa ter deixado o envio na fila.');
+        $this->markAsRunning($running[0]);
+
+        $opportunity->shortDescription = 'Edital revisado durante o envio';
+        $opportunity->save(true);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'A fila segue com uma linha; é o pk que distingue tê-la preservado de tê-la trocado.');
+        $this->assertSame((int) $running[0]->pk, (int) $jobs[0]->pk, 'A linha do envio em curso não pode ser trocada: o worker que a carrega apaga a dele por pk ao terminar, e a substituta sobrevive para um segundo envio do mesmo edital.');
+        $this->assertSame('Edital revisado durante o envio', $this->reloaded($opportunity)->shortDescription, 'Premissa do teste: o save precisa ter acontecido, ou nada se prova sobre o gatilho.');
+    }
+
+    // worker morto com a linha na mão: sem a recuperação do core o edital nunca mais seria enviado
+    function testASaveRevivesTheSendWhenTheRunningJobIsStuck()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $stuck = $this->enqueuedSendJobs();
+        $this->assertCount(1, $stuck, 'Premissa do teste: o gatilho precisa ter deixado o envio na fila.');
+        $this->markAsStuck($stuck[0]);
+
+        $opportunity->shortDescription = 'Edital revisado depois de o worker morrer';
+        $opportunity->save(true);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'A recuperação troca a linha presa, não acrescenta uma segunda.');
+        $this->assertNotSame((int) $stuck[0]->pk, (int) $jobs[0]->pk, 'Linha em processamento há mais de cinco minutos é de worker morto, e o core a substitui: preservá-la deixaria o edital parado para sempre.');
+        $this->assertSame(Job::STATUS_WAITING, (int) $jobs[0]->status, 'A linha nova espera a vez do cron, em vez de nascer presa como a anterior.');
+    }
+
+    // a espera da retentativa é por indisponibilidade da API: salvar não resolve nada, e não deve antecipar
+    function testASaveDuringTheRetryWindowKeepsTheScheduledRetry()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->purgeSendJobs();
+        Plugin::instance()->scheduleSend($opportunity, 2, '+30 seconds');
+        $scheduled = $this->enqueuedSendJobs();
+        $this->assertCount(1, $scheduled, 'Premissa do teste: sem a retentativa agendada não há janela que preservar.');
+
+        $opportunity->shortDescription = 'Edital revisado durante a espera';
+        $opportunity->save(true);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Salvar durante a espera não acrescenta linha à fila.');
+        $this->assertSame((int) $scheduled[0]->pk, (int) $jobs[0]->pk, 'A retentativa agendada sobrevive ao save: é a mesma linha que esperava.');
+        $this->assertSame(2, (int) $jobs[0]->attempt, 'O contador não volta a um: salvar não compra três tentativas novas contra uma API fora do ar.');
     }
 
     function testPublishingAnOpportunityWithoutAFederativeSealEnqueuesNothing()
