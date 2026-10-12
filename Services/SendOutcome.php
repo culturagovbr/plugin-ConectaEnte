@@ -3,10 +3,14 @@
 namespace ConectaEnte\Services;
 
 /**
- * Desfecho de uma tentativa de envio, no vocabulário gravado como metadado.
+ * Desfecho de um envio, no vocabulário que o plugin grava — no metadado da oportunidade e no histórico.
  */
 final class SendOutcome
 {
+    /** Estados do envelope do histórico: nem a tentativa nem o metadado da oportunidade gravam estes dois. */
+    const PENDING = 'pending';
+    const ABANDONED = 'abandoned';
+
     const SUCCESS = 'success';
     const SIMULATED = 'simulated';
     const REJECTED = 'rejected';
