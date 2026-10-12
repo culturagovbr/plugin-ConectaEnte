@@ -91,7 +91,7 @@ $this->import('
                     <h3><?php i::_e('Fontes, inscrições e ações afirmativas') ?></h3>
                 </template>
                 <template #content>
-                    <div class="grid-12 conectaente-opportunity-tab__blocos">
+                    <div class="grid-12 conectaente-opportunity-tab__blocks">
                         <conectaente--funding-sources :entity="entity" prop="<?= CultBrMetadata::FUNDING_SOURCES ?>" classes="col-12"></conectaente--funding-sources>
                         <conectaente--registration-channels :entity="entity" prop="<?= CultBrMetadata::REGISTRATION_CHANNELS ?>" classes="col-12"></conectaente--registration-channels>
                         <conectaente--affirmative-actions :entity="entity" prop="<?= CultBrMetadata::AFFIRMATIVE_ACTIONS ?>" classes="col-12"></conectaente--affirmative-actions>
