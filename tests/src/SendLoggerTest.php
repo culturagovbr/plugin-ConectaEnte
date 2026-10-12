@@ -223,6 +223,23 @@ class SendLoggerTest extends TestCase
         );
     }
 
+    function testAnOversizedPayloadIsStoredAsAMarkerInsteadOfBrokenJson()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $campos = array_fill_keys(array_map(fn ($i) => "campo{$i}", range(1, 40)), str_repeat('x', 2000));
+
+        $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            status: 201,
+            requestPayload: $campos,
+        ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
+
+        $armazenado = $this->attemptsOf($log)[0]->requestPayload;
+        $this->assertNotNull(json_decode($armazenado), 'Cortar o JSON por bytes grava texto que ninguém decodifica de volta.');
+        $this->assertTrue(json_decode($armazenado, true)['truncated']);
+    }
+
     function testTheRequestIdIsCappedToTheColumnWidth()
     {
         $this->loginAsSaasSuperAdmin();
