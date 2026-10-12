@@ -176,7 +176,10 @@ class Plugin extends \MapasCulturais\Plugin
             return;
         }
 
-        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt), $start, '', 1, true);
+        $isRetry = $attempt > 1;
+
+        // só a retentativa substitui: trocar a linha de um envio em curso põe dois workers no mesmo edital
+        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt), $start, '', 1, $isRetry);
     }
 
     /**
