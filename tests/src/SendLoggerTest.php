@@ -11,6 +11,8 @@ use ConectaEnte\Services\SendLogger;
 use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
+use Monolog\Handler\TestHandler;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Traits\CapturesLog;
@@ -417,6 +419,24 @@ class SendLoggerTest extends TestCase
         $job->logUuid = $logUuid;
 
         $jobType->_execute($job);
+    }
+
+    // processo próprio: o EntityManager fechado não volta a abrir, e levaria junto todos os arquivos seguintes da suíte
+    #[RunInSeparateProcess]
+    function testAClosedEntityManagerStopsAtTheLoggerInstead()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+        $log = $this->logger()->startOrResume($opportunity);
+        $this->app->log->setHandlers([$capturado = new TestHandler()]);
+        $this->app->em->close();
+
+        $aberto = $this->logger()->startOrResume($opportunity);
+        $fechado = $this->logger()->finish($log, SendOutcome::SUCCESS);
+
+        $this->assertNull($aberto, 'Abrir o envelope com o Doctrine fechado não pode derrubar o envio.');
+        $this->assertFalse($fechado, 'Fechar o envelope com o Doctrine fechado também não.');
+        $this->assertTrue($capturado->hasErrorThatContains("histórico do edital {$opportunity->id}"));
     }
 
     private function logger(): SendLogger
