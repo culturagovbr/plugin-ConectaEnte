@@ -102,6 +102,24 @@ class SendOpportunityJobTest extends TestCase
         $this->assertSame(2, (int) $jobs[0]->attempt);
     }
 
+    // a retentativa roda de dentro do job em PROCESSING: a guarda do disparo externo não pode alcançá-la
+    function testTheRetryReplacesTheLineOfTheJobThatIsRunning()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        Plugin::instance()->mode = Plugin::MODE_LIVE;
+        Plugin::instance()->transport = FakeTransport::replying(500, 'Internal Server Error');
+        $running = $this->enqueuedSendJobs();
+        $this->assertCount(1, $running, 'Premissa do teste: sem a linha da primeira tentativa não há o que substituir.');
+        $this->markAsRunning($running[0]);
+
+        $this->executeSend($opportunity->id, attempt: 1);
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'A retentativa não pode somar linha à fila.');
+        $this->assertSame(2, (int) $jobs[0]->attempt, 'Sem a tentativa seguinte agendada, uma indisponibilidade passageira encerraria o envio.');
+        $this->assertSame(Job::STATUS_WAITING, (int) $jobs[0]->status, 'A linha nasce esperando: herdar o processamento a deixaria fora do alcance do cron.');
+    }
+
     function testTheRetryIsScheduledForTheConfiguredDelay()
     {
         // o literal trava o valor acordado; a janela, o mecanismo. Só a constante seria tautológico
