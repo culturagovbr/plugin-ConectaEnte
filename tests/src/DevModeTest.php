@@ -313,25 +313,25 @@ class DevModeTest extends TestCase
         }
     }
 
-    function testDevServesAnyEnteAndLiveDoesNot()
+    function testDevServesAnyFederativeEntityAndLiveDoesNot()
     {
         $plugin = Plugin::instance();
         $plugin->transport = null;
         $plugin->mode = Plugin::MODE_DEV;
 
         try {
-            $anotherEnte = $plugin->client()->getParInformation('token', '99999999999999');
+            $anotherEntity = $plugin->client()->getParInformation('token', '99999999999999');
         } finally {
             $plugin->mode = null;
         }
 
         $this->assertNotNull(
-            $anotherEnte->tree->exercises[0] ?? null,
+            $anotherEntity->tree->exercises[0] ?? null,
             'A fixture do PAR é uma só e precisa servir a qualquer ente cadastrado em dev.',
         );
     }
 
-    function testTheEnteFilterHoldsWithARealTransport()
+    function testTheFederativeEntityFilterHoldsWithARealTransport()
     {
         $plugin = Plugin::instance();
         $plugin->transport = FakeTransport::replying(200, ['data' => [['cnpj' => '99999999999999', 'exercicios' => [['id' => 'de-outro-ente']]]]]);
