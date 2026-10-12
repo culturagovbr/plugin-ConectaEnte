@@ -3,6 +3,7 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Entities\Log;
+use ConectaEnte\Entities\LogAttempt;
 use ConectaEnte\Http\HttpExchange;
 use ConectaEnte\Services\SendLogger;
 use ConectaEnte\Services\SendOutcome;
@@ -127,6 +128,112 @@ class SendLoggerTest extends TestCase
         $this->assertSame('c0ffee00-0000-4000-8000-000000000000', $log->uuid, 'Se a abertura da primeira tentativa falhou, o uuid do job continua valendo para a retentativa.');
     }
 
+    function testTheAttemptIsStoredUnderTheEnvelope()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+
+        $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            method: 'POST',
+            status: 201,
+            requestId: 'req-7',
+            durationMs: 142,
+        ), SendOutcome::SUCCESS, attempt: 2, maxAttempts: 3);
+
+        $stored = $this->attemptsOf($log)[0];
+        $this->assertSame(2, $stored->attempt);
+        $this->assertSame(3, $stored->maxAttempts);
+        $this->assertSame('https://cultbr.example/api/v1/oportunidades/', $stored->endpoint);
+        $this->assertSame('POST', $stored->httpMethod);
+        $this->assertSame(201, $stored->httpStatus);
+        $this->assertSame('req-7', $stored->requestId);
+        $this->assertSame(142, $stored->durationMs);
+        $this->assertSame(SendOutcome::SUCCESS, $stored->outcome);
+    }
+
+    function testThePayloadAndHeadersAreStoredAsReadableJson()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+
+        $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            requestPayload: ['nome' => 'Edital de Ação Cultural'],
+            responseHeaders: ['x-request-id' => 'req-7'],
+        ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
+
+        $stored = $this->attemptsOf($log)[0];
+        $this->assertStringContainsString('Ação', $stored->requestPayload, 'Acento escapado em \\u torna a coluna ilegível para quem for depurar.');
+        $this->assertSame(['nome' => 'Edital de Ação Cultural'], json_decode($stored->requestPayload, true));
+        $this->assertSame(['x-request-id' => 'req-7'], json_decode($stored->responseHeaders, true));
+    }
+
+    function testAnAttemptWithoutRequestKeepsStatusAndDurationNull()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+
+        $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            errorMessage: 'O payload do edital está incompleto.',
+        ), SendOutcome::ERROR, attempt: 1, maxAttempts: 3);
+
+        $stored = $this->attemptsOf($log)[0];
+        $this->assertNull($stored->httpStatus, 'Falha anterior à requisição é tentativa sem status: inventar um seria mentir sobre a resposta.');
+        $this->assertNull($stored->durationMs);
+        $this->assertNull($stored->requestPayload);
+        $this->assertSame('O payload do edital está incompleto.', $stored->errorMessage);
+    }
+
+    function testInvalidUtf8BecomesTheReplacementCharacter()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+
+        $attempt = $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            status: 502,
+            responseBody: "<html>erro \xC3\x28 do proxy</html>",
+        ), SendOutcome::ERROR, attempt: 1, maxAttempts: 3);
+
+        $this->assertNotNull($attempt, 'O Postgres recusa byte inválido até em coluna text: sem o saneamento, o insert derruba o envio.');
+        $this->assertStringContainsString("\u{FFFD}", $this->attemptsOf($log)[0]->responseBody);
+    }
+
+    function testTheStoredResponseIsCapped()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+
+        $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            status: 500,
+            responseBody: str_repeat('a', SendLogger::MAX_STORED_BYTES + 4096),
+        ), SendOutcome::ERROR, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame(
+            SendLogger::MAX_STORED_BYTES,
+            strlen($this->attemptsOf($log)[0]->responseBody),
+            'Sem teto, uma página de erro grande entra inteira na linha, e a tabela já cresce sem expurgo.'
+        );
+    }
+
+    function testTheRequestIdIsCappedToTheColumnWidth()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+
+        $attempt = $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            status: 201,
+            requestId: str_repeat('x', 500),
+        ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
+
+        $this->assertNotNull($attempt, 'O cabeçalho vem de fora: mais largo que a coluna, o insert falharia.');
+        $this->assertSame(SendLogger::MAX_REQUEST_ID_BYTES, strlen($this->attemptsOf($log)[0]->requestId));
+    }
+
     function testTheEnvelopeClosesWithTheOutcome()
     {
         $this->loginAsSaasSuperAdmin();
@@ -213,6 +320,34 @@ class SendLoggerTest extends TestCase
         $this->assertTrue($capturedLog->hasErrorThatContains("desfecho 'enviado' não fecha"));
     }
 
+    function testAFailureToStoreTheAttemptIsSwallowedAndLogged()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+        $log = new Log;
+        $log->uuid = 'c0ffee00-0000-4000-8000-000000000001';
+        $log->opportunityId = $opportunity->id;
+        $log->outcome = SendOutcome::PENDING;
+        $capturedLog = $this->captureLog();
+
+        $attempt = $this->logger()->recordAttempt($log, new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            status: 201,
+        ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
+
+        $this->assertNull($attempt, 'Falha ao gravar o histórico não pode derrubar o envio.');
+        $this->assertTrue($capturedLog->hasErrorThatContains("histórico do edital {$opportunity->id}"));
+    }
+
+    // engolir a falha não serve de nada se o Doctrine ficar inutilizável depois dela
+    function testTheEntityManagerSurvivesAFailureToStore()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+
+        $this->assertNotNull($log, 'Falha de gravação que feche o EntityManager derruba o resto da requisição, não só o histórico.');
+    }
+
     private function logger(): SendLogger
     {
         return new SendLogger;
@@ -227,6 +362,11 @@ class SendLoggerTest extends TestCase
     }
 
     /** @return LogAttempt[] */
+    private function attemptsOf(Log $log): array
+    {
+        return $this->app->repo(LogAttempt::class)->findBy(['log' => $log], ['id' => 'ASC']);
+    }
+
     // leitura pela conexão: o UPDATE condicional não passa pelo UnitOfWork, e o cache de identidade devolveria o valor antigo
     private function storedOutcomeOf(Log $log): string
     {
