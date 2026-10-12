@@ -158,6 +158,22 @@ class SendLoggerTest extends TestCase
         $this->assertSame(SendOutcome::SUCCESS, $stored->outcome);
     }
 
+    function testEveryExchangeOfTheSameRunBecomesItsOwnAttempt()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $recusada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/53781', method: 'PUT', status: 404);
+        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', method: 'POST', status: 201);
+
+        $this->logger()->recordAttempts($log, [$recusada, $aceita], SendOutcome::SUCCESS, attempt: 2, maxAttempts: 3);
+
+        $armazenadas = $this->attemptsOf($log);
+        $this->assertCount(2, $armazenadas, 'Uma linha por troca: sobrescrever faria a requisição recusada sumir do histórico.');
+        $this->assertSame(['PUT', 'POST'], array_map(fn ($tentativa) => $tentativa->httpMethod, $armazenadas));
+        $this->assertSame([404, 201], array_map(fn ($tentativa) => $tentativa->httpStatus, $armazenadas));
+        $this->assertSame([2, 2], array_map(fn ($tentativa) => $tentativa->attempt, $armazenadas), 'As duas trocas são da mesma tentativa do job.');
+    }
+
     function testThePayloadAndHeadersAreStoredAsReadableJson()
     {
         $this->loginAsSaasSuperAdmin();
