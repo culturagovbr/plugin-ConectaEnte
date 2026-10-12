@@ -32,10 +32,10 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
     public static function targetingFields(): array
     {
         return [
-            'segmento' => ['conectaente_segments', 'O campo segmento artístico-cultural é obrigatório.'],
-            'etapa' => ['conectaente_culturalStages', 'O campo etapa do fazer cultural é obrigatório.'],
-            'pauta' => ['conectaente_thematicAgendas', 'O campo pauta temática é obrigatório.'],
-            'território' => ['conectaente_priorityTerritories', 'O campo território é obrigatório.'],
+            'segment' => ['conectaente_segments', 'O campo segmento artístico-cultural é obrigatório.'],
+            'stage' => ['conectaente_culturalStages', 'O campo etapa do fazer cultural é obrigatório.'],
+            'agenda' => ['conectaente_thematicAgendas', 'O campo pauta temática é obrigatório.'],
+            'territory' => ['conectaente_priorityTerritories', 'O campo território é obrigatório.'],
         ];
     }
 
@@ -84,10 +84,10 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
     public static function parKeys(): array
     {
         return [
-            'exercicio' => [CultBrMetadata::PAR_EXERCISE_ID, 'Exercício do PAR'],
-            'meta' => [CultBrMetadata::PAR_GOAL_ID, 'Meta do PAR'],
-            'acao' => [CultBrMetadata::PAR_ACTION_ID, 'Ação do PAR'],
-            'atividade' => [CultBrMetadata::PAR_ACTIVITY_ID, 'Atividade do PAR'],
+            'exercise' => [CultBrMetadata::PAR_EXERCISE_ID, 'Exercício do PAR'],
+            'goal' => [CultBrMetadata::PAR_GOAL_ID, 'Meta do PAR'],
+            'action' => [CultBrMetadata::PAR_ACTION_ID, 'Ação do PAR'],
+            'activity' => [CultBrMetadata::PAR_ACTIVITY_ID, 'Atividade do PAR'],
         ];
     }
 
@@ -120,9 +120,9 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
     public static function otherSpecifications(): array
     {
         return [
-            'segmento' => ['conectaente_segments', Segment::OTHER->value, 'conectaente_segmentsOther', 'O campo especificar segmento artístico-cultural é obrigatório quando "Outros (especificar)" é selecionado.'],
-            'etapa' => ['conectaente_culturalStages', CulturalStage::OTHER->value, 'conectaente_culturalStagesOther', 'O campo especificar etapa do fazer cultural é obrigatório quando "Outra (especificar)" é selecionada.'],
-            'pauta' => ['conectaente_thematicAgendas', ThematicAgenda::OTHER->value, 'conectaente_thematicAgendasOther', 'O campo especificar pauta temática é obrigatório quando "Outra (especificar)" é selecionada.'],
+            'segment' => ['conectaente_segments', Segment::OTHER->value, 'conectaente_segmentsOther', 'O campo especificar segmento artístico-cultural é obrigatório quando "Outros (especificar)" é selecionado.'],
+            'stage' => ['conectaente_culturalStages', CulturalStage::OTHER->value, 'conectaente_culturalStagesOther', 'O campo especificar etapa do fazer cultural é obrigatório quando "Outra (especificar)" é selecionada.'],
+            'agenda' => ['conectaente_thematicAgendas', ThematicAgenda::OTHER->value, 'conectaente_thematicAgendasOther', 'O campo especificar pauta temática é obrigatório quando "Outra (especificar)" é selecionada.'],
         ];
     }
 
