@@ -161,7 +161,7 @@ class Plugin extends \MapasCulturais\Plugin
     /**
      * Enfileira o envio da oportunidade, se ela for raiz e estiver elegível agora.
      */
-    function scheduleSend(Opportunity $opportunity, int $attempt = 1, string $start = 'now'): void
+    function scheduleSend(Opportunity $opportunity, int $attempt = 1, string $start = 'now', ?string $logUuid = null): void
     {
         // sem selo de ente não se pergunta o resto: é o caso comum, e logar a cada save encheria o log
         if ($opportunity->parent || !$this->sealedOpportunity()->federativeEntityOf($opportunity)) {
@@ -179,7 +179,7 @@ class Plugin extends \MapasCulturais\Plugin
         $isRetry = $attempt > 1;
 
         // só a retentativa substitui: trocar a linha de um envio em curso põe dois workers no mesmo edital
-        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt), $start, '', 1, $isRetry);
+        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt, $logUuid), $start, '', 1, $isRetry);
     }
 
     /**

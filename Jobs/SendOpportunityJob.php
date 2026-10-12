@@ -17,9 +17,16 @@ class SendOpportunityJob extends JobType
     // a coluna do slug no core tem 32 caracteres: nome mais longo não salva
     const SLUG = 'conectaente-send-opportunity';
 
-    static function dataFor(Opportunity $opportunity, int $attempt = 1): array
+    static function dataFor(Opportunity $opportunity, int $attempt = 1, ?string $logUuid = null): array
     {
-        return ['opportunityId' => $opportunity->id, 'attempt' => $attempt];
+        $data = ['opportunityId' => $opportunity->id, 'attempt' => $attempt];
+
+        // o uuid só existe a partir da retentativa, e é ele que mantém as tentativas sob um envio só
+        if ($logUuid) {
+            $data['logUuid'] = $logUuid;
+        }
+
+        return $data;
     }
 
     // dedupe só pelo id da oportunidade: um novo save, ou a própria retentativa, substitui o que está na fila
@@ -48,7 +55,7 @@ class SendOpportunityJob extends JobType
             $outcome = Plugin::instance()->opportunitySender()->send($opportunity);
 
             if ($outcome->isRetryable()) {
-                $this->retryOrGiveUp($opportunity, (int) ($job->attempt ?? 1), $outcome);
+                $this->retryOrGiveUp($opportunity, (int) ($job->attempt ?? 1), $outcome, $job->logUuid ?? null);
             }
         } catch (\Throwable $error) {
             $this->recordFailure($opportunity, $error);
@@ -70,7 +77,7 @@ class SendOpportunityJob extends JobType
         }
     }
 
-    private function retryOrGiveUp(Opportunity $opportunity, int $attempt, SendOutcome $lastAttempt): void
+    private function retryOrGiveUp(Opportunity $opportunity, int $attempt, SendOutcome $lastAttempt, ?string $logUuid): void
     {
         $plugin = Plugin::instance();
 
@@ -80,6 +87,6 @@ class SendOpportunityJob extends JobType
             return;
         }
 
-        $plugin->scheduleSend($opportunity, $attempt + 1, "+{$plugin->sendRetryDelaySeconds()} seconds");
+        $plugin->scheduleSend($opportunity, $attempt + 1, "+{$plugin->sendRetryDelaySeconds()} seconds", $logUuid);
     }
 }
