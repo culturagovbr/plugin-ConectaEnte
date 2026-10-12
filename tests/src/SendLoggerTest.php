@@ -5,10 +5,14 @@ namespace Tests\ConectaEnte;
 use ConectaEnte\Entities\Log;
 use ConectaEnte\Entities\LogAttempt;
 use ConectaEnte\Http\HttpExchange;
+use ConectaEnte\Jobs\SendOpportunityJob;
+use ConectaEnte\Plugin;
 use ConectaEnte\Services\SendLogger;
 use ConectaEnte\Services\SendOutcome;
+use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use Tests\Abstract\TestCase;
+use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Traits\CapturesLog;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 use Tests\ConectaEnte\Traits\SendQueue;
@@ -320,6 +324,45 @@ class SendLoggerTest extends TestCase
         $this->assertTrue($capturedLog->hasErrorThatContains("desfecho 'enviado' não fecha"));
     }
 
+    function testTheFirstAttemptCarriesNoEnvelopeUuid()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+
+        $this->assertArrayNotHasKey('logUuid', SendOpportunityJob::dataFor($opportunity));
+    }
+
+    function testTheRetryCarriesTheEnvelopeUuidInTheQueuedJob()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        Plugin::instance()->mode = Plugin::MODE_LIVE;
+        $this->purgeSendJobs();
+
+        Plugin::instance()->scheduleSend($opportunity, 2, 'now', 'c0ffee00-0000-4000-8000-000000000000');
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Premissa do teste: a retentativa precisa ter sido enfileirada.');
+        $this->assertSame('c0ffee00-0000-4000-8000-000000000000', $jobs[0]->logUuid, 'Sem o uuid na fila, a retentativa abriria um envio novo e partiria o histórico em dois.');
+    }
+
+    function testTheRetryOfARunningJobCarriesTheUuidForward()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        Plugin::instance()->mode = Plugin::MODE_LIVE;
+        Plugin::instance()->transport = FakeTransport::replying(500, 'Internal Server Error');
+        $this->purgeSendJobs();
+
+        $this->executeSendJob($opportunity->id, attempt: 1, logUuid: 'c0ffee00-0000-4000-8000-000000000000');
+
+        $jobs = $this->enqueuedSendJobs();
+        $this->assertCount(1, $jobs, 'Premissa do teste: a indisponibilidade precisa ter reagendado o envio.');
+        $this->assertSame(
+            'c0ffee00-0000-4000-8000-000000000000',
+            $jobs[0]->logUuid,
+            'O uuid tem que atravessar a retentativa: perdido aqui, a tentativa seguinte abre outro envio.'
+        );
+    }
+
     function testAFailureToStoreTheAttemptIsSwallowedAndLogged()
     {
         $this->loginAsSaasSuperAdmin();
@@ -346,6 +389,17 @@ class SendLoggerTest extends TestCase
         $log = $this->logger()->startOrResume($this->createOpportunity());
 
         $this->assertNotNull($log, 'Falha de gravação que feche o EntityManager derruba o resto da requisição, não só o histórico.');
+    }
+
+    private function executeSendJob(int $opportunityId, int $attempt, ?string $logUuid = null): void
+    {
+        $jobType = new SendOpportunityJob(SendOpportunityJob::SLUG);
+        $job = new Job($jobType);
+        $job->opportunityId = $opportunityId;
+        $job->attempt = $attempt;
+        $job->logUuid = $logUuid;
+
+        $jobType->_execute($job);
     }
 
     private function logger(): SendLogger
