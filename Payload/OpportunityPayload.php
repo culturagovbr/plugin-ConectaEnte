@@ -3,6 +3,7 @@
 namespace ConectaEnte\Payload;
 
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\SealedOpportunity;
 use ConectaEnte\Vocabulary\AffirmativeAction;
 use ConectaEnte\Vocabulary\CulturalStage;
@@ -27,8 +28,10 @@ final class OpportunityPayload
 {
     const DETAIL_MAX_LENGTH = 600;
 
-    public function __construct(private SealedOpportunity $sealedOpportunity)
-    {
+    public function __construct(
+        private SealedOpportunity $sealedOpportunity,
+        private PublicationStamp $publicationStamp,
+    ) {
     }
 
     /**
@@ -52,7 +55,7 @@ final class OpportunityPayload
             'numero_e_titulo_edital' => $opportunity->name ?: null,
             'forma_de_execucao' => $this->executionType($opportunity),
             'status' => $this->status($opportunity),
-            'data_publicacao_edital' => $this->date($opportunity->{CultBrMetadata::PUBLISHED_AT}),
+            'data_publicacao_edital' => $this->date($this->publicationStamp->publicationDate($opportunity)),
             'detalhamento_objeto' => $this->objectDetail($opportunity),
             'numero_previsto_vagas' => $opportunity->vacancies === null ? null : (int) $opportunity->vacancies,
             'valor_total_edital' => $this->decimal($opportunity->totalResource),

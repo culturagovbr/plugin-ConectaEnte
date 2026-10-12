@@ -6,12 +6,13 @@ use ConectaEnte\Http\Response;
 
 class CurlTransport implements TransportInterface
 {
-    /**
-     * Tempos curtos de propósito: a verificação roda no caminho de uma requisição do
-     * administrador, e API lenta não pode virar tela travada.
-     */
-    const CONNECT_TIMEOUT = 5;
-    const TIMEOUT = 10;
+    // qualquer leitura pode estar rodando com alguém esperando na tela, inclusive a árvore do PAR
+    const INTERACTIVE_CONNECT_TIMEOUT = 5;
+    const INTERACTIVE_TIMEOUT = 10;
+
+    // escrever só acontece na fila: teto curto esgota as tentativas contra um CultBR que só demorou
+    const QUEUED_CONNECT_TIMEOUT = 30;
+    const QUEUED_TIMEOUT = 60;
 
     public function get(string $url, array $headers = []): Response
     {
@@ -19,8 +20,8 @@ class CurlTransport implements TransportInterface
 
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT,
-            CURLOPT_TIMEOUT => self::TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => self::INTERACTIVE_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::INTERACTIVE_TIMEOUT,
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
@@ -35,5 +36,42 @@ class CurlTransport implements TransportInterface
         }
 
         return Response::received((int) $status, (string) $body);
+    }
+
+    public function put(string $url, array $body, array $headers = []): Response
+    {
+        return $this->write('PUT', $url, $body, $headers);
+    }
+
+    public function post(string $url, array $body, array $headers = []): Response
+    {
+        return $this->write('POST', $url, $body, $headers);
+    }
+
+    private function write(string $verb, string $url, array $body, array $headers): Response
+    {
+        $curl = curl_init($url);
+        $headers['Content-Type'] = 'application/json';
+
+        curl_setopt_array($curl, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => self::QUEUED_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::QUEUED_TIMEOUT,
+            CURLOPT_CUSTOMREQUEST => $verb,
+            CURLOPT_POSTFIELDS => JsonBody::encode($body),
+            CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
+        ]);
+
+        $responseBody = curl_exec($curl);
+        $error = curl_error($curl);
+        $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+        curl_close($curl);
+
+        if ($responseBody === false || $error) {
+            return Response::failed($error ?: 'falha de transporte');
+        }
+
+        return Response::received((int) $status, (string) $responseBody);
     }
 }

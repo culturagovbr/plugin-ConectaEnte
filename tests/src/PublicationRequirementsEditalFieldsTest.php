@@ -6,6 +6,7 @@ use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\Segment;
 use ConectaEnte\Vocabulary\TargetingOption;
 use ConectaEnte\Vocabulary\ThematicAgenda;
+use ConectaEnte\Metadata\CultBrMetadata;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
@@ -78,6 +79,42 @@ class PublicationRequirementsEditalFieldsTest extends TestCase
             'O campo etapa do fazer cultural é obrigatório.',
             'A opção "__todas_opcoes__" de etapa do fazer cultural não tem correspondente no CultBR.',
         ]], $this->missing($opportunity));
+    }
+
+    public static function parKeys(): array
+    {
+        return [
+            'exercicio' => [CultBrMetadata::PAR_EXERCISE_ID, 'Exercício do PAR'],
+            'meta' => [CultBrMetadata::PAR_GOAL_ID, 'Meta do PAR'],
+            'acao' => [CultBrMetadata::PAR_ACTION_ID, 'Ação do PAR'],
+            'atividade' => [CultBrMetadata::PAR_ACTIVITY_ID, 'Atividade do PAR'],
+        ];
+    }
+
+    // o payload exige ctype_digit e devolve null fora dele; sem esta exigencia o edital passa
+    // como elegivel e chega ao CultBR com uma das quatro chaves obrigatorias nula
+    #[DataProvider('parKeys')]
+    function testParIdThatIsNotAWholeNumberIsRefused(string $key, string $label)
+    {
+        $opportunity = $this->completeOpportunity();
+
+        foreach (['700.9', '9001-A', '1e3', ' 17832 x'] as $invalid) {
+            $opportunity->$key = $invalid;
+            $errors = $this->missing($opportunity);
+
+            $this->assertArrayHasKey($key, $errors, "O valor {$invalid} não é um id do PAR e precisa reprovar.");
+            $this->assertStringContainsString($label, $errors[$key][0], 'O motivo nomeia o campo como o gestor o vê na tela.');
+            $this->assertStringNotContainsString('obrigatório', $errors[$key][0], 'O campo está preenchido: dizer que falta mandaria o gestor procurar a coisa errada.');
+        }
+    }
+
+    #[DataProvider('parKeys')]
+    function testAWholeNumberIsAcceptedAsAParId(string $key, string $label)
+    {
+        $opportunity = $this->completeOpportunity();
+        $opportunity->$key = '17832';
+
+        $this->assertArrayNotHasKey($key, $this->missing($opportunity), "O id {$label} em dígitos é a forma que o contrato pede.");
     }
 
     public static function otherSpecifications(): array

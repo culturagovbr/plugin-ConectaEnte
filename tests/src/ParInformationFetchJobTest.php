@@ -165,6 +165,8 @@ class ParInformationFetchJobTest extends TestCase
             $this->logHandler = null;
         }
 
+        Plugin::instance()->transport = null;
+
         parent::tearDown();
     }
 }

@@ -106,8 +106,12 @@ final class PublicationRequirements
         $errors = [];
 
         foreach ($labels as $key => $label) {
-            if (trim((string) $opportunity->$key) === '') {
+            $value = trim((string) $opportunity->$key);
+
+            if ($value === '') {
                 $errors[$key] = [sprintf(i::__('O campo "%s" é obrigatório.'), $label)];
+            } elseif (!ctype_digit($value)) {
+                $errors[$key] = [sprintf(i::__('O campo "%s" não guarda um id do PAR: refaça a seleção.'), $label)];
             }
         }
 

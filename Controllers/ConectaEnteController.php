@@ -243,7 +243,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->json([
             'sealed' => $isSealed,
             'missing' => $this->withoutPlainRequiredMessages($missing),
-            'labels' => $this->fieldLabels($opportunity, array_keys($missing)),
+            'labels' => Plugin::instance()->fieldLabels()->forKeys($opportunity, array_keys($missing)),
             'anchors' => $this->fieldAnchors(array_keys($missing)),
             'groups' => $this->fieldGroups(array_keys($missing)),
         ]);
@@ -381,17 +381,6 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
     }
 
-    private function fieldLabels(Opportunity $opportunity, array $keys): array
-    {
-        $description = $opportunity::getPropertiesMetadata();
-        $labels = [];
-
-        foreach ($keys as $key) {
-            $labels[$key] = $this->fieldLabel($description, $key);
-        }
-
-        return $labels;
-    }
 
     /** A ordem em que a aba exibe os campos; chave de fora vai para o fim. */
     private function inScreenOrder(array $missing): array
@@ -463,17 +452,6 @@ class ConectaEnteController extends \MapasCulturais\Controller
         };
     }
 
-    // chaves sem rótulo na descrição da entidade levam o texto da tela do core
-    private function fieldLabel(array $description, string $key): string
-    {
-        return match ($key) {
-            'rules' => i::__('Regulamento'),
-            'term-area' => i::__('Área de Interesse'),
-            'registrationRanges' => i::__('Faixas/linhas'),
-            PublicationRequirements::REGISTRATION_CHANNELS_EMAIL => $description[CultBrMetadata::REGISTRATION_CHANNELS]['label'],
-            default => ($description[$key]['label'] ?? '') ?: $key,
-        };
-    }
 
     private function requestedSeal(): ?Seal
     {

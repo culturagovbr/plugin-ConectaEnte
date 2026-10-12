@@ -1,102 +1,78 @@
 {
-    "pagination": {
-        "skip": 0,
-        "limit": 100,
-        "total": 1,
-        "next": null,
-        "previous": null
-    },
-    "data": [
+  "pagination": {
+    "skip": 0,
+    "limit": 100,
+    "total": 1,
+    "next": null,
+    "previous": null
+  },
+  "data": [
+    {
+      "nome": "ENTE DE DESENVOLVIMENTO",
+      "cnpj": "00000000000191",
+      "exercicios": [
         {
-            "nome": "ENTE DE DESENVOLVIMENTO",
-            "cnpj": "00000000000191",
-            "exercicios": [
+          "id": 9001,
+          "ano": 2025,
+          "metas": [
+            {
+              "id": 9101,
+              "nome": "Fomento à produção cultural",
+              "valor": "1500000.00",
+              "acoes": [
                 {
-                    "id": "9001",
-                    "ano": "2025",
-                    "metas": [
-                        {
-                            "id": "9101",
-                            "nome": "Fomento à produção cultural",
-                            "valor": "1500000.00",
-                            "acoes": [
-                                {
-                                    "id": "9201",
-                                    "nome": "Editais de fomento",
-                                    "atividades": [
-                                        {
-                                            "id": "9301",
-                                            "nome": "Edital de música"
-                                        },
-                                        {
-                                            "id": "9302",
-                                            "nome": "Edital de artes cênicas"
-                                        },
-                                        {
-                                            "id": "9303",
-                                            "nome": "Edital de audiovisual"
-                                        }
-                                    ]
-                                },
-                                {
-                                    "id": "9202",
-                                    "nome": "Premiações",
-                                    "atividades": [
-                                        {
-                                            "id": "9304",
-                                            "nome": "Prêmio mestres e mestras da cultura"
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        {
-                            "id": "9102",
-                            "nome": "Formação e qualificação",
-                            "valor": "400000.00",
-                            "acoes": [
-                                {
-                                    "id": "9203",
-                                    "nome": "Oficinas e residências",
-                                    "atividades": [
-                                        {
-                                            "id": "9305",
-                                            "nome": "Residências artísticas"
-                                        },
-                                        {
-                                            "id": "9306",
-                                            "nome": "Oficinas de formação técnica"
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
+                  "id": 9201,
+                  "nome": "Editais de fomento",
+                  "valor": "1200000.00",
+                  "atividades": [
+                    {
+                      "id": 9301,
+                      "nome": "Edital de música",
+                      "valor": "700000.00"
+                    },
+                    {
+                      "id": 9302,
+                      "nome": "Edital de artes visuais",
+                      "valor": "500000.00"
+                    }
+                  ]
                 },
                 {
-                    "id": "9002",
-                    "ano": "2026",
-                    "metas": [
-                        {
-                            "id": "9103",
-                            "nome": "Patrimônio e memória",
-                            "valor": "800000.00",
-                            "acoes": [
-                                {
-                                    "id": "9204",
-                                    "nome": "Inventários participativos",
-                                    "atividades": [
-                                        {
-                                            "id": "9307",
-                                            "nome": "Inventário de ofícios tradicionais"
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
+                  "id": 9202,
+                  "nome": "Aquisição de bens culturais",
+                  "valor": "300000.00",
+                  "atividades": [
+                    {
+                      "id": 9303,
+                      "nome": "Aquisição de acervo",
+                      "valor": "300000.00"
+                    }
+                  ]
                 }
-            ]
+              ]
+            },
+            {
+              "id": 9102,
+              "nome": "Política Nacional de Cultura Viva",
+              "valor": "400000.00",
+              "acoes": [
+                {
+                  "id": 9203,
+                  "nome": "Fomento a Pontos de Cultura",
+                  "valor": "400000.00",
+                  "atividades": [
+                    {
+                      "id": 9304,
+                      "nome": "Chamamento de Pontos de Cultura",
+                      "valor": "400000.00"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
-    ]
+      ]
+    }
+  ]
 }

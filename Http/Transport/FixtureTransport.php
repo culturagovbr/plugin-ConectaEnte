@@ -28,6 +28,27 @@ class FixtureTransport implements TransportInterface
         return Response::received(200, (string) file_get_contents($file));
     }
 
+    /**
+     * O envio real nunca deveria chamar o transporte em modo dev — quem decide isso é
+     * `OpportunitySender`, que grava o desfecho `simulated` sem passar por aqui.
+     */
+    public function put(string $url, array $body, array $headers = []): Response
+    {
+        return $this->refuseWriting('put', $url);
+    }
+
+    public function post(string $url, array $body, array $headers = []): Response
+    {
+        return $this->refuseWriting('post', $url);
+    }
+
+    private function refuseWriting(string $verb, string $url): Response
+    {
+        App::i()->log->warning("ConectaEnte em modo dev: {$verb}() não deveria ser chamado, rota {$this->routeOf($url)}");
+
+        return Response::failed('envio real não roda em modo simulado');
+    }
+
     // o último segmento nomeia a rota: /api/v1/par-information vira par-information
     private function routeOf(string $url): string
     {

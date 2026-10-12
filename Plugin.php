@@ -11,16 +11,21 @@ use ConectaEnte\Http\Transport\FixtureTransport;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Payload\OpportunityPayload;
+use ConectaEnte\Payload\PayloadValidation;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Jobs\ParInformationFetchJob;
 use ConectaEnte\Jobs\ParInformationSyncJob;
+use ConectaEnte\Jobs\SendOpportunityJob;
+use ConectaEnte\Services\FieldLabels;
 use ConectaEnte\Services\FundingSourceName;
+use ConectaEnte\Services\OpportunitySender;
 use ConectaEnte\Services\ParInformationService;
 use ConectaEnte\Services\PublicationContext;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\SealedOpportunity;
+use ConectaEnte\Services\SendEligibility;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -34,6 +39,8 @@ class Plugin extends \MapasCulturais\Plugin
     const DEFAULT_PASSWORD_WINDOW = 120;
     const DEFAULT_PAR_SYNC_INTERVAL_MINUTES = 30;
     const DEFAULT_PAR_CACHE_TTL_MINUTES = 10;
+    const DEFAULT_SEND_MAX_ATTEMPTS = 3;
+    const DEFAULT_SEND_RETRY_DELAY_SECONDS = 30;
 
     /** Em `dev` nenhuma rota do CultBR é chamada: a resposta vem de `fixtures/<rota>.json`. */
     const MODE_LIVE = 'live';
@@ -46,6 +53,8 @@ class Plugin extends \MapasCulturais\Plugin
             'passwordWindow' => (int) env('CONECTAENTE_PASSWORD_WINDOW', self::DEFAULT_PASSWORD_WINDOW),
             'parSyncIntervalMinutes' => (int) env('CONECTAENTE_PAR_SYNC_INTERVAL_MINUTES', self::DEFAULT_PAR_SYNC_INTERVAL_MINUTES),
             'parCacheTtlMinutes' => (int) env('CONECTAENTE_PAR_CACHE_TTL_MINUTES', self::DEFAULT_PAR_CACHE_TTL_MINUTES),
+            'sendMaxAttempts' => (int) env('CONECTAENTE_SEND_MAX_ATTEMPTS', self::DEFAULT_SEND_MAX_ATTEMPTS),
+            'sendRetryDelaySeconds' => (int) env('CONECTAENTE_SEND_RETRY_DELAY_SECONDS', self::DEFAULT_SEND_RETRY_DELAY_SECONDS),
             // enquanto o CultBR não estabiliza, a instalação nasce em dev e declara CONECTAENTE_MODE=live para valer
             'mode' => env('CONECTAENTE_MODE', self::MODE_DEV),
         ];
@@ -84,7 +93,12 @@ class Plugin extends \MapasCulturais\Plugin
 
     function opportunityPayload(): OpportunityPayload
     {
-        return new OpportunityPayload($this->sealedOpportunity());
+        return new OpportunityPayload($this->sealedOpportunity(), $this->publicationStamp());
+    }
+
+    function payloadValidation(): PayloadValidation
+    {
+        return new PayloadValidation($this->fieldLabels());
     }
 
     function coreFieldsDescription(): CoreFieldsDescription
@@ -97,17 +111,15 @@ class Plugin extends \MapasCulturais\Plugin
         return new FundingSourceName();
     }
 
+    // uma instância por requisição: as duas guardam o que a requisição em curso está fazendo
     private ?PublicationStamp $publicationStamp = null;
+    private ?PublicationContext $publicationContext = null;
 
-    // uma instância por requisição: ela guarda a marca da duplicação em curso
     function publicationStamp(): PublicationStamp
     {
         return $this->publicationStamp ??= new PublicationStamp($this->sealedOpportunity());
     }
 
-    private ?PublicationContext $publicationContext = null;
-
-    // uma instância por requisição: ela guarda o status pedido pela requisição em curso
     function publicationContext(): PublicationContext
     {
         return $this->publicationContext ??= new PublicationContext();
@@ -116,6 +128,58 @@ class Plugin extends \MapasCulturais\Plugin
     function publicationRequirements(): PublicationRequirements
     {
         return new PublicationRequirements($this->publicationStamp(), $this->parInformationService());
+    }
+
+    function fieldLabels(): FieldLabels
+    {
+        return new FieldLabels();
+    }
+
+    function sendEligibility(): SendEligibility
+    {
+        return new SendEligibility($this->sealedOpportunity(), $this->publicationRequirements(), $this->fieldLabels());
+    }
+
+    /** Serviço alternativo, para os testes exercitarem o que acontece quando o envio falha. */
+    public ?OpportunitySender $opportunitySender = null;
+
+    function opportunitySender(): OpportunitySender
+    {
+        return $this->opportunitySender ?? new OpportunitySender($this, $this->sealedOpportunity());
+    }
+
+    function sendMaxAttempts(): int
+    {
+        return (int) $this->_config['sendMaxAttempts'];
+    }
+
+    function sendRetryDelaySeconds(): int
+    {
+        return (int) $this->_config['sendRetryDelaySeconds'];
+    }
+
+    /**
+     * Enfileira o envio da oportunidade, se ela for raiz e estiver elegível agora.
+     */
+    function scheduleSend(Opportunity $opportunity, int $attempt = 1, string $start = 'now'): void
+    {
+        // sem selo de ente não se pergunta o resto: é o caso comum, e logar a cada save encheria o log
+        if ($opportunity->parent || !$this->sealedOpportunity()->federativeEntityOf($opportunity)) {
+            return;
+        }
+
+        $reason = $this->sendEligibility()->ineligibilityReason($opportunity);
+
+        if ($reason) {
+            App::i()->log->info("ConectaEnte: oportunidade {$opportunity->id} não elegível para envio: {$reason}");
+
+            return;
+        }
+
+        $isRetry = $attempt > 1;
+
+        // só a retentativa substitui: trocar a linha de um envio em curso põe dois workers no mesmo edital
+        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt), $start, '', 1, $isRetry);
     }
 
     /**
@@ -152,7 +216,31 @@ class Plugin extends \MapasCulturais\Plugin
 
     function isDevMode(): bool
     {
-        return ($this->mode ?? $this->_config['mode']) === self::MODE_DEV;
+        return $this->mode() === self::MODE_DEV;
+    }
+
+    /** O modo em vigor: `live` só quando declarado assim, porque tudo o mais não pode virar envio real. */
+    function mode(): string
+    {
+        return $this->declaredMode() === self::MODE_LIVE ? self::MODE_LIVE : self::MODE_DEV;
+    }
+
+    /** Avisa quando o modo declarado não é reconhecido: cair em dev é o lado seguro, mas em silêncio ninguém descobre o erro. */
+    function warnOnUnknownMode(): void
+    {
+        $declared = $this->declaredMode();
+
+        if (in_array($declared, [self::MODE_DEV, self::MODE_LIVE], true)) {
+            return;
+        }
+
+        App::i()->log->warning("ConectaEnte: CONECTAENTE_MODE=\"{$declared}\" não é um modo conhecido; a instalação fica em dev e não fala com o CultBR.");
+    }
+
+    // variável declarada vazia chega como '', e o env() do core ainda converte `1` em float e `true` em bool
+    private function declaredMode(): string
+    {
+        return strtolower(trim((string) ($this->mode ?? $this->_config['mode'])));
     }
 
     function fixturesPath(): string
@@ -170,15 +258,17 @@ class Plugin extends \MapasCulturais\Plugin
 
     function parInformationService(): ParInformationService
     {
-        // TTL curto: o CultBR muda o PAR em intervalo imprevisível, e árvore vencida faz o gestor escolher o que não existe
         return $this->parInformationService ?? new ParInformationService($this->_config['parCacheTtlMinutes'] * 60, $this->client());
     }
 
     public function _init(){
         $app = App::i();
 
+        $this->warnOnUnknownMode();
+
         $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
         $app->registerJobType(new ParInformationFetchJob(ParInformationFetchJob::SLUG));
+        $app->registerJobType(new SendOpportunityJob(SendOpportunityJob::SLUG));
 
         try {
             $this->scheduleParSync();
@@ -195,7 +285,6 @@ class Plugin extends \MapasCulturais\Plugin
         $app->view->enqueueStyle('app', 'conectaente', 'css/conectaente.css');
         $app->view->enqueueStyle('app-v2', 'conectaente', 'css/conectaente.css');
 
-        // o core religa o $this dos hooks ao objeto que os dispara
         $app->hook('auth.logout:before', fn() => Plugin::instance()->passwordWindow()->close());
 
         $app->hook('panel.nav', function (&$nav) use ($app) {
@@ -288,7 +377,6 @@ class Plugin extends \MapasCulturais\Plugin
             $this->part('conectaente/opportunity-tab');
         });
 
-        // abaixo do cabeçalho, em qualquer página: ninguém deve confundir dado de exemplo com dado do CultBR
         $app->hook('view.partial(main-header):after', function ($template, &$html) {
             if (Plugin::instance()->isDevMode()) {
                 $html .= $this->partialRender('conectaente/dev-mode-banner', [], true);
@@ -299,6 +387,16 @@ class Plugin extends \MapasCulturais\Plugin
         $app->hook('entity(Opportunity).validationErrors', function (&$errors) {
             Plugin::instance()->requirePublicationFields($this, $errors);
         }, 1000);
+
+        // `update:finish` cobre publicar e reeditar; `insert` nunca vê publicada, porque toda oportunidade nasce rascunho
+        $app->hook('entity(Opportunity).update:finish', function () {
+            Plugin::instance()->scheduleSend($this);
+        });
+
+        // selar não passa pelo save da oportunidade, e tem que ser pós-flush: a elegibilidade lê o selo no banco
+        $app->hook('entity(OpportunitySealRelation).save:finish', function () {
+            Plugin::instance()->scheduleSend($this->owner);
+        });
     }
 
     private function requiresPublicationFields(Opportunity $opportunity): bool

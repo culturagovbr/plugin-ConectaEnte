@@ -43,7 +43,7 @@ class Client
             return TokenValidation::unreachable();
         }
 
-        return TokenValidation::reject($this->readDetail($body, $response->status));
+        return TokenValidation::reject($this->readDetail($body, $response->status, i::__('A Plataforma CultBR recusou a verificação do token (HTTP %d).')));
     }
 
     /**
@@ -84,7 +84,26 @@ class Client
             return ParInformationResult::unreachable();
         }
 
-        return ParInformationResult::rejected($this->readDetail($response->json(), $response->status));
+        return ParInformationResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou a consulta ao Plano de Ação e Referência (HTTP %d).')));
+    }
+
+    /**
+     * Envia o edital selado; 5xx e falha de conexão são a única faixa retentável.
+     */
+    public function sendOpportunity(string $token, array $payload): SendResult
+    {
+        // o contrato dá o upsert ao POST, e só atualização ao PUT: um verbo cobre criar e atualizar
+        $response = $this->transport->post($this->url('/api/v1/oportunidades/'), $payload, ['token' => $token]);
+
+        if (!$response->reachedServer() || $response->status >= 500) {
+            return SendResult::unreachable($response->status, $response->transportError);
+        }
+
+        if ($response->status === 200) {
+            return SendResult::ok($response->decoded() ?? []);
+        }
+
+        return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));
     }
 
     private function readValidation(array $body): TokenValidation
@@ -110,7 +129,7 @@ class Client
         return $this->acceptsAnyEnte ? (string) ($body['data'][0]['cnpj'] ?? $document) : $document;
     }
 
-    private function readDetail(array $body, int $status): string
+    private function readDetail(array $body, int $status, string $refusal): string
     {
         $detail = $body['detail'] ?? null;
 
@@ -119,14 +138,40 @@ class Client
         }
 
         if (is_array($detail)) {
-            $messages = array_filter(array_map(fn($error) => $error['msg'] ?? null, $detail));
+            $messages = array_filter(array_map(fn($error) => $this->fieldError($error), $detail));
 
             if ($messages) {
                 return implode('; ', $messages);
             }
         }
 
-        return sprintf(i::__('A Plataforma CultBR recusou a verificação (HTTP %d).'), $status);
+        return sprintf($refusal, $status);
+    }
+
+    // o formato de `detail` é do CultBR: item fora dele não pode derrubar a leitura de nenhum dos fluxos
+    private function fieldError(mixed $error): ?string
+    {
+        $message = is_array($error) ? ($error['msg'] ?? null) : null;
+
+        if (!is_string($message) || $message === '') {
+            return null;
+        }
+
+        $field = $this->fieldName($error['loc'] ?? null);
+
+        return $field ? "{$field}: {$message}" : $message;
+    }
+
+    // só erro no corpo é campo do edital: `header` é a credencial e `query` é a rota, e nomeá-los confundiria
+    private function fieldName(mixed $loc): ?string
+    {
+        if (!is_array($loc) || ($loc[0] ?? null) !== 'body') {
+            return null;
+        }
+
+        $path = array_slice($loc, 1);
+
+        return $path ? implode('.', $path) : null;
     }
 
     /**

@@ -119,7 +119,7 @@ class ClientTest extends TestCase
 
         $validation = (new Client(self::HOST, $transport))->validateToken('um-token');
 
-        $this->assertSame('Field required; Invalid format', $validation->message);
+        $this->assertSame('Field required; Invalid format', $validation->message, 'O token viaja em cabeçalho: prefixar "token:" não ajuda quem está preenchendo o campo Token.');
     }
 
     function testTreatsServerErrorAsUnavailableAndNotAsRejection()
@@ -147,6 +147,7 @@ class ClientTest extends TestCase
         $validation = (new Client(self::HOST, $transport))->validateToken('um-token');
 
         $this->assertStringContainsString('400', $validation->message);
+        $this->assertStringContainsString('token', $validation->message, 'A frase precisa nomear a verificação do token, não outro fluxo do mesmo cliente.');
     }
 
     function testHealthChecksTheRouteOutsideTheApiPrefix()

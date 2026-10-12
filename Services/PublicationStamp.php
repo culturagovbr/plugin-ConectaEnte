@@ -42,11 +42,28 @@ final class PublicationStamp
     }
 
     /**
+     * A data de publicação em vigor: a gravada, ou a que ainda será herdada do publishedTimestamp.
+     */
+    public function publicationDate(Opportunity $opportunity): ?DateTime
+    {
+        // valor cru, nunca a propriedade mágica: o unserialize dela lança com data corrompida, e isto roda no save
+        $stamped = $opportunity->getMetadata(CultBrMetadata::PUBLISHED_AT);
+
+        if ($stamped instanceof DateTime) {
+            return $stamped;
+        }
+
+        $parsed = is_string($stamped) ? DateTime::createFromFormat('Y-m-d H:i:s', $stamped) : false;
+
+        return $parsed ?: $this->inheritableDate($opportunity);
+    }
+
+    /**
      * Se a oportunidade tem data de publicação, gravada ou ainda por herdar do publishedTimestamp.
      */
     public function hasPublicationDate(Opportunity $opportunity): bool
     {
-        return $opportunity->getMetadata(CultBrMetadata::PUBLISHED_AT) || $this->inheritableDate($opportunity);
+        return $this->publicationDate($opportunity) !== null;
     }
 
     /**
