@@ -64,7 +64,9 @@ Fora da requisição, um ciclo aquece o cache: ele seleciona os Entes Federados 
 
 O edital selado por Ente Federado vai ao CultBR sozinho, sem botão: quem dispara é o save. Três situações enfileiram o envio — publicar uma oportunidade selada e completa, editar uma já publicada, e aplicar o selo numa que já estava publicada. Fase e oportunidade sem selo de Ente nunca disparam.
 
-O envio não acontece dentro da requisição. O gatilho só enfileira um job, que o cron executa depois, com `PUT /api/v1/oportunidades/{id}` e o token do Ente Federado dono do selo. A fila deduplica **por edital**: salvar três vezes seguidas deixa um job, não três.
+O envio não acontece dentro da requisição. O gatilho só enfileira um job, que o cron executa depois, com `POST /api/v1/oportunidades/` e o token do Ente Federado dono do selo: o id da oportunidade vai no corpo, e o mesmo verbo cria o edital e atualiza o que já existe. A fila deduplica **por edital**: salvar três vezes seguidas deixa um job, não três.
+
+Enquanto um envio está em curso, salvar de novo não o interrompe nem enfileira um segundo — a edição chega ao CultBR no save seguinte. Trocar a linha de um job em execução deixaria dois workers enviando o mesmo edital.
 
 ## O que o gestor vê
 
@@ -75,6 +77,7 @@ Três metadados na oportunidade registram o desfecho da última tentativa:
 | `conectaente_sendStatus` | `success`, `simulated`, `rejected` ou `error` |
 | `conectaente_sendReason` | por que não foi aceito; vazio quando foi |
 | `conectaente_sendAt` | quando a tentativa aconteceu |
+| `conectaente_parEditalId` | o id do edital no CultBR, devolvido no aceite — a única chave que liga os dois lados |
 
 `rejected` é recusa do CultBR — o edital chegou lá e foi negado, e o motivo nomeia o campo recusado quando a resposta traz essa informação. `error` é falha nossa ou indisponibilidade que esgotou as tentativas. A distinção importa: recusa pede corrigir o edital, falha pede olhar o log.
 
@@ -83,6 +86,8 @@ Três metadados na oportunidade registram o desfecho da última tentativa:
 ## Retentativa
 
 Só indisponibilidade retenta: 5xx e falha de conexão. Recusa do CultBR encerra na primeira tentativa, porque repetir não mudaria a resposta. São três tentativas com trinta segundos entre elas (`CONECTAENTE_SEND_MAX_ATTEMPTS` e `CONECTAENTE_SEND_RETRY_DELAY_SECONDS`); esgotadas, o desfecho vira `error` e a fila para.
+
+Salvar durante a espera não antecipa a tentativa seguinte nem zera a contagem: a espera é por indisponibilidade da API, que salvar não resolve. Esgotadas as três, a fila fica vazia e o próximo save recomeça o ciclo.
 
 O envio tem tempos próprios — 30 s para conectar, 60 no total —, mais largos que os da leitura, que desiste em 10 s porque qualquer consulta pode estar rodando dentro da requisição, com alguém esperando na tela. Escrever no CultBR só acontece na fila, onde ninguém espera, e desistir cedo demais registraria falha num edital que ele apenas demorou a processar.
 
