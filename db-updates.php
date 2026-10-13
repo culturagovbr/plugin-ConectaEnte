@@ -114,4 +114,14 @@ return [
                 FOREIGN KEY (log_id) REFERENCES conectaente_log(id) ON DELETE CASCADE");
         }
     },
+
+    'conectaente: a tentativa do histórico volta a apontar para o envio' => function () {
+        if (__table_exists('conectaente_log_attempt')) {
+            __try("ALTER TABLE conectaente_log_attempt DROP CONSTRAINT IF EXISTS fk_conectaente_log_attempt_log");
+
+            __try("ALTER TABLE conectaente_log_attempt
+                ADD CONSTRAINT fk_conectaente_log_attempt_log
+                FOREIGN KEY (log_id) REFERENCES conectaente_log(id) ON DELETE CASCADE");
+        }
+    },
 ];
