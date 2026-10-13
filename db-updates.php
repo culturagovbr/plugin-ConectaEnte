@@ -109,7 +109,7 @@ return [
 
             __try("CREATE INDEX idx_conectaente_log_attempt_log ON conectaente_log_attempt (log_id, id)");
 
-            __try("ALTER TA BLE conectaente_log_attempt
+            __try("ALTER TABLE conectaente_log_attempt
                 ADD CONSTRAINT fk_conectaente_log_attempt_log
                 FOREIGN KEY (log_id) REFERENCES conectaente_log(id) ON DELETE CASCADE");
         }
