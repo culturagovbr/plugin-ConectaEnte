@@ -1,0 +1,25 @@
+// segunda linha da grade do título do cabeçalho: a coluna 1 é o avatar
+.conectaente-send-status {
+    grid-column: 2;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    // a grade do título separa as linhas em 18px, demais para um badge de apoio
+    margin-top: -1.625rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--mc-border-radius-pill);
+    font-size: var(--mc-font-size-xxs);
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+@mixin outcome-badge($token) {
+    background: color-mix(in srgb, var($token) 12%, var(--mc-white));
+    color: var($token);
+}
+
+.conectaente-send-status--success { @include outcome-badge(--mc-success-500); }
+.conectaente-send-status--simulated { @include outcome-badge(--mc-primary-500); }
+.conectaente-send-status--rejected { @include outcome-badge(--mc-warning-700); }
+.conectaente-send-status--error { @include outcome-badge(--mc-danger-700); }
