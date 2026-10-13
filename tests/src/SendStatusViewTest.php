@@ -61,8 +61,24 @@ class SendStatusViewTest extends TestCase
         $this->assertNull($this->pendingState($opportunity));
     }
 
+    // o desfecho da oportunidade que perdeu o selo não volta à tela: o badge é da integração viva
+    function testAnOpportunityWithoutTheSealShowsNoBadgeEvenWithARecordedOutcome()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+        $opportunity->setMetadata(CultBrMetadata::SEND_STATUS, SendOutcome::SUCCESS);
+        $opportunity->saveMetadata();
+
+        $this->assertFalse($this->view($opportunity)['sealed']);
+    }
+
+    private function view(?Opportunity $opportunity): array
+    {
+        return Plugin::instance()->sendStatusView()->of($opportunity);
+    }
+
     private function pendingState(?Opportunity $opportunity): ?string
     {
-        return Plugin::instance()->sendStatusView()->of($opportunity)['pendingSendState'];
+        return $this->view($opportunity)['pendingSendState'];
     }
 }
