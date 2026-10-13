@@ -26,6 +26,7 @@ use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\SealedOpportunity;
 use ConectaEnte\Services\SendEligibility;
+use ConectaEnte\Services\SendLogger;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -146,6 +147,11 @@ class Plugin extends \MapasCulturais\Plugin
     function opportunitySender(): OpportunitySender
     {
         return $this->opportunitySender ?? new OpportunitySender($this, $this->sealedOpportunity());
+    }
+
+    function sendLogger(): SendLogger
+    {
+        return new SendLogger;
     }
 
     function sendMaxAttempts(): int
