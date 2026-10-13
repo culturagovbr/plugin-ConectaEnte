@@ -12,6 +12,7 @@ use ConectaEnte\Http\TokenValidation;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
+use ConectaEnte\Services\SendHistory;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -305,6 +306,32 @@ class ConectaEnteController extends \MapasCulturais\Controller
         App::i()->log->warning(
             "ConectaEnte: árvore do PAR indisponível ({$state}) para o ente {$federativeEntity?->id} na oportunidade {$opportunity->id}: {$result->message}"
         );
+    }
+
+    /**
+     * O histórico de envio da oportunidade, mais recentes primeiro, com as tentativas aninhadas.
+     */
+    function GET_sendHistory()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $this->refuseOtherSubsite($opportunity);
+        $opportunity->checkPermission('modify');
+
+        $this->json(Plugin::instance()->sendHistory()->of(
+            $opportunity,
+            (int) ($this->data['page'] ?? 1),
+            (int) ($this->data['pageSize'] ?? SendHistory::DEFAULT_PAGE_SIZE),
+        ));
+    }
+
+    // o histórico carrega o payload, com o documento do Ente dentro: informar o id de outra instalação não pode bastar
+    private function refuseOtherSubsite(Opportunity $opportunity): void
+    {
+        if (!$opportunity->authorizedInThisSite()) {
+            App::i()->pass();
+        }
     }
 
     private function parUnavailableReason(ParInformationResult $result): string
