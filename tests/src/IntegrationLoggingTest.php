@@ -3,6 +3,8 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\ParInformationService;
+use MapasCulturais\Entities\Opportunity;
 use Psr\Http\Message\ServerRequestInterface;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
@@ -78,6 +80,33 @@ class IntegrationLoggingTest extends TestCase
         $this->assertTrue($log->hasWarningThatContains('Token revogado'));
     }
 
+    function testAnUnavailableParTreeIsLoggedWithTheEntityAndTheOpportunity()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $federativeEntity = $this->resolveFederativeEntity($opportunity);
+        $this->app->mscache->delete(ParInformationService::cacheKey($federativeEntity));
+        Plugin::instance()->transport = FakeTransport::unreachable();
+        $log = $this->captureLog();
+
+        $this->send($this->parInformation($opportunity->id));
+
+        $this->assertTrue($log->hasWarningThatContains("ente {$federativeEntity->id}"));
+        $this->assertTrue($log->hasWarningThatContains("oportunidade {$opportunity->id}"));
+        $this->assertTrue($log->hasWarningThatContains('sem resposta da API'), 'O log diz o estado real: a tela colapsa cache vazio e recusa na mesma palavra.');
+    }
+
+    // o job de aquecimento deixa este caso passar em silêncio, e a tela abre a cada visita à aba
+    function testAnEntityWithoutAParInTheCultBrIsNotLoggedAsAFailure()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $this->primeParInformationNotFound($this->resolveFederativeEntity($opportunity));
+        $log = $this->captureLog();
+
+        $this->send($this->parInformation($opportunity->id));
+
+        $this->assertFalse($log->hasWarningThatContains('árvore do PAR'), 'Ente sem PAR é resposta legítima: registrar cada visita à aba encheria o log de ruído.');
+    }
+
     private function registerEntity(string $token): ServerRequestInterface
     {
         return $this->requestFactory->POST('conectaente', 'federativeEntities', [], [
@@ -87,4 +116,8 @@ class IntegrationLoggingTest extends TestCase
         ]);
     }
 
+    private function parInformation(int $opportunityId): ServerRequestInterface
+    {
+        return $this->requestFactory->GET('conectaente', 'parInformation', [$opportunityId]);
+    }
 }
