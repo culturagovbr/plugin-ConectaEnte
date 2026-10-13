@@ -42,12 +42,14 @@ final class CultBrMetadata
 
     const PAR_KEYS = [self::PAR_EXERCISE_ID, self::PAR_GOAL_ID, self::PAR_ACTION_ID, self::PAR_ACTIVITY_ID];
 
-    // o desfecho da última tentativa de envio; nenhuma aba lê estas chaves ainda
     const SEND_STATUS = 'conectaente_sendStatus';
     // o id do edital no CultBR, devolvido pelo envio aceito: a única chave de correlação entre os dois lados
     const PAR_EDITAL_ID = 'conectaente_parEditalId';
     const SEND_REASON = 'conectaente_sendReason';
     const SEND_AT = 'conectaente_sendAt';
+
+    /** O que aconteceu com esta oportunidade e quem ela é no CultBR: não se copia para uma duplicata. */
+    const SEND_STATE_KEYS = [self::SEND_STATUS, self::SEND_REASON, self::SEND_AT, self::PAR_EDITAL_ID];
 
     /**
      * Registra na oportunidade os campos que o CultBR exige; quem os torna obrigatórios é a regra de publicação.

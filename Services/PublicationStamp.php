@@ -24,7 +24,7 @@ final class PublicationStamp
     public function stamp(Opportunity $opportunity): void
     {
         if ($this->isCopyBeingDuplicated($opportunity)) {
-            $this->clearCopiedDates($opportunity);
+            $this->clearCopiedState($opportunity);
             return;
         }
 
@@ -97,12 +97,17 @@ final class PublicationStamp
         return $this->duplicationSourceId !== null && $opportunity->id !== $this->duplicationSourceId && !$opportunity->parent;
     }
 
-    private function clearCopiedDates(Opportunity $copy): void
+    // o que a oportunidade é se copia; o que aconteceu com ela, e quem ela é no CultBR, não
+    private function clearCopiedState(Opportunity $copy): void
     {
         $copy->{CultBrMetadata::PUBLISHED_AT} = null;
 
         if ($copy->getRegisteredMetadata(self::INHERITED_KEY, true)) {
             $copy->setMetadata(self::INHERITED_KEY, null);
+        }
+
+        foreach (CultBrMetadata::SEND_STATE_KEYS as $key) {
+            $copy->setMetadata($key, null);
         }
     }
 
