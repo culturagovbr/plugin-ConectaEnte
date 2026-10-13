@@ -174,6 +174,50 @@ class SendLoggerTest extends TestCase
         $this->assertSame([2, 2], array_map(fn ($tentativa) => $tentativa->attempt, $armazenadas), 'As duas trocas são da mesma tentativa do job.');
     }
 
+    function testEachAttemptTakesTheOutcomeOfItsOwnStatus()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $recusada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 400);
+        $quebrada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 500);
+        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200);
+
+        $this->logger()->recordAttempts($log, [$recusada, $quebrada, $aceita], SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame(
+            [SendOutcome::REJECTED, SendOutcome::ERROR, SendOutcome::SUCCESS],
+            array_map(fn ($tentativa) => $tentativa->outcome, $this->attemptsOf($log)),
+            'Herdar o desfecho do envio apagaria a recusa: é ela que a consulta por SQL precisa encontrar.'
+        );
+    }
+
+    // o cliente só aceita 200: um 201 é recusa para o envio, e a tentativa não pode dizer o contrário dele
+    function testAStatusThatLooksAcceptedButIsNotTwoHundredFollowsTheSend()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $criado = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 201);
+
+        $this->logger()->recordAttempts($log, [$criado], SendOutcome::REJECTED, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame(SendOutcome::REJECTED, $this->attemptsOf($log)[0]->outcome, 'Envelope e tentativa não podem discordar sobre a mesma resposta.');
+    }
+
+    function testAnAttemptWithoutResponseKeepsTheOutcomeOfTheSend()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $semRequisicao = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/');
+
+        $this->logger()->recordAttempts($log, [$semRequisicao], SendOutcome::SIMULATED, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame(
+            SendOutcome::SIMULATED,
+            $this->attemptsOf($log)[0]->outcome,
+            'Sem status não há faixa: o simulado precisa do desfecho do envio para não virar falha.'
+        );
+    }
+
     function testThePayloadAndHeadersAreStoredAsReadableJson()
     {
         $this->loginAsSaasSuperAdmin();
