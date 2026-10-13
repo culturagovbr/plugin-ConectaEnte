@@ -56,6 +56,14 @@ class SendHistoryRouteTest extends TestCase
         $this->assertSame(403, $this->send($this->sendHistory($opportunity->id)));
     }
 
+    // o papel é conferido antes de procurar a oportunidade: para quem não o tem, nem a existência dela aparece
+    function testTheRoleIsCheckedBeforeTheOpportunityIsLookedUp()
+    {
+        $this->login($this->userDirector->createUser());
+
+        $this->assertSame(403, $this->send($this->sendHistory(999999)));
+    }
+
     function testTheSaasSuperAdminReadsTheHistory()
     {
         $this->loginAsSaasSuperAdmin();
