@@ -44,6 +44,8 @@ class Plugin extends \MapasCulturais\Plugin
     const DEFAULT_SEND_MAX_ATTEMPTS = 3;
     const DEFAULT_SEND_RETRY_DELAY_SECONDS = 30;
 
+    const OPERATOR_ROLE = 'saasSuperAdmin';
+
     /** Em `dev` nenhuma rota do CultBR é chamada: a resposta vem de `fixtures/<rota>.json`. */
     const MODE_LIVE = 'live';
     const MODE_DEV = 'dev';
@@ -153,6 +155,12 @@ class Plugin extends \MapasCulturais\Plugin
     function sendHistory(): SendHistory
     {
         return new SendHistory;
+    }
+
+    /** A rota e a aba decidem por aqui, para não divergirem. */
+    function canReadSendHistory(): bool
+    {
+        return App::i()->user->is(self::OPERATOR_ROLE);
     }
 
     function sendLogger(): SendLogger

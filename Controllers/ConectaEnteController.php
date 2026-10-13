@@ -313,11 +313,11 @@ class ConectaEnteController extends \MapasCulturais\Controller
      */
     function GET_sendHistory()
     {
-        $this->requireAuthentication();
+        $this->requireSaasSuperAdmin();
 
         $opportunity = $this->requestedOpportunity();
+        // o papel é global: sem esta linha, o histórico de uma oportunidade do subsite A sai pelo subsite B
         $this->refuseOtherSubsite($opportunity);
-        $opportunity->checkPermission('modify');
 
         $this->json(Plugin::instance()->sendHistory()->of(
             $opportunity,
@@ -402,7 +402,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $app = App::i();
         $this->requireAuthentication();
 
-        if (!$app->user->is('saasSuperAdmin')) {
+        if (!$app->user->is(Plugin::OPERATOR_ROLE)) {
             throw new PermissionDenied($app->user);
         }
     }
