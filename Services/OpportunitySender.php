@@ -10,6 +10,7 @@ use ConectaEnte\Plugin;
 use DateTime;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\OpportunityMeta;
 use MapasCulturais\i;
 use RuntimeException;
 
@@ -129,12 +130,32 @@ class OpportunitySender
             return;
         }
 
+        if ($owner = $this->opportunityOwningParEdital((string) $id, $opportunity)) {
+            App::i()->log->error("ConectaEnte: o edital {$id} do CultBR já é da oportunidade {$owner}; o id não foi gravado na {$opportunity->id}.");
+
+            return;
+        }
+
         $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, (string) $id);
         $opportunity->saveMetadata();
 
         if ($log) {
             $this->plugin->sendLogger()->keepParEdital($log, (int) $id);
         }
+    }
+
+    // um edital do CultBR pertence a uma oportunidade só: gravar o id de outra é pior do que não gravar
+    private function opportunityOwningParEdital(string $id, Opportunity $opportunity): ?int
+    {
+        $rows = App::i()->repo(OpportunityMeta::class)->findBy(['key' => CultBrMetadata::PAR_EDITAL_ID, 'value' => $id]);
+
+        foreach ($rows as $row) {
+            if ($row->owner && $row->owner->id !== $opportunity->id) {
+                return $row->owner->id;
+            }
+        }
+
+        return null;
     }
 
     private function recorded(Opportunity $opportunity, SendOutcome $outcome): SendOutcome
