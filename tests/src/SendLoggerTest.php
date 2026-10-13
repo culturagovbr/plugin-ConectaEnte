@@ -142,7 +142,7 @@ class SendLoggerTest extends TestCase
         $this->logger()->recordAttempt($log, new HttpExchange(
             endpoint: 'https://cultbr.example/api/v1/oportunidades/',
             method: 'POST',
-            status: 201,
+            status: 200,
             requestId: 'req-7',
             durationMs: 142,
         ), SendOutcome::SUCCESS, attempt: 2, maxAttempts: 3);
@@ -152,7 +152,7 @@ class SendLoggerTest extends TestCase
         $this->assertSame(3, $stored->maxAttempts);
         $this->assertSame('https://cultbr.example/api/v1/oportunidades/', $stored->endpoint);
         $this->assertSame('POST', $stored->httpMethod);
-        $this->assertSame(201, $stored->httpStatus);
+        $this->assertSame(200, $stored->httpStatus);
         $this->assertSame('req-7', $stored->requestId);
         $this->assertSame(142, $stored->durationMs);
         $this->assertSame(SendOutcome::SUCCESS, $stored->outcome);
@@ -163,14 +163,14 @@ class SendLoggerTest extends TestCase
         $this->loginAsSaasSuperAdmin();
         $log = $this->logger()->startOrResume($this->createOpportunity());
         $recusada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/53781', method: 'PUT', status: 404);
-        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', method: 'POST', status: 201);
+        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', method: 'POST', status: 200);
 
         $this->logger()->recordAttempts($log, [$recusada, $aceita], SendOutcome::SUCCESS, attempt: 2, maxAttempts: 3);
 
         $armazenadas = $this->attemptsOf($log);
         $this->assertCount(2, $armazenadas, 'Uma linha por troca: sobrescrever faria a requisição recusada sumir do histórico.');
         $this->assertSame(['PUT', 'POST'], array_map(fn ($tentativa) => $tentativa->httpMethod, $armazenadas));
-        $this->assertSame([404, 201], array_map(fn ($tentativa) => $tentativa->httpStatus, $armazenadas));
+        $this->assertSame([404, 200], array_map(fn ($tentativa) => $tentativa->httpStatus, $armazenadas));
         $this->assertSame([2, 2], array_map(fn ($tentativa) => $tentativa->attempt, $armazenadas), 'As duas trocas são da mesma tentativa do job.');
     }
 
@@ -249,7 +249,7 @@ class SendLoggerTest extends TestCase
 
         $this->logger()->recordAttempt($log, new HttpExchange(
             endpoint: 'https://cultbr.example/api/v1/oportunidades/',
-            status: 201,
+            status: 200,
             requestPayload: $campos,
         ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
 
@@ -265,7 +265,7 @@ class SendLoggerTest extends TestCase
 
         $attempt = $this->logger()->recordAttempt($log, new HttpExchange(
             endpoint: 'https://cultbr.example/api/v1/oportunidades/',
-            status: 201,
+            status: 200,
             requestId: str_repeat('x', 500),
         ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
 
@@ -410,7 +410,7 @@ class SendLoggerTest extends TestCase
 
         $attempt = $this->logger()->recordAttempt($log, new HttpExchange(
             endpoint: 'https://cultbr.example/api/v1/oportunidades/',
-            status: 201,
+            status: 200,
         ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
 
         $this->assertNull($attempt, 'Falha ao gravar o histórico não pode derrubar o envio.');
@@ -464,7 +464,7 @@ class SendLoggerTest extends TestCase
     {
         $this->logger()->recordAttempt($log, new HttpExchange(
             endpoint: 'https://cultbr.example/api/v1/oportunidades/',
-            status: 201,
+            status: 200,
         ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
     }
 
