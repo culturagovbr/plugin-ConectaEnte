@@ -2,6 +2,7 @@
 
 namespace ConectaEnte\Jobs;
 
+use ConectaEnte\Entities\Log;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\App;
@@ -21,7 +22,6 @@ class SendOpportunityJob extends JobType
     {
         $data = ['opportunityId' => $opportunity->id, 'attempt' => $attempt];
 
-        // o uuid só existe a partir da retentativa, e é ele que mantém as tentativas sob um envio só
         if ($logUuid) {
             $data['logUuid'] = $logUuid;
         }
@@ -51,42 +51,47 @@ class SendOpportunityJob extends JobType
             return true;
         }
 
+        $attempt = (int) ($job->attempt ?? 1);
+
+        // o envelope é aberto aqui porque é o job que conhece a tentativa e agenda a seguinte
+        $log = Plugin::instance()->sendLogger()->startOrResume($opportunity, $job->logUuid ?? null);
+
         try {
-            $outcome = Plugin::instance()->opportunitySender()->send($opportunity);
+            $outcome = Plugin::instance()->opportunitySender()->send($opportunity, $log, $attempt);
 
             if ($outcome->isRetryable()) {
-                $this->retryOrGiveUp($opportunity, (int) ($job->attempt ?? 1), $outcome, $job->logUuid ?? null);
+                $this->retryOrGiveUp($opportunity, $attempt, $outcome, $log);
             }
         } catch (\Throwable $error) {
-            $this->recordFailure($opportunity, $error);
+            $this->recordFailure($opportunity, $error, $log, $attempt);
         }
 
         return true;
     }
 
     // nem o registro pode escapar: _execute que lança prende a linha do job em processamento para sempre
-    private function recordFailure(Opportunity $opportunity, \Throwable $error): void
+    private function recordFailure(Opportunity $opportunity, \Throwable $error, ?Log $log, int $attempt): void
     {
         $app = App::i();
         $app->log->error("SendOpportunityJob: exceção ao enviar a oportunidade {$opportunity->id}: {$error->getMessage()}");
 
         try {
-            Plugin::instance()->opportunitySender()->recordFailure($opportunity);
+            Plugin::instance()->opportunitySender()->recordFailure($opportunity, $log, $attempt);
         } catch (\Throwable $failure) {
             $app->log->error("SendOpportunityJob: falha ao registrar o desfecho da oportunidade {$opportunity->id}: {$failure->getMessage()}");
         }
     }
 
-    private function retryOrGiveUp(Opportunity $opportunity, int $attempt, SendOutcome $lastAttempt, ?string $logUuid): void
+    private function retryOrGiveUp(Opportunity $opportunity, int $attempt, SendOutcome $lastAttempt, ?Log $log): void
     {
         $plugin = Plugin::instance();
 
         if ($attempt >= $plugin->sendMaxAttempts()) {
-            $plugin->opportunitySender()->recordExhausted($opportunity, $lastAttempt);
+            $plugin->opportunitySender()->recordExhausted($opportunity, $lastAttempt, $log);
 
             return;
         }
 
-        $plugin->scheduleSend($opportunity, $attempt + 1, "+{$plugin->sendRetryDelaySeconds()} seconds", $logUuid);
+        $plugin->scheduleSend($opportunity, $attempt + 1, "+{$plugin->sendRetryDelaySeconds()} seconds", $log?->uuid);
     }
 }
