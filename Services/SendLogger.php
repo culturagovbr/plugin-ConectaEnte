@@ -97,6 +97,17 @@ class SendLogger
         }
     }
 
+    /** Guarda no envelope o id que o CultBR devolveu, para correlacionar os dois lados sem abrir o payload. */
+    public function keepParEdital(Log $log, int $parEditalId): void
+    {
+        try {
+            $log->parEditalId = $parEditalId;
+            App::i()->em->flush();
+        } catch (Throwable $error) {
+            $this->report($log->opportunityId, $error);
+        }
+    }
+
     /**
      * Grava uma tentativa por troca da execução, na ordem em que aconteceram.
      *

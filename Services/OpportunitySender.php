@@ -66,7 +66,7 @@ class OpportunitySender
             default => SendOutcome::rejected($result->message ?? i::__('A Plataforma CultBR recusou o envio.')),
         };
 
-        $this->keepParEditalId($opportunity, $result);
+        $this->keepParEditalId($opportunity, $result, $log);
         $this->recordAttempts($log, $client->exchanges(), $outcome, $attempt);
 
         // indisponível não é desfecho final: quem decide reenfileirar é o job, que sabe a tentativa atual
@@ -121,13 +121,19 @@ class OpportunitySender
     }
 
     // a resposta aceita traz o id do edital no CultBR: guardá-lo é o que permite correlacionar os dois lados
-    private function keepParEditalId(Opportunity $opportunity, SendResult $result): void
+    private function keepParEditalId(Opportunity $opportunity, SendResult $result, ?Log $log): void
     {
         $id = $result->response['id_par_edital'] ?? null;
 
-        if ($id !== null) {
-            $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, (string) $id);
-            $opportunity->saveMetadata();
+        if ($id === null) {
+            return;
+        }
+
+        $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, (string) $id);
+        $opportunity->saveMetadata();
+
+        if ($log) {
+            $this->plugin->sendLogger()->keepParEdital($log, (int) $id);
         }
     }
 
