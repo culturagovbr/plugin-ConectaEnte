@@ -270,6 +270,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
 
         // sem árvore a tela precisa do motivo: token recusado não se resolve esperando, falha do CultBR sim
         if (!$result->tree) {
+            $this->logUnavailablePar($opportunity, $result);
             $this->json(['available' => false, 'reason' => $this->parUnavailableReason($result), 'exercicios' => []]);
         }
 
@@ -282,6 +283,28 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $outcome = $validation->unavailable ? 'indisponível' : 'recusado';
 
         App::i()->log->warning("ConectaEnte: token {$outcome} {$where}: {$validation->message}");
+    }
+
+    // o `reason` que vai à tela é uma de três chaves, e a mensagem do CultBR se perde na conversão
+    private function logUnavailablePar(Opportunity $opportunity, ParInformationResult $result): void
+    {
+        // ente sem PAR no CultBR é resposta legítima, e o job de aquecimento também a deixa passar em silêncio
+        if ($result->notFound) {
+            return;
+        }
+
+        $federativeEntity = Plugin::instance()->sealedOpportunity()->federativeEntityOf($opportunity);
+
+        // o estado real, não a chave que a tela recebe: cache vazio e recusa da API chegam lá como a mesma palavra
+        $state = match (true) {
+            $result->unreachable => 'sem resposta da API',
+            $result->unavailable => 'sem nada no cache',
+            default => 'recusada pela API',
+        };
+
+        App::i()->log->warning(
+            "ConectaEnte: árvore do PAR indisponível ({$state}) para o ente {$federativeEntity?->id} na oportunidade {$opportunity->id}: {$result->message}"
+        );
     }
 
     private function parUnavailableReason(ParInformationResult $result): string
