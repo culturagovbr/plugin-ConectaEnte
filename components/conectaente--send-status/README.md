@@ -10,9 +10,20 @@ Mostra, no cabeçalho da edição da oportunidade, a situação do último envio
 
 Lê `conectaente_sendStatus` e `conectaente_sendAt` — dois dos metadados que o `OpportunitySender` grava a cada envio — direto da entidade, sem requisição. São metadados públicos, então já chegam no payload da página.
 
-Sem situação gravada, nada aparece: o edital que nunca foi enviado não tem o que mostrar aqui.
+O indicador é um badge discreto, logo abaixo do título, e distingue seis situações:
 
-O indicador é um badge discreto, logo abaixo do título. Os quatro desfechos têm cor e texto próprios, e **simulado não se parece com enviado** — em modo dev nada sai para o CultBR, e o badge diz isso. O motivo gravado em `conectaente_sendReason` **não** é exibido aqui.
+| Quando | O que diz |
+|---|---|
+| houve envio | "Enviado", "Falha ao enviar", "O CultBR recusou" ou "Envio simulado", com a data |
+| selada, pronta, sem envio ainda | "Aguardando o envio ao CultBR" |
+| selada e barrada pelo gate | "Ainda não enviada ao CultBR" |
+| sem selo de Ente Federado | nada |
+
+**Simulado não se parece com enviado** — em modo dev nada sai para o CultBR, e o badge diz isso. E **não enviada não se parece com falhou**: era a confusão que o CultEditais colapsa numa frase só.
+
+O motivo gravado em `conectaente_sendReason` **não** é exibido aqui: por que falhou é detalhe de integração e vive na aba de histórico, do `saasSuperAdmin`. O que falta **preencher** continua no card "Campos pendentes" da aba CultBR, que é de quem edita.
+
+As três situações sem envio vêm decididas do servidor, em `$MAPAS.config.conectaenteSendStatus.pendingSendState` (`awaiting`, `ineligible` ou nulo), pelo `Services\SendStatusView` — que pergunta ao mesmo `SendEligibility` do envio, em vez de repetir a regra. Com desfecho gravado o servidor devolve nulo: o desfecho manda, e as onze validações do gate não chegam a rodar.
 
 A cor de cada desfecho sai do token do tema (`--mc-success-500`, `--mc-primary-500`, `--mc-warning-700`, `--mc-danger-700`), e o fundo é o mesmo token clareado por `color-mix` — assim o badge acompanha a paleta de qualquer instalação em vez de fixar uma cor nossa.
 
