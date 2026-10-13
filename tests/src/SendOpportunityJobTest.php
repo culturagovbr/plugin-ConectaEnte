@@ -440,6 +440,23 @@ class SendOpportunityJobTest extends TestCase
 
     private bool $removingFromPayload = false;
 
+    // um edital do CultBR pertence a uma oportunidade só: o id não muda de dono por causa de uma resposta
+    function testTheParEditalIdOfAnotherOpportunityIsRefusedAndLogged()
+    {
+        $dona = $this->liveSealedOpportunity();
+        $dona->setMetadata(CultBrMetadata::PAR_EDITAL_ID, '53781');
+        $dona->saveMetadata();
+
+        $outra = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, ['id_par_edital' => 53781]);
+
+        $this->executeSend($outra->id);
+
+        $this->assertNull($this->reloaded($outra)->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'Gravar o id de outra oportunidade é pior do que não gravar.');
+        $this->assertSame('53781', $this->reloaded($dona)->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'E a dona do id não pode perdê-lo nesse caminho.');
+        $this->assertSame(SendOutcome::SUCCESS, $this->reloaded($outra)->getMetadata(CultBrMetadata::SEND_STATUS), 'O envio foi aceito: recusar o id não derruba o desfecho.');
+    }
+
     private function liveSealedOpportunity(): Opportunity
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
