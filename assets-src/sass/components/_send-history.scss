@@ -1,0 +1,175 @@
+.conectaente-send-history {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    // mesma faixa de leitura do .container do core, em coluna única
+    max-width: 1360px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.conectaente-send-history .mc-accordion__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+}
+
+.conectaente-send-history .mc-accordion__title {
+    width: 100%;
+    margin: 0;
+}
+
+.conectaente-send-history .mc-accordion__header,
+.conectaente-send-history .mc-accordion__content {
+    // o acordeão do core limita a 870px, estreito demais para payload e resposta
+    max-width: none;
+}
+
+.conectaente-send-history .mc-accordion {
+    // o cabeçalho do core tem raio próprio e o acordeão, fundo cinza: sem isso os cantos do card não fecham
+    overflow: hidden;
+    background: transparent;
+}
+
+.conectaente-send-history .mc-accordion__header {
+    border-radius: 0;
+}
+
+.conectaente-send-history__send,
+.conectaente-send-history__attempt,
+.conectaente-send-history__content {
+    background: var(--mc-white);
+    border: 1px solid var(--mc-gray-300);
+    border-radius: var(--mc-border-radius-sm);
+}
+
+.conectaente-send-history__send > .mc-accordion__content {
+    padding: 1rem 1.25rem;
+}
+
+.conectaente-send-history__attempt {
+    margin-top: 0.75rem;
+
+    &:first-of-type {
+        margin-top: 0;
+    }
+
+    > .mc-accordion__content {
+        padding: 1rem 1.25rem;
+    }
+}
+
+.conectaente-send-history__content {
+    margin-top: 0.75rem;
+    background: var(--mc-gray-100);
+
+    .mc-accordion__header {
+        padding: 0.75rem 1rem;
+    }
+
+    .mc-accordion__title {
+        font-family: var(--mc-font-semibold);
+    }
+
+    > .mc-accordion__content {
+        padding: 0;
+        background: var(--mc-white);
+    }
+}
+
+.conectaente-send-history__heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    small {
+        color: var(--mc-gray-500);
+        font-size: var(--mc-font-size-xs);
+    }
+}
+
+.conectaente-send-history__uuid {
+    font-family: monospace;
+    font-weight: 700;
+    font-size: var(--mc-font-size-sm);
+}
+
+.conectaente-send-history__outcome--success { color: var(--mc-success-500); }
+.conectaente-send-history__outcome--simulated { color: var(--mc-primary-500); }
+.conectaente-send-history__outcome--rejected { color: var(--mc-warning-500); }
+.conectaente-send-history__outcome--error { color: var(--mc-danger-500); }
+.conectaente-send-history__outcome--pending,
+.conectaente-send-history__outcome--abandoned { color: var(--mc-gray-500); }
+
+.conectaente-send-history__meta {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 1.5rem;
+    margin: 0 0 0.75rem;
+
+    dd {
+        margin: 0;
+        font-family: monospace;
+        overflow-wrap: anywhere;
+    }
+}
+
+.conectaente-send-history__failure {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.75rem 0;
+    padding: 0.875rem 1.25rem;
+    background: var(--mc-danger-500);
+    border-radius: var(--mc-border-radius-sm);
+    color: var(--mc-white);
+
+    .iconify {
+        font-size: 1.25rem;
+    }
+}
+
+.conectaente-send-history__code {
+    position: relative;
+
+    pre {
+        max-height: 25rem;
+        margin: 0;
+        padding: 1rem;
+        overflow: auto;
+        background: #2d2d2d;
+        border-radius: var(--mc-border-radius-sm);
+        color: var(--mc-white);
+        font-family: monospace;
+        font-size: 0.7rem;
+        line-height: 1.6;
+        white-space: pre;
+    }
+}
+
+.conectaente-send-history__copy {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: #2d2d2d;
+    border: 1px solid var(--mc-gray-500);
+    border-radius: var(--mc-border-radius-sm);
+    color: var(--mc-white);
+    cursor: pointer;
+    font-size: 0.7rem;
+
+    &:hover {
+        border-color: var(--mc-white);
+    }
+}
+
+.conectaente-send-history__more {
+    align-self: center;
+}

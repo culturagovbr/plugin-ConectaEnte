@@ -25,17 +25,7 @@ class CurlTransport implements TransportInterface
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
-        $body = curl_exec($curl);
-        $error = curl_error($curl);
-        $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-
-        curl_close($curl);
-
-        if ($body === false || $error) {
-            return Response::failed($error ?: 'falha de transporte');
-        }
-
-        return Response::received((int) $status, (string) $body);
+        return $this->execute($curl);
     }
 
     public function put(string $url, array $body, array $headers = []): Response
@@ -62,16 +52,33 @@ class CurlTransport implements TransportInterface
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
-        $responseBody = curl_exec($curl);
+        return $this->execute($curl);
+    }
+
+    private function execute(\CurlHandle $curl): Response
+    {
+        $headers = [];
+        curl_setopt($curl, CURLOPT_HEADERFUNCTION, function ($curl, $line) use (&$headers) {
+            $parts = explode(':', $line, 2);
+
+            if (count($parts) === 2) {
+                $headers[strtolower(trim($parts[0]))] = trim($parts[1]);
+            }
+
+            return strlen($line);
+        });
+
+        $body = curl_exec($curl);
         $error = curl_error($curl);
         $status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $duration = (int) round(curl_getinfo($curl, CURLINFO_TOTAL_TIME) * 1000);
 
         curl_close($curl);
 
-        if ($responseBody === false || $error) {
-            return Response::failed($error ?: 'falha de transporte');
+        if ($body === false || $error) {
+            return Response::failed($error ?: 'falha de transporte', $duration);
         }
 
-        return Response::received((int) $status, (string) $responseBody);
+        return Response::received((int) $status, (string) $body, $headers, $duration);
     }
 }

@@ -98,12 +98,12 @@ class RegistrationChannelsBlockTest extends TestCase
     /** @return array o bloco como o componente da aba o grava */
     private function blockAsTheTabWritesIt(array $descriptionByType): array
     {
-        $formas = array_map(
+        $channels = array_map(
             fn(string $type, string $description) => ['tipo' => $type, 'descricao' => $description],
             array_keys($descriptionByType),
             $descriptionByType,
         );
 
-        return ['previstasNoEdital' => 'sim', 'formas' => $formas];
+        return ['previstasNoEdital' => 'sim', 'formas' => $channels];
     }
 }

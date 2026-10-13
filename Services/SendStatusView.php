@@ -1,0 +1,41 @@
+<?php
+
+namespace ConectaEnte\Services;
+
+use ConectaEnte\Metadata\CultBrMetadata;
+use MapasCulturais\Entities\Opportunity;
+
+/**
+ * O que o indicador da oportunidade mostra enquanto não há desfecho de envio gravado.
+ */
+final class SendStatusView
+{
+    const AWAITING = 'awaiting';
+    const INELIGIBLE = 'ineligible';
+
+    public function __construct(
+        private SealedOpportunity $sealedOpportunity,
+        private SendEligibility $sendEligibility,
+    ) {
+    }
+
+    public function of(?Opportunity $opportunity): array
+    {
+        $sealed = (bool) ($opportunity && $this->sealedOpportunity->federativeEntityOf($opportunity));
+
+        return [
+            'sealed' => $sealed,
+            'pendingSendState' => $sealed ? $this->pendingSendState($opportunity) : null,
+        ];
+    }
+
+    private function pendingSendState(Opportunity $opportunity): ?string
+    {
+        // com desfecho gravado a tela mostra o desfecho: conferir o gate custaria as onze validações sem mudar nada
+        if ($opportunity->getMetadata(CultBrMetadata::SEND_STATUS)) {
+            return null;
+        }
+
+        return $this->sendEligibility->isEligible($opportunity) ? self::AWAITING : self::INELIGIBLE;
+    }
+}

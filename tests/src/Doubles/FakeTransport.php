@@ -22,9 +22,9 @@ class FakeTransport implements TransportInterface
     {
     }
 
-    public static function replying(int $status, array|string $body = []): self
+    public static function replying(int $status, array|string $body = [], array $headers = [], ?int $durationMs = null): self
     {
-        return new self(Response::received($status, is_string($body) ? $body : json_encode($body)));
+        return new self(Response::received($status, is_string($body) ? $body : json_encode($body), $headers, $durationMs));
     }
 
     public static function unreachable(): self

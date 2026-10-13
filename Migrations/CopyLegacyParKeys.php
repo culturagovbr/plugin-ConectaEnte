@@ -29,20 +29,20 @@ final class CopyLegacyParKeys
             // o valor já gravado na chave nova manda: a migração pode rodar de novo sem desfazer escolha posterior
             $copied += (int) $connection->executeStatement(
                 "INSERT INTO opportunity_meta (object_id, key, value)
-                 SELECT legado.object_id, ?, legado.value
-                 FROM opportunity_meta legado
-                 WHERE legado.key = ?
+                 SELECT legacy.object_id, ?, legacy.value
+                 FROM opportunity_meta legacy
+                 WHERE legacy.key = ?
                    AND EXISTS (
                        SELECT 1
-                       FROM seal_relation selo
-                       JOIN conectaente_federative_entity_seal ente ON ente.seal_id = selo.seal_id
-                       WHERE selo.object_id = legado.object_id
-                         AND selo.object_type = ?
-                         AND selo.status = 1
+                       FROM seal_relation seal
+                       JOIN conectaente_federative_entity_seal entity_seal ON entity_seal.seal_id = seal.seal_id
+                       WHERE seal.object_id = legacy.object_id
+                         AND seal.object_type = ?
+                         AND seal.status = 1
                    )
                    AND NOT EXISTS (
-                       SELECT 1 FROM opportunity_meta atual
-                       WHERE atual.object_id = legado.object_id AND atual.key = ?
+                       SELECT 1 FROM opportunity_meta existing
+                       WHERE existing.object_id = legacy.object_id AND existing.key = ?
                    )",
                 [$prefixed, $legacy, Opportunity::class, $prefixed],
             );

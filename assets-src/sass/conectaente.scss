@@ -90,7 +90,7 @@
     padding-top: 1.5rem;
 }
 
-.conectaente-opportunity-tab__blocos > * + * {
+.conectaente-opportunity-tab__blocks > * + * {
     border-top: var(--mc-border-hairline);
     padding-top: 1.5rem;
 }
@@ -252,6 +252,9 @@
 @import './components/affirmative-actions';
 @import './components/funding-sources';
 @import './components/federative-entity-par';
+@import './components/send-history';
+@import './components/send-status';
+@import './components/opportunity-tabs';
 
 // faixa de modo de desenvolvimento: logo abaixo do cabeçalho, em qualquer página
 .conectaente-dev-mode-banner {

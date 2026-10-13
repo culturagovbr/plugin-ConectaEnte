@@ -4,6 +4,7 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\SendOutcome;
 use ConectaEnte\Services\PublicationStamp;
 use DateTime;
 use MapasCulturais\Definitions\Metadata;
@@ -237,6 +238,40 @@ class PublicationStampTest extends TestCase
         $copy->publish(true);
 
         $this->assertStampedNow($this->reloaded($copy));
+    }
+
+    // a cópia não viveu o envio da original, e o id do edital no CultBR é identidade dela, não da cópia
+    function testCopyIsBornWithoutTheSendStateOfTheSource()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $source = $this->sealedDraft();
+        $source->setMetadata(CultBrMetadata::SEND_STATUS, SendOutcome::SUCCESS);
+        $source->setMetadata(CultBrMetadata::SEND_AT, '2026-10-13 12:17:03');
+        $source->setMetadata(CultBrMetadata::SEND_REASON, 'motivo anterior');
+        $source->setMetadata(CultBrMetadata::PAR_EDITAL_ID, '53781');
+        $source->saveMetadata();
+
+        $copy = $this->reloaded($this->duplicate($source));
+
+        foreach (CultBrMetadata::SEND_STATE_KEYS as $key) {
+            $this->assertNull($copy->getMetadata($key), "A cópia herdou {$key} da original.");
+        }
+    }
+
+    // a contraprova: limpar estado não pode levar junto o que descreve o edital
+    function testCopyKeepsTheContentOfTheSource()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $source = $this->sealedDraft();
+        $source->setMetadata(CultBrMetadata::SEND_STATUS, SendOutcome::SUCCESS);
+        $source->setMetadata(CultBrMetadata::PAR_EXERCISE_ID, '17832');
+        $source->setMetadata(CultBrMetadata::EXECUTION_TYPE, 'Execução cultural');
+        $source->saveMetadata();
+
+        $copy = $this->reloaded($this->duplicate($source));
+
+        $this->assertSame('17832', $copy->getMetadata(CultBrMetadata::PAR_EXERCISE_ID));
+        $this->assertSame('Execução cultural', $copy->getMetadata(CultBrMetadata::EXECUTION_TYPE));
     }
 
     function testDuplicationLeavesTheSourceDateUntouched()

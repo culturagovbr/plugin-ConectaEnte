@@ -5,6 +5,7 @@
  */
 
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Plugin;
 use ConectaEnte\Vocabulary\CulturalStage;
 use ConectaEnte\Vocabulary\Segment;
 use ConectaEnte\Vocabulary\ThematicAgenda;
@@ -26,6 +27,12 @@ $this->import('
     mc-container
     mc-tab
 ');
+
+$showsSendHistory = Plugin::instance()->canReadSendHistory();
+
+if ($showsSendHistory) {
+    $this->import('conectaente--send-history');
+}
 ?>
 <mc-tab v-if="isSealed" label="<?php i::esc_attr_e('CultBR') ?>" slug="cultbr">
     <mc-container>
@@ -91,7 +98,7 @@ $this->import('
                     <h3><?php i::_e('Fontes, inscrições e ações afirmativas') ?></h3>
                 </template>
                 <template #content>
-                    <div class="grid-12 conectaente-opportunity-tab__blocos">
+                    <div class="grid-12 conectaente-opportunity-tab__blocks">
                         <conectaente--funding-sources :entity="entity" prop="<?= CultBrMetadata::FUNDING_SOURCES ?>" classes="col-12"></conectaente--funding-sources>
                         <conectaente--registration-channels :entity="entity" prop="<?= CultBrMetadata::REGISTRATION_CHANNELS ?>" classes="col-12"></conectaente--registration-channels>
                         <conectaente--affirmative-actions :entity="entity" prop="<?= CultBrMetadata::AFFIRMATIVE_ACTIONS ?>" classes="col-12"></conectaente--affirmative-actions>
@@ -125,3 +132,9 @@ $this->import('
         </aside>
     </mc-container>
 </mc-tab>
+
+<?php if ($showsSendHistory): ?>
+<mc-tab v-if="isSealed" label="<?php i::esc_attr_e('Histórico de envio') ?>" slug="cultbr-historico" cache>
+    <conectaente--send-history :entity="entity"></conectaente--send-history>
+</mc-tab>
+<?php endif; ?>

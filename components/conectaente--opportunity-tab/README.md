@@ -1,8 +1,10 @@
 # Componente `<conectaente--opportunity-tab>`
 
-Aba "CultBR" da página de edição de oportunidade. Só aparece na oportunidade selada por um Ente Federado. Reúne os campos do edital que o CultBR recebe e a lista dos campos pendentes.
+Abas "CultBR" e "Histórico de envio" da página de edição de oportunidade. Só aparecem na oportunidade selada por um Ente Federado. A primeira reúne os campos do edital que o CultBR recebe e a lista dos campos pendentes; a segunda hospeda o `<conectaente--send-history>`.
 
-O `mc-tab` fica dentro do componente porque o `v-if` depende de estado dele. A part `conectaente/opportunity-tab`, incluída no hook `template(opportunity.edit.tabs):end`, só instancia o componente.
+Os `mc-tab` ficam dentro do componente porque o `v-if` depende de estado dele — as duas abas compartilham a mesma conta de selo. A part `conectaente/opportunity-tab`, incluída no hook `template(opportunity.edit.tabs):end`, só instancia o componente.
+
+A aba do histórico é `cache`: o conteúdo monta na primeira abertura e não é desmontado ao trocar de aba, então quem nunca a abre não paga a consulta e a paginação sobrevive à navegação. Ela também exige o `saasSuperAdmin`: o template pergunta ao `Plugin::canReadSendHistory()` antes de importar o componente e de montar a `mc-tab`, então quem não tem o papel não recebe nem o markup — a rota, que recusa pelo mesmo papel, é a segunda tranca.
 
 ### Propriedades
 

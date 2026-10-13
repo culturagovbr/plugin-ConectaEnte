@@ -26,6 +26,9 @@ use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\SealedOpportunity;
 use ConectaEnte\Services\SendEligibility;
+use ConectaEnte\Services\SendStatusView;
+use ConectaEnte\Services\SendHistory;
+use ConectaEnte\Services\SendLogger;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -41,6 +44,8 @@ class Plugin extends \MapasCulturais\Plugin
     const DEFAULT_PAR_CACHE_TTL_MINUTES = 10;
     const DEFAULT_SEND_MAX_ATTEMPTS = 3;
     const DEFAULT_SEND_RETRY_DELAY_SECONDS = 30;
+
+    const OPERATOR_ROLE = 'saasSuperAdmin';
 
     /** Em `dev` nenhuma rota do CultBR é chamada: a resposta vem de `fixtures/<rota>.json`. */
     const MODE_LIVE = 'live';
@@ -135,6 +140,11 @@ class Plugin extends \MapasCulturais\Plugin
         return new FieldLabels();
     }
 
+    function sendStatusView(): SendStatusView
+    {
+        return new SendStatusView($this->sealedOpportunity(), $this->sendEligibility());
+    }
+
     function sendEligibility(): SendEligibility
     {
         return new SendEligibility($this->sealedOpportunity(), $this->publicationRequirements(), $this->fieldLabels());
@@ -146,6 +156,22 @@ class Plugin extends \MapasCulturais\Plugin
     function opportunitySender(): OpportunitySender
     {
         return $this->opportunitySender ?? new OpportunitySender($this, $this->sealedOpportunity());
+    }
+
+    function sendHistory(): SendHistory
+    {
+        return new SendHistory;
+    }
+
+    /** A rota e a aba decidem por aqui, para não divergirem. */
+    function canReadSendHistory(): bool
+    {
+        return App::i()->user->is(self::OPERATOR_ROLE);
+    }
+
+    function sendLogger(): SendLogger
+    {
+        return new SendLogger;
     }
 
     function sendMaxAttempts(): int
@@ -161,7 +187,7 @@ class Plugin extends \MapasCulturais\Plugin
     /**
      * Enfileira o envio da oportunidade, se ela for raiz e estiver elegível agora.
      */
-    function scheduleSend(Opportunity $opportunity, int $attempt = 1, string $start = 'now'): void
+    function scheduleSend(Opportunity $opportunity, int $attempt = 1, string $start = 'now', ?string $logUuid = null): void
     {
         // sem selo de ente não se pergunta o resto: é o caso comum, e logar a cada save encheria o log
         if ($opportunity->parent || !$this->sealedOpportunity()->federativeEntityOf($opportunity)) {
@@ -179,7 +205,7 @@ class Plugin extends \MapasCulturais\Plugin
         $isRetry = $attempt > 1;
 
         // só a retentativa substitui: trocar a linha de um envio em curso põe dois workers no mesmo edital
-        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt), $start, '', 1, $isRetry);
+        App::i()->enqueueJob(SendOpportunityJob::SLUG, SendOpportunityJob::dataFor($opportunity, $attempt, $logUuid), $start, '', 1, $isRetry);
     }
 
     /**
@@ -375,6 +401,10 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->hook('template(opportunity.edit.tabs):end', function () {
             $this->part('conectaente/opportunity-tab');
+        });
+
+        $app->hook('template(opportunity.edit.entity-header):end', function () {
+            $this->part('conectaente/send-status');
         });
 
         $app->hook('view.partial(main-header):after', function ($template, &$html) {

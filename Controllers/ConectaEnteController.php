@@ -8,9 +8,11 @@ use ConectaEnte\Dto\SealOption;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Http\ParInformationResult;
+use ConectaEnte\Http\TokenValidation;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
+use ConectaEnte\Services\SendHistory;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -140,6 +142,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $validation = Plugin::instance()->client()->validateToken($token);
 
         if (!$validation->accepted) {
+            $this->logRefusedToken($validation, 'no cadastro de um Ente Federado');
             $this->errorJson(['token' => [$validation->message]], $validation->unavailable ? 503 : 400);
         }
 
@@ -214,6 +217,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $validation = Plugin::instance()->client()->validateToken($token);
 
         if (!$validation->accepted) {
+            $this->logRefusedToken($validation, "na troca do token do ente {$federativeEntity->id}");
             $this->errorJson(['token' => [$validation->message]], $validation->unavailable ? 503 : 400);
         }
 
@@ -267,10 +271,67 @@ class ConectaEnteController extends \MapasCulturais\Controller
 
         // sem árvore a tela precisa do motivo: token recusado não se resolve esperando, falha do CultBR sim
         if (!$result->tree) {
+            $this->logUnavailablePar($opportunity, $result);
             $this->json(['available' => false, 'reason' => $this->parUnavailableReason($result), 'exercicios' => []]);
         }
 
         $this->json(['available' => true, 'simulated' => Plugin::instance()->isDevMode()] + $result->tree->jsonSerialize());
+    }
+
+    // o motivo do CultBR chega à tela e morre nela: sem esta linha, token recusado não deixa rastro nenhum
+    private function logRefusedToken(TokenValidation $validation, string $where): void
+    {
+        $outcome = $validation->unavailable ? 'indisponível' : 'recusado';
+
+        App::i()->log->warning("ConectaEnte: token {$outcome} {$where}: {$validation->message}");
+    }
+
+    // o `reason` que vai à tela é uma de três chaves, e a mensagem do CultBR se perde na conversão
+    private function logUnavailablePar(Opportunity $opportunity, ParInformationResult $result): void
+    {
+        // ente sem PAR no CultBR é resposta legítima, e o job de aquecimento também a deixa passar em silêncio
+        if ($result->notFound) {
+            return;
+        }
+
+        $federativeEntity = Plugin::instance()->sealedOpportunity()->federativeEntityOf($opportunity);
+
+        // o estado real, não a chave que a tela recebe: cache vazio e recusa da API chegam lá como a mesma palavra
+        $state = match (true) {
+            $result->unreachable => 'sem resposta da API',
+            $result->unavailable => 'sem nada no cache',
+            default => 'recusada pela API',
+        };
+
+        App::i()->log->warning(
+            "ConectaEnte: árvore do PAR indisponível ({$state}) para o ente {$federativeEntity?->id} na oportunidade {$opportunity->id}: {$result->message}"
+        );
+    }
+
+    /**
+     * O histórico de envio da oportunidade, mais recentes primeiro, com as tentativas aninhadas.
+     */
+    function GET_sendHistory()
+    {
+        $this->requireSaasSuperAdmin();
+
+        $opportunity = $this->requestedOpportunity();
+        // o papel é global: sem esta linha, o histórico de uma oportunidade do subsite A sai pelo subsite B
+        $this->refuseOtherSubsite($opportunity);
+
+        $this->json(Plugin::instance()->sendHistory()->of(
+            $opportunity,
+            (int) ($this->data['page'] ?? 1),
+            (int) ($this->data['pageSize'] ?? SendHistory::DEFAULT_PAGE_SIZE),
+        ));
+    }
+
+    // o histórico carrega o payload, com o documento do Ente dentro: informar o id de outra instalação não pode bastar
+    private function refuseOtherSubsite(Opportunity $opportunity): void
+    {
+        if (!$opportunity->authorizedInThisSite()) {
+            App::i()->pass();
+        }
     }
 
     private function parUnavailableReason(ParInformationResult $result): string
@@ -341,7 +402,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $app = App::i();
         $this->requireAuthentication();
 
-        if (!$app->user->is('saasSuperAdmin')) {
+        if (!$app->user->is(Plugin::OPERATOR_ROLE)) {
             throw new PermissionDenied($app->user);
         }
     }
