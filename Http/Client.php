@@ -95,7 +95,7 @@ class Client
      */
     public function sendOpportunity(string $token, array $payload): SendResult
     {
-        $url = $this->url('/api/v1/oportunidades/');
+        $url = $this->sendOpportunityUrl();
 
         // o contrato dá o upsert ao POST, e só atualização ao PUT: um verbo cobre criar e atualizar
         $response = $this->transport->post($url, $payload, ['token' => $token]);
@@ -111,6 +111,12 @@ class Client
         }
 
         return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));
+    }
+
+    /** A rota do envio, para o histórico nomear o destino mesmo quando a requisição não chega a sair. */
+    public function sendOpportunityUrl(): string
+    {
+        return $this->url('/api/v1/oportunidades/');
     }
 
     /**
