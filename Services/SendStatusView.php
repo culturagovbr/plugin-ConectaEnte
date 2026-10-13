@@ -21,15 +21,16 @@ final class SendStatusView
 
     public function of(?Opportunity $opportunity): array
     {
-        return ['pendingSendState' => $this->pendingSendState($opportunity)];
+        $sealed = (bool) ($opportunity && $this->sealedOpportunity->federativeEntityOf($opportunity));
+
+        return [
+            'sealed' => $sealed,
+            'pendingSendState' => $sealed ? $this->pendingSendState($opportunity) : null,
+        ];
     }
 
-    private function pendingSendState(?Opportunity $opportunity): ?string
+    private function pendingSendState(Opportunity $opportunity): ?string
     {
-        if (!$opportunity || !$this->sealedOpportunity->federativeEntityOf($opportunity)) {
-            return null;
-        }
-
         // com desfecho gravado a tela mostra o desfecho: conferir o gate custaria as onze validações sem mudar nada
         if ($opportunity->getMetadata(CultBrMetadata::SEND_STATUS)) {
             return null;

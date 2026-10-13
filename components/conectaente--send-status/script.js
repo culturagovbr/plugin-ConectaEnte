@@ -27,8 +27,9 @@ app.component('conectaente--send-status', {
     },
 
     computed: {
+        // sem selo não há badge, nem com desfecho gravado: o que vale é a integração de agora
         state() {
-            return this.entity.conectaente_sendStatus || this.config.pendingSendState;
+            return this.config.sealed ? this.entity.conectaente_sendStatus || this.config.pendingSendState : null;
         },
 
         icon() {
