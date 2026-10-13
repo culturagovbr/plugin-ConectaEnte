@@ -23,3 +23,5 @@
 .conectaente-send-status--simulated { @include outcome-badge(--mc-primary-500); }
 .conectaente-send-status--rejected { @include outcome-badge(--mc-warning-700); }
 .conectaente-send-status--error { @include outcome-badge(--mc-danger-700); }
+.conectaente-send-status--awaiting,
+.conectaente-send-status--ineligible { @include outcome-badge(--mc-gray-700); }

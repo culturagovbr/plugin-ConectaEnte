@@ -7,4 +7,6 @@ return [
     'situacao_simulated' => i::__('Envio simulado em {data}: nada saiu para o CultBR'),
     'situacao_rejected' => i::__('O CultBR recusou este edital em {data}'),
     'situacao_error' => i::__('Falha ao enviar ao CultBR em {data}'),
+    'situacao_awaiting' => i::__('Aguardando o envio ao CultBR'),
+    'situacao_ineligible' => i::__('Ainda não enviada ao CultBR'),
 ];

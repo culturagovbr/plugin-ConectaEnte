@@ -3,6 +3,8 @@ const SEND_STATUS_ICONS = {
     simulated: 'code',
     rejected: 'close',
     error: 'exclamation',
+    awaiting: 'clock',
+    ineligible: 'info',
 };
 
 app.component('conectaente--send-status', {
@@ -19,21 +21,22 @@ app.component('conectaente--send-status', {
 
     setup() {
         const text = Utils.getTexts('conectaente--send-status');
+        const config = $MAPAS.config.conectaenteSendStatus;
 
-        return { text };
+        return { text, config };
     },
 
     computed: {
-        outcome() {
-            return this.entity.conectaente_sendStatus || null;
+        state() {
+            return this.entity.conectaente_sendStatus || this.config.pendingSendState;
         },
 
         icon() {
-            return SEND_STATUS_ICONS[this.outcome] ?? 'clock';
+            return SEND_STATUS_ICONS[this.state] ?? 'circle';
         },
 
         label() {
-            return this.text(`situacao_${this.outcome}`, { data: this.sentAt });
+            return this.text(`situacao_${this.state}`, { data: this.sentAt });
         },
 
         sentAt() {
