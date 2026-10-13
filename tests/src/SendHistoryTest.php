@@ -68,6 +68,21 @@ class SendHistoryTest extends TestCase
         $this->assertSame(422, $this->attemptsOf($log)[0]->httpStatus);
     }
 
+    // os dois status que a base do CultEditais nunca produziu como recusa
+    function testWhatTheCultBrRefusesIsStoredAsRejected()
+    {
+        foreach ([400, 403] as $status) {
+            $opportunity = $this->liveSealedOpportunity();
+            Plugin::instance()->transport = FakeTransport::replying($status, ['detail' => 'ente_federado obrigatório']);
+
+            $this->executeSend($opportunity->id);
+
+            $log = $this->logOf($opportunity);
+            $this->assertSame(SendOutcome::REJECTED, $log->outcome, "envelope do status {$status}");
+            $this->assertSame(SendOutcome::REJECTED, $this->attemptsOf($log)[0]->outcome, "tentativa do status {$status}");
+        }
+    }
+
     function testAnUnavailableApiLeavesTheEnvelopeOpenForTheRetry()
     {
         $opportunity = $this->liveSealedOpportunity();
