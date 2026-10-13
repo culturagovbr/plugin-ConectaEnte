@@ -97,6 +97,17 @@ class SendLogger
         }
     }
 
+    // o mesmo corte que o cliente faz com a resposta: aceite é 200 exato, e faixa mais larga faria a tentativa discordar do envio
+    private function outcomeOf(HttpExchange $exchange, string $sendOutcome): string
+    {
+        return match (true) {
+            $exchange->status === null => $sendOutcome,
+            $exchange->status === 200 => SendOutcome::SUCCESS,
+            $exchange->status >= 500 => SendOutcome::ERROR,
+            default => SendOutcome::REJECTED,
+        };
+    }
+
     /** Guarda no envelope o id que o CultBR devolveu, para correlacionar os dois lados sem abrir o payload. */
     public function keepParEdital(Log $log, int $parEditalId): void
     {
@@ -111,6 +122,8 @@ class SendLogger
     /**
      * Grava uma tentativa por troca da execução, na ordem em que aconteceram.
      *
+     * O desfecho de cada uma sai da faixa de status; o do envio só vale para a troca que não teve resposta.
+     *
      * @param HttpExchange[] $exchanges
      * @return LogAttempt[] as que foram gravadas
      */
@@ -119,7 +132,7 @@ class SendLogger
         $stored = [];
 
         foreach ($exchanges as $exchange) {
-            $recorded = $this->recordAttempt($log, $exchange, $outcome, $attempt, $maxAttempts);
+            $recorded = $this->recordAttempt($log, $exchange, $this->outcomeOf($exchange, $outcome), $attempt, $maxAttempts);
 
             if ($recorded) {
                 $stored[] = $recorded;
