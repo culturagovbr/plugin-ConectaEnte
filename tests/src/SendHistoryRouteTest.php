@@ -34,7 +34,7 @@ class SendHistoryRouteTest extends TestCase
         $this->assertStatus401($this->requestFactory->GET('conectaente', 'sendHistory', [1]));
     }
 
-    function testUserWhoCannotEditTheOpportunityIsRefused()
+    function testUserWithoutTheGlobalRoleIsRefused()
     {
         $this->loginAsSaasSuperAdmin();
         $opportunity = $this->createOpportunity();
@@ -43,8 +43,20 @@ class SendHistoryRouteTest extends TestCase
         $this->assertSame(403, $this->send($this->sendHistory($opportunity->id)));
     }
 
-    // AC da história: quem administra o edital precisa ver o que foi enviado dele
-    function testWhoEditsTheOpportunityReadsItsHistory()
+    // a permissão sobre o edital não abre o histórico dele: o payload é do estado, não de quem edita
+    function testAdminWhoCanEditTheOpportunityStillDoesNotReachTheHistory()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+        $this->openSend($opportunity);
+
+        $this->login($this->userDirector->createUser(['admin']));
+
+        $this->assertTrue($opportunity->canUser('modify'), 'O caso só prova o que promete se este administrador puder editar a oportunidade.');
+        $this->assertSame(403, $this->send($this->sendHistory($opportunity->id)));
+    }
+
+    function testTheSaasSuperAdminReadsTheHistory()
     {
         $this->loginAsSaasSuperAdmin();
         $opportunity = $this->createOpportunity();
