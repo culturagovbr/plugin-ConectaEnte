@@ -2,6 +2,8 @@
 
 namespace ConectaEnte\Services;
 
+use ConectaEnte\Entities\Log;
+use ConectaEnte\Http\HttpExchange;
 use ConectaEnte\Http\SendResult;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
@@ -22,12 +24,15 @@ class OpportunitySender
     }
 
     /** Uma tentativa de envio; o payload é montado e conferido antes de a simulação ser decidida. */
-    public function send(Opportunity $opportunity): SendOutcome
+    public function send(Opportunity $opportunity, ?Log $log = null, int $attempt = 1): SendOutcome
     {
         $federativeEntity = $this->sealedOpportunity->federativeEntityOf($opportunity);
 
         if (!$federativeEntity) {
-            throw new RuntimeException("A oportunidade {$opportunity->id} não é um edital selado por Ente Federado.");
+            $reason = "A oportunidade {$opportunity->id} não é um edital selado por Ente Federado.";
+            $this->recordUnsent($log, SendOutcome::error($reason), $attempt, $reason);
+
+            throw new RuntimeException($reason);
         }
 
         $payload = $this->plugin->opportunityPayload()->build($opportunity);
@@ -36,18 +41,24 @@ class OpportunitySender
         // conferir antes do desvio de modo: em dev, pular a conferência esconderia o campo faltando
         if ($pending) {
             App::i()->log->error("ConectaEnte: payload do edital {$opportunity->id} incompleto: " . implode(' ', $pending));
+            $outcome = SendOutcome::error($this->pendingReason($pending));
+            $this->recordUnsent($log, $outcome, $attempt, $outcome->reason);
 
-            return $this->recorded($opportunity, SendOutcome::error($this->pendingReason($pending)));
+            return $this->recorded($opportunity, $outcome);
         }
 
         if ($this->plugin->isDevMode()) {
             // a faixa na página não alcança quem drena a fila: sem este registro, o worker simula em silêncio
             App::i()->log->warning("ConectaEnte em modo dev: o edital {$opportunity->id} não foi enviado ao CultBR.");
+            $outcome = SendOutcome::simulated();
+            $this->recordUnsent($log, $outcome, $attempt, null);
 
-            return $this->recorded($opportunity, SendOutcome::simulated());
+            return $this->recorded($opportunity, $outcome);
         }
 
-        $result = $this->plugin->client()->sendOpportunity($federativeEntity->token, $payload);
+        // o cliente precisa sobreviver à chamada: é dele que saem as trocas que viram tentativas
+        $client = $this->plugin->client();
+        $result = $client->sendOpportunity($federativeEntity->token, $payload);
 
         $outcome = match (true) {
             $result->unreachable => SendOutcome::unavailable($this->unavailableReason($result)),
@@ -56,15 +67,48 @@ class OpportunitySender
         };
 
         $this->keepParEditalId($opportunity, $result);
+        $this->recordAttempts($log, $client->exchanges(), $outcome, $attempt);
 
         // indisponível não é desfecho final: quem decide reenfileirar é o job, que sabe a tentativa atual
         if ($outcome->isRetryable()) {
             $this->logUnavailable($opportunity, $result);
         } else {
             $this->recordOutcome($opportunity, $outcome);
+            $this->closeHistory($log, $outcome);
         }
 
         return $outcome;
+    }
+
+    // falha anterior à requisição também deixa tentativa: sem status, sem resposta, com o motivo
+    private function recordUnsent(?Log $log, SendOutcome $outcome, int $attempt, ?string $reason): void
+    {
+        if (!$log) {
+            return;
+        }
+
+        $exchange = new HttpExchange(
+            endpoint: $this->plugin->client()->sendOpportunityUrl(),
+            errorMessage: $reason,
+        );
+
+        $this->plugin->sendLogger()->recordAttempt($log, $exchange, $outcome->status, $attempt, $this->plugin->sendMaxAttempts());
+        $this->closeHistory($log, $outcome);
+    }
+
+    private function recordAttempts(?Log $log, array $exchanges, SendOutcome $outcome, int $attempt): void
+    {
+        if ($log) {
+            $this->plugin->sendLogger()->recordAttempts($log, $exchanges, $outcome->status, $attempt, $this->plugin->sendMaxAttempts());
+        }
+    }
+
+    // o metadado do envio prevalece: envelope que não fecha deixa linha no log, não desfaz o que o CultBR aceitou
+    private function closeHistory(?Log $log, SendOutcome $outcome): void
+    {
+        if ($log && !$this->plugin->sendLogger()->finish($log, $outcome->status)) {
+            App::i()->log->warning("ConectaEnte: o histórico do edital {$log->opportunityId} não fechou como {$outcome->status}; vale o desfecho gravado no edital.");
+        }
     }
 
     // o motivo é público na API sem sessão: muitas pendências indicam defeito no build, e aí o log é o lugar
@@ -95,11 +139,13 @@ class OpportunitySender
     }
 
     /** Grava o desfecho final do esgotamento, preservando o motivo da última tentativa. */
-    public function recordExhausted(Opportunity $opportunity, SendOutcome $lastAttempt): void
+    public function recordExhausted(Opportunity $opportunity, SendOutcome $lastAttempt, ?Log $log = null): void
     {
         $reason = trim(($lastAttempt->reason ?? '') . ' ' . i::__('Tentativas esgotadas.'));
+        $outcome = SendOutcome::error($reason);
 
-        $this->recordOutcome($opportunity, SendOutcome::error($reason));
+        $this->recordOutcome($opportunity, $outcome);
+        $this->closeHistory($log, $outcome);
     }
 
     // o status é inócuo e identifica a falha; o erro do curl nomeia host e DNS, e o motivo sai na API sem sessão
@@ -118,9 +164,12 @@ class OpportunitySender
     }
 
     // o motivo é público na API da oportunidade: mensagem de exceção fica no log, não aqui
-    public function recordFailure(Opportunity $opportunity): void
+    public function recordFailure(Opportunity $opportunity, ?Log $log = null, int $attempt = 1): void
     {
-        $this->recordOutcome($opportunity, SendOutcome::error(i::__('Falha ao enviar o edital ao CultBR.')));
+        $outcome = SendOutcome::error(i::__('Falha ao enviar o edital ao CultBR.'));
+
+        $this->recordOutcome($opportunity, $outcome);
+        $this->recordUnsent($log, $outcome, $attempt, $outcome->reason);
     }
 
     // via saveMetadata(), nunca save(): salvar a oportunidade de novo reacionaria o próprio gatilho de envio

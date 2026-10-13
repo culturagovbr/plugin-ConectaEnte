@@ -2,6 +2,7 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Entities\Log;
 use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Http\ParInformationResult;
@@ -394,12 +395,12 @@ class SendOpportunityJobTest extends TestCase
         $opportunity = $this->liveSealedOpportunity();
         $log = $this->captureLog();
         Plugin::instance()->opportunitySender = new class (Plugin::instance(), Plugin::instance()->sealedOpportunity()) extends OpportunitySender {
-            public function send(Opportunity $opportunity): SendOutcome
+            public function send(Opportunity $opportunity, ?Log $log = null, int $attempt = 1): SendOutcome
             {
                 throw new RuntimeException('estouro no envio');
             }
 
-            public function recordFailure(Opportunity $opportunity): void
+            public function recordFailure(Opportunity $opportunity, ?Log $log = null, int $attempt = 1): void
             {
                 throw new RuntimeException('estouro ao gravar o desfecho');
             }
