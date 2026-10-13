@@ -19,6 +19,7 @@ $this->import('
     conectaente--proponent-types
     conectaente--quota-reservation
     conectaente--registration-channels
+    conectaente--send-history
     conectaente--targeting-multiselect
     entity-field
     entity-file
@@ -124,4 +125,8 @@ $this->import('
             </mc-card>
         </aside>
     </mc-container>
+</mc-tab>
+
+<mc-tab v-if="isSealed" label="<?php i::esc_attr_e('Histórico de envio') ?>" slug="cultbr-historico" cache>
+    <conectaente--send-history :entity="entity"></conectaente--send-history>
 </mc-tab>
