@@ -397,6 +397,10 @@ class Plugin extends \MapasCulturais\Plugin
             $this->part('conectaente/opportunity-tab');
         });
 
+        $app->hook('template(opportunity.edit.entity-header):end', function () {
+            $this->part('conectaente/send-status');
+        });
+
         $app->hook('view.partial(main-header):after', function ($template, &$html) {
             if (Plugin::instance()->isDevMode()) {
                 $html .= $this->partialRender('conectaente/dev-mode-banner', [], true);
