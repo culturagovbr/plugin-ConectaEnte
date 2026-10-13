@@ -8,6 +8,7 @@ use ConectaEnte\Dto\SealOption;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Http\ParInformationResult;
+use ConectaEnte\Http\TokenValidation;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
@@ -140,6 +141,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $validation = Plugin::instance()->client()->validateToken($token);
 
         if (!$validation->accepted) {
+            $this->logRefusedToken($validation, 'no cadastro de um Ente Federado');
             $this->errorJson(['token' => [$validation->message]], $validation->unavailable ? 503 : 400);
         }
 
@@ -214,6 +216,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $validation = Plugin::instance()->client()->validateToken($token);
 
         if (!$validation->accepted) {
+            $this->logRefusedToken($validation, "na troca do token do ente {$federativeEntity->id}");
             $this->errorJson(['token' => [$validation->message]], $validation->unavailable ? 503 : 400);
         }
 
@@ -271,6 +274,14 @@ class ConectaEnteController extends \MapasCulturais\Controller
         }
 
         $this->json(['available' => true, 'simulated' => Plugin::instance()->isDevMode()] + $result->tree->jsonSerialize());
+    }
+
+    // o motivo do CultBR chega à tela e morre nela: sem esta linha, token recusado não deixa rastro nenhum
+    private function logRefusedToken(TokenValidation $validation, string $where): void
+    {
+        $outcome = $validation->unavailable ? 'indisponível' : 'recusado';
+
+        App::i()->log->warning("ConectaEnte: token {$outcome} {$where}: {$validation->message}");
     }
 
     private function parUnavailableReason(ParInformationResult $result): string
