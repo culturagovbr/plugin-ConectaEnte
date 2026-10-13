@@ -124,4 +124,12 @@ return [
                 FOREIGN KEY (log_id) REFERENCES conectaente_log(id) ON DELETE CASCADE");
         }
     },
+
+    // a limpeza vem antes do índice, no mesmo passo: índice único não nasce com acervo duplicado
+    'conectaente: o edital do CultBR passa a pertencer a uma oportunidade só' => function () {
+        \ConectaEnte\Migrations\ClaimParEditalId::run();
+
+        __try("CREATE UNIQUE INDEX IF NOT EXISTS unq_conectaente_par_edital_id
+            ON opportunity_meta (value) WHERE key = 'conectaente_parEditalId'");
+    },
 ];
