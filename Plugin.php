@@ -26,6 +26,7 @@ use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\SealedOpportunity;
 use ConectaEnte\Services\SendEligibility;
+use ConectaEnte\Services\SendStatusView;
 use ConectaEnte\Services\SendHistory;
 use ConectaEnte\Services\SendLogger;
 use MapasCulturais\Entities\Job;
@@ -137,6 +138,11 @@ class Plugin extends \MapasCulturais\Plugin
     function fieldLabels(): FieldLabels
     {
         return new FieldLabels();
+    }
+
+    function sendStatusView(): SendStatusView
+    {
+        return new SendStatusView($this->sealedOpportunity(), $this->sendEligibility());
     }
 
     function sendEligibility(): SendEligibility
