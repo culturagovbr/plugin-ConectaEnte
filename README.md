@@ -50,11 +50,20 @@ docker run --rm -v "$PWD":/app -w /app php:7.2-cli sh -c \
 
 ## Testes
 
-Unitários (PHPUnit 8, PHP 7.2 em container, sem banco nem HTTP). A partir de qualquer pasta:
+Unitários (PHPUnit 8, PHP 7.2 em container, sem banco nem HTTP). O `tests/run.sh` resolve os
+caminhos sozinho, então funciona de qualquer diretório; só o caminho do script muda. Da raiz do
+repositório principal (`v5mapas`):
 
 ```bash
-src/protected/application/plugins/ConectaEnte/tests/run.sh                        # toda a suíte
+src/protected/application/plugins/ConectaEnte/tests/run.sh                         # toda a suíte
 src/protected/application/plugins/ConectaEnte/tests/run.sh --filter testEditalType # filtra por nome
+```
+
+Da raiz deste plugin:
+
+```bash
+tests/run.sh
+tests/run.sh --filter testEditalType
 ```
 
 Os testes ficam em `tests/src` (namespace `Tests\ConectaEnte`); `tests/bootstrap.php` carrega o autoload.
