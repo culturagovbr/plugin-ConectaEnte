@@ -50,4 +50,4 @@ docker run --rm -v "$PWD":/app -w /app php:7.2-cli sh -c \
 
 ## Testes
 
-Ver issue #14.
+Ver issue #50.
