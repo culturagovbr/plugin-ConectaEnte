@@ -50,4 +50,11 @@ docker run --rm -v "$PWD":/app -w /app php:7.2-cli sh -c \
 
 ## Testes
 
-Ver issue #50.
+Unitários (PHPUnit 8, PHP 7.2 em container, sem banco nem HTTP). A partir de qualquer pasta:
+
+```bash
+src/protected/application/plugins/ConectaEnte/tests/run.sh                        # toda a suíte
+src/protected/application/plugins/ConectaEnte/tests/run.sh --filter testEditalType # filtra por nome
+```
+
+Os testes ficam em `tests/src` (namespace `Tests\ConectaEnte`); `tests/bootstrap.php` carrega o autoload.
