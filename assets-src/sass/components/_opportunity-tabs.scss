@@ -1,0 +1,11 @@
+// o slug da aba vira classe no item da lista: é por ele que as duas abas do plugin se distinguem das do core
+.tabs-component__button.cultbr,
+.tabs-component__button.cultbr-historico {
+    a {
+        color: var(--mc-primary-500);
+    }
+
+    &.tabs-component__button--active::after {
+        background-color: var(--mc-primary-500);
+    }
+}

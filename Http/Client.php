@@ -1,0 +1,224 @@
+<?php
+
+namespace ConectaEnte\Http;
+
+use ConectaEnte\Dto\ParInformation;
+use ConectaEnte\Http\Transport\CurlTransport;
+use ConectaEnte\Http\Transport\TransportInterface;
+use MapasCulturais\i;
+
+class Client
+{
+    const TYPE_SYSTEM = 'SISTEMA';
+
+    private TransportInterface $transport;
+
+    /** @var HttpExchange[] */
+    private array $exchanges = [];
+
+    public function __construct(
+        private string $host,
+        ?TransportInterface $transport = null,
+        // em modo dev a fixture é uma só, e precisa servir a qualquer ente cadastrado
+        private bool $acceptsAnyEnte = false,
+    ) {
+        $this->transport = $transport ?? new CurlTransport;
+    }
+
+    /**
+     * Verifica o token contra a API e descobre de qual ente ele é.
+     */
+    public function validateToken(string $token): TokenValidation
+    {
+        $response = $this->transport->get($this->url('/api/v1/integracao/validar-token'), ['token' => $token]);
+
+        if (!$response->reachedServer()) {
+            return TokenValidation::unreachable();
+        }
+
+        $body = $response->json();
+
+        if ($response->status === 200) {
+            return $this->readValidation($body);
+        }
+
+        if ($response->status >= 500) {
+            return TokenValidation::unreachable();
+        }
+
+        return TokenValidation::reject($this->readDetail($body, $response->status, i::__('A Plataforma CultBR recusou a verificação do token (HTTP %d).')));
+    }
+
+    /**
+     * Responde sem token: separa "API fora do ar" de "credencial rejeitada".
+     */
+    public function isHealthy(): bool
+    {
+        return $this->transport->get($this->url('/health'))->status === 200;
+    }
+
+    /**
+     * A árvore do PAR do ente dono do token, casada pelo cnpj na lista que a resposta devolve.
+     */
+    public function getParInformation(string $token, string $document): ParInformationResult
+    {
+        $response = $this->transport->get($this->url('/api/v1/par-information'), ['token' => $token]);
+
+        if (!$response->reachedServer()) {
+            return ParInformationResult::unreachable();
+        }
+
+        if ($response->status === 200) {
+            $body = $response->decoded();
+
+            // corpo imprestável não pode virar árvore vazia: o job gravaria "ente sem PAR" no cache
+            if ($body === null) {
+                return ParInformationResult::unreachable(i::__('A resposta da API não é um JSON válido.'));
+            }
+
+            return ParInformationResult::ok(ParInformation::fromApiListResponse($body, $this->enteDocument($body, $document)));
+        }
+
+        if ($response->status === 404) {
+            return ParInformationResult::notFound();
+        }
+
+        if ($response->status >= 500) {
+            return ParInformationResult::unreachable();
+        }
+
+        return ParInformationResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou a consulta ao Plano de Ação e Referência (HTTP %d).')));
+    }
+
+    /**
+     * Envia o edital selado; 5xx e falha de conexão são a única faixa retentável.
+     */
+    public function sendOpportunity(string $token, array $payload): SendResult
+    {
+        $url = $this->sendOpportunityUrl();
+
+        // o contrato dá o upsert ao POST, e só atualização ao PUT: um verbo cobre criar e atualizar
+        $response = $this->transport->post($url, $payload, ['token' => $token]);
+
+        $this->exchanges[] = $this->exchangeOf('POST', $url, $payload, $response);
+
+        if (!$response->reachedServer() || $response->status >= 500) {
+            return SendResult::unreachable($response->status, $response->transportError);
+        }
+
+        if ($response->status === 200) {
+            return SendResult::ok($response->decoded() ?? []);
+        }
+
+        return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));
+    }
+
+    /** A rota do envio, para o histórico nomear o destino mesmo quando a requisição não chega a sair. */
+    public function sendOpportunityUrl(): string
+    {
+        return $this->url('/api/v1/oportunidades/');
+    }
+
+    /**
+     * As trocas desta execução, na ordem em que aconteceram.
+     *
+     * @return HttpExchange[]
+     */
+    public function exchanges(): array
+    {
+        return $this->exchanges;
+    }
+
+    // acumular, nunca sobrescrever: duas requisições numa execução são duas linhas do histórico
+    private function exchangeOf(string $method, string $url, array $payload, Response $response): HttpExchange
+    {
+        return new HttpExchange(
+            endpoint: $url,
+            method: $method,
+            status: $response->reachedServer() ? $response->status : null,
+            requestPayload: $payload,
+            responseBody: $response->body === '' ? null : $response->body,
+            responseHeaders: $response->headers ?: null,
+            requestId: $response->headers['x-request-id'] ?? null,
+            errorMessage: $response->transportError,
+            durationMs: $response->durationMs,
+        );
+    }
+
+    private function readValidation(array $body): TokenValidation
+    {
+        if (($body['tipo'] ?? null) !== self::TYPE_SYSTEM) {
+            return TokenValidation::reject(i::__('Este token não é um token de sistema (ente).'));
+        }
+
+        if (empty($body['valido']) || empty($body['cnpj'])) {
+            return TokenValidation::reject(i::__('A Plataforma CultBR não reconheceu este token.'));
+        }
+
+        $name = $body['nome_ente'] ?? null;
+
+        return TokenValidation::accept((string) $body['cnpj'], $name ? (string) $name : null);
+    }
+
+    /**
+     * `detail` é texto em 400, 401, 403 e 404, e lista de erros de campo em 422.
+     */
+    private function enteDocument(array $body, string $document): string
+    {
+        return $this->acceptsAnyEnte ? (string) ($body['data'][0]['cnpj'] ?? $document) : $document;
+    }
+
+    private function readDetail(array $body, int $status, string $refusal): string
+    {
+        $detail = $body['detail'] ?? null;
+
+        if (is_string($detail) && $detail !== '') {
+            return $detail;
+        }
+
+        if (is_array($detail)) {
+            $messages = array_filter(array_map(fn($error) => $this->fieldError($error), $detail));
+
+            if ($messages) {
+                return implode('; ', $messages);
+            }
+        }
+
+        return sprintf($refusal, $status);
+    }
+
+    // o formato de `detail` é do CultBR: item fora dele não pode derrubar a leitura de nenhum dos fluxos
+    private function fieldError(mixed $error): ?string
+    {
+        $message = is_array($error) ? ($error['msg'] ?? null) : null;
+
+        if (!is_string($message) || $message === '') {
+            return null;
+        }
+
+        $field = $this->fieldName($error['loc'] ?? null);
+
+        return $field ? "{$field}: {$message}" : $message;
+    }
+
+    // só erro no corpo é campo do edital: `header` é a credencial e `query` é a rota, e nomeá-los confundiria
+    private function fieldName(mixed $loc): ?string
+    {
+        if (!is_array($loc) || ($loc[0] ?? null) !== 'body') {
+            return null;
+        }
+
+        $path = array_slice($loc, 1);
+
+        return $path ? implode('.', $path) : null;
+    }
+
+    /**
+     * O contrato não declara `servers`: os caminhos dele são absolutos a partir da origem,
+     * e `/health` fica fora de `/api/v1`. Por isso o host configurado é só a origem.
+     */
+    private function url(string $path): string
+    {
+        return rtrim($this->host, '/') . $path;
+    }
+}

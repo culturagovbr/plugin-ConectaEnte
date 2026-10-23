@@ -1,0 +1,66 @@
+<?php
+/**
+ * @var MapasCulturais\App $app
+ * @var MapasCulturais\Themes\BaseV2\Theme $this
+ */
+
+use MapasCulturais\i;
+
+?>
+
+<div class="opportunity-proponent-types conectaente-proponent-types" data-field="registrationProponentTypes">
+    <h4 class="bold"><?= i::__("Tipos do proponente")?> <span class="required">*<?php i::_e('obrigatório') ?></span></h4>
+    <h6><?= i::__("Selecione um ou mais tipos de proponente que poderá participar do edital")?></h6>
+    <div>
+        <div class="opportunity-proponent-types__fields">
+            <div class="opportunity-proponent-types__field" v-for="optionValue in description.optionsOrder" :key="optionValue">
+                <label>
+                    <input 
+                        :checked="value?.includes(optionValue)" 
+                        type="checkbox" 
+                        :value="optionValue" 
+                        @change="modifyCheckbox($event)"
+                    > 
+                    {{ description.options[optionValue] }}
+                </label>
+                <div class="opportunity-proponent-types__field field__collective" v-if="showColetivoBinding && optionValue === '<?= i::__('Coletivo') ?>'">
+                    <label>
+                        <input 
+                            type="checkbox" 
+                            :checked="proponentAgentRelation['Coletivo']" 
+                            @change="toggleAgentRelation($event, 'Coletivo')"
+                        > 
+                        <?= i::__("Habilitar a vinculação de agente coletivo")?>
+                    </label>
+                    <label v-if="proponentAgentRelation['Coletivo']">
+                        <input 
+                            type="checkbox" 
+                            :checked="proponentAgentRelationAvatar['Coletivo']" 
+                            @change="toggleAgentRelationAvatar($event, 'Coletivo')"
+                        > 
+                        <?= i::__("Habilitar solicitação de imagem de perfil")?>
+                    </label>
+                </div>
+
+                <div class="opportunity-proponent-types__field field__legal" v-if="showJuridicaBinding && optionValue === '<?= i::__('Pessoa Jurídica') ?>'">
+                    <label>
+                        <input 
+                            type="checkbox" 
+                            :checked="proponentAgentRelation['Pessoa Jurídica']" 
+                            @change="toggleAgentRelation($event, 'Pessoa Jurídica')"
+                        > 
+                        <?= i::__("Habilitar a vinculação de agente coletivo")?>
+                    </label>
+                    <label v-if="proponentAgentRelation['Pessoa Jurídica']">
+                        <input 
+                            type="checkbox" 
+                            :checked="proponentAgentRelationAvatar['Pessoa Jurídica']" 
+                            @change="toggleAgentRelationAvatar($event, 'Pessoa Jurídica')"
+                        > 
+                        <?= i::__("Habilitar solicitação de imagem de perfil")?>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

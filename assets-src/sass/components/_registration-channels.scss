@@ -1,0 +1,22 @@
+.conectaente-registration-channels {
+    width: 100%;
+}
+
+.conectaente-registration-channels__detalhamento {
+    width: 100%;
+    margin-top: 1.5rem;
+}
+
+.conectaente-registration-channels__detalhamento-titulo {
+    font-family: var(--mc-font-headings);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.1875rem;
+    margin: 0 0 0.75rem 0;
+    display: block;
+}
+
+.conectaente-registration-channels .required {
+    color: var(--mc-error);
+    font-weight: 700;
+}
