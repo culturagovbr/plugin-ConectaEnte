@@ -107,11 +107,16 @@ class Client
 
     private function readValidation(array $body)
     {
+        // `valido` vem antes do tipo: a mensagem do tipo errado afirma que o token é válido
+        if (empty($body['valido'])) {
+            return TokenValidation::reject($this->translate('A Plataforma CultBR não reconheceu este token.'));
+        }
+
         if (!isset($body['tipo']) || $body['tipo'] !== self::TYPE_SYSTEM) {
             return TokenValidation::reject($this->translate(self::WRONG_TYPE_MESSAGE));
         }
 
-        if (empty($body['valido']) || empty($body['cnpj'])) {
+        if (empty($body['cnpj'])) {
             return TokenValidation::reject($this->translate('A Plataforma CultBR não reconheceu este token.'));
         }
 

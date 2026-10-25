@@ -62,6 +62,19 @@ class ClientValidateTokenTest extends TestCase
         $this->assertFalse($validation->isUnavailable());
     }
 
+    // `valido` falso nunca pode ser reportado como "token válido, mas de outro tipo"
+    public function testInvalidTokenIsNotReportedAsWrongTypeWhateverTheType()
+    {
+        foreach ([[], ['tipo' => 'PAT'], ['tipo' => 'SISTEMA'], ['tipo' => null]] as $extra) {
+            $body = array_merge(['valido' => false, 'cnpj' => '12200176000176'], $extra);
+
+            $validation = (new Client(self::HOST, FakeTransport::replying(200, $body)))->validateToken('um-token');
+
+            $this->assertFalse($validation->isAccepted());
+            $this->assertNotSame(Client::WRONG_TYPE_MESSAGE, $validation->getMessage());
+        }
+    }
+
     public function testRejectsSuccessResponseWithoutDocument()
     {
         $transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA']);
