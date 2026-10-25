@@ -143,7 +143,7 @@ class ClientValidateTokenTest extends TestCase
 
     public function testRejectsDocumentThatIsNotFourteenDigits()
     {
-        foreach (['1220017600017', '122001760001766', '12.200.176/0001-76', 'abcdefghijklmn'] as $cnpj) {
+        foreach (['1220017600017', '122001760001766', '12.200.176/0001-76', 'abcdefghijklmn', "12200176000176\n", " 12200176000176"] as $cnpj) {
             $transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA', 'cnpj' => $cnpj]);
 
             $validation = (new Client(self::HOST, $transport))->validateToken('um-token');

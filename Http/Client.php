@@ -120,7 +120,7 @@ class Client
             return TokenValidation::reject($this->translate('A Plataforma CultBR não reconheceu este token.'));
         }
 
-        if (!preg_match('/^\d{14}$/', (string) $body['cnpj'])) {
+        if (!preg_match('/^\d{14}\z/', (string) $body['cnpj'])) {
             return TokenValidation::reject($this->translate('A Plataforma CultBR devolveu um CNPJ inválido para este token.'));
         }
 
