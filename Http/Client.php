@@ -34,8 +34,16 @@ class Client
 
     public function validateToken($token)
     {
-        if (trim((string) $token) === '') {
+        // quebra de linha colada junto do token é comum e a API o recusaria como "inválido"
+        $token = trim((string) $token);
+
+        if ($token === '') {
             return TokenValidation::reject($this->translate('Informe o token do ente.'));
+        }
+
+        // o token vira linha de cabeçalho HTTP: controle no meio dele permitiria injetar cabeçalho
+        if (preg_match('/[\x00-\x1f\x7f]/', $token)) {
+            return TokenValidation::reject($this->translate('O token contém caracteres inválidos.'));
         }
 
         $response = $this->transport->get($this->url('/api/v1/integracao/validar-token'), ['token' => $token]);
@@ -47,7 +55,8 @@ class Client
         $body = $response->json();
 
         if ($response->getStatus() === 200) {
-            return $this->readValidation($body);
+            // 200 sem JSON é página de proxy/balanceador, não resposta do CultBR: não é culpa do token
+            return $response->decoded() === null ? TokenValidation::unreachable() : $this->readValidation($body);
         }
 
         if ($response->getStatus() >= 500) {

@@ -141,6 +141,51 @@ class ClientValidateTokenTest extends TestCase
         }
     }
 
+    public function testSendsTheTokenWithoutSurroundingWhitespace()
+    {
+        foreach (["cult_abc\n", "  cult_abc", "\tcult_abc \r\n"] as $pasted) {
+            $transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA', 'cnpj' => '12200176000176']);
+
+            $validation = (new Client(self::HOST, $transport))->validateToken($pasted);
+
+            $this->assertTrue($validation->isAccepted());
+            $this->assertSame(['token' => 'cult_abc'], $transport->sentHeaders[0]);
+        }
+    }
+
+    public function testRejectsTokenWithControlCharactersWithoutCallingTheApi()
+    {
+        foreach (["cult\r\nX-Injected: 1", "cult\nabc", "cult\0abc", "cult\x7fabc"] as $token) {
+            $transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA', 'cnpj' => '12200176000176']);
+
+            $validation = (new Client(self::HOST, $transport))->validateToken($token);
+
+            $this->assertFalse($validation->isAccepted());
+            $this->assertFalse($validation->isUnavailable());
+            $this->assertSame([], $transport->requestedUrls);
+            $this->assertStringNotContainsString('X-Injected', (string) $validation->getMessage());
+        }
+    }
+
+    // proxy/balanceador respondendo 200 com HTML não pode ser contado como token recusado
+    public function testSuccessWithoutJsonIsUnavailableAndNotAnInvalidToken()
+    {
+        foreach (['<html>Bad gateway page</html>', '', 'OK', '"texto"'] as $body) {
+            $validation = (new Client(self::HOST, FakeTransport::replying(200, $body)))->validateToken('um-token');
+
+            $this->assertFalse($validation->isAccepted());
+            $this->assertTrue($validation->isUnavailable());
+        }
+    }
+
+    public function testSuccessWithAnEmptyJsonObjectIsStillARejectedToken()
+    {
+        $validation = (new Client(self::HOST, FakeTransport::replying(200, '{}')))->validateToken('um-token');
+
+        $this->assertFalse($validation->isAccepted());
+        $this->assertFalse($validation->isUnavailable());
+    }
+
     public function testRejectsDocumentThatIsNotFourteenDigits()
     {
         foreach (['1220017600017', '122001760001766', '12.200.176/0001-76', 'abcdefghijklmn', "12200176000176\n", " 12200176000176"] as $cnpj) {
