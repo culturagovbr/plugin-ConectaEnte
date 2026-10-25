@@ -11,6 +11,7 @@ use MapasCulturais\i;
 class Client
 {
     const TYPE_SYSTEM = 'SISTEMA';
+    const WRONG_TYPE_MESSAGE = 'Este token é válido, mas não é um token de sistema (ente).';
 
     private $host;
     private $transport;
@@ -33,6 +34,10 @@ class Client
 
     public function validateToken($token)
     {
+        if (trim((string) $token) === '') {
+            return TokenValidation::reject($this->translate('Informe o token do ente.'));
+        }
+
         $response = $this->transport->get($this->url('/api/v1/integracao/validar-token'), ['token' => $token]);
 
         if (!$response->reachedServer()) {
@@ -47,6 +52,11 @@ class Client
 
         if ($response->getStatus() >= 500) {
             return TokenValidation::unreachable();
+        }
+
+        // 403 é o token válido de outro tipo (um PAT): mensagem fixa, distinta das 4 recusas do 401
+        if ($response->getStatus() === 403) {
+            return TokenValidation::reject($this->translate(self::WRONG_TYPE_MESSAGE));
         }
 
         return TokenValidation::reject($this->readDetail($body, $response->getStatus(), $this->translate('A Plataforma CultBR recusou a verificação do token (HTTP %d).')));
@@ -98,11 +108,15 @@ class Client
     private function readValidation(array $body)
     {
         if (!isset($body['tipo']) || $body['tipo'] !== self::TYPE_SYSTEM) {
-            return TokenValidation::reject($this->translate('Este token não é um token de sistema (ente).'));
+            return TokenValidation::reject($this->translate(self::WRONG_TYPE_MESSAGE));
         }
 
         if (empty($body['valido']) || empty($body['cnpj'])) {
             return TokenValidation::reject($this->translate('A Plataforma CultBR não reconheceu este token.'));
+        }
+
+        if (!preg_match('/^\d{14}$/', (string) $body['cnpj'])) {
+            return TokenValidation::reject($this->translate('A Plataforma CultBR devolveu um CNPJ inválido para este token.'));
         }
 
         // o contrato declara `nome_ente`; a resposta real observada em homologação usa `nome_entidade`

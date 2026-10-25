@@ -97,12 +97,67 @@ class ClientValidateTokenTest extends TestCase
 
     public function testRejectsTokenOfTheWrongTypeWithItsOwnMessage()
     {
-        $transport = FakeTransport::replying(403, ['detail' => 'Token válido, mas não é um token de sistema (ente).']);
+        foreach ([['detail' => 'Token válido, mas não é um token de sistema (ente).'], 'Forbidden', []] as $body) {
+            $validation = (new Client(self::HOST, FakeTransport::replying(403, $body)))->validateToken('um-token');
 
-        $validation = (new Client(self::HOST, $transport))->validateToken('um-token');
+            $this->assertFalse($validation->isAccepted());
+            $this->assertFalse($validation->isUnavailable());
+            $this->assertSame(Client::WRONG_TYPE_MESSAGE, $validation->getMessage());
+        }
+    }
 
-        $this->assertFalse($validation->isAccepted());
-        $this->assertSame('Token válido, mas não é um token de sistema (ente).', $validation->getMessage());
+    public function testWrongTypeMessageDiffersFromEveryInvalidTokenMessage()
+    {
+        foreach (['Token de autorização necessário', 'Token inválido', 'Token expirado', 'Token revogado'] as $detail) {
+            $validation = (new Client(self::HOST, FakeTransport::replying(401, ['detail' => $detail])))->validateToken('um-token');
+
+            $this->assertNotSame(Client::WRONG_TYPE_MESSAGE, $validation->getMessage());
+        }
+    }
+
+    public function testEmptyTokenIsRejectedWithoutCallingTheApi()
+    {
+        foreach (['', '   ', null] as $token) {
+            $transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA', 'cnpj' => '12200176000176']);
+
+            $validation = (new Client(self::HOST, $transport))->validateToken($token);
+
+            $this->assertFalse($validation->isAccepted());
+            $this->assertFalse($validation->isUnavailable());
+            $this->assertSame([], $transport->requestedUrls);
+        }
+    }
+
+    public function testRejectsDocumentThatIsNotFourteenDigits()
+    {
+        foreach (['1220017600017', '122001760001766', '12.200.176/0001-76', 'abcdefghijklmn'] as $cnpj) {
+            $transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA', 'cnpj' => $cnpj]);
+
+            $validation = (new Client(self::HOST, $transport))->validateToken('um-token');
+
+            $this->assertFalse($validation->isAccepted());
+            $this->assertNull($validation->getDocument());
+        }
+    }
+
+    public function testNoMessageEchoesTheToken()
+    {
+        $token = 'cult_segredo-do-ente';
+        $replies = [
+            FakeTransport::replying(401, ['detail' => 'Token inválido']),
+            FakeTransport::replying(403, []),
+            FakeTransport::replying(400, 'nao e json'),
+            FakeTransport::replying(422, ['detail' => [['loc' => ['header', 'token'], 'msg' => 'Field required']]]),
+            FakeTransport::replying(500, 'Internal Server Error'),
+            FakeTransport::replying(200, ['valido' => false, 'tipo' => 'SISTEMA']),
+            FakeTransport::unreachable(),
+        ];
+
+        foreach ($replies as $transport) {
+            $validation = (new Client(self::HOST, $transport))->validateToken($token);
+
+            $this->assertStringNotContainsString($token, (string) $validation->getMessage());
+        }
     }
 
     public function testRejectsSystemTokenWhoseTypeIsNotSystem()
