@@ -11,6 +11,7 @@ use MapasCulturais\i;
 class Client
 {
     const TYPE_SYSTEM = 'SISTEMA';
+    const WRONG_TYPE_MESSAGE = 'Este token é válido, mas não é um token de sistema (ente).';
 
     private $host;
     private $transport;
@@ -33,6 +34,18 @@ class Client
 
     public function validateToken($token)
     {
+        // quebra de linha colada junto do token é comum e a API o recusaria como "inválido"
+        $token = trim((string) $token);
+
+        if ($token === '') {
+            return TokenValidation::reject($this->translate('Informe o token do ente.'));
+        }
+
+        // o token vira linha de cabeçalho HTTP: controle no meio dele permitiria injetar cabeçalho
+        if (preg_match('/[\x00-\x1f\x7f]/', $token)) {
+            return TokenValidation::reject($this->translate('O token contém caracteres inválidos.'));
+        }
+
         $response = $this->transport->get($this->url('/api/v1/integracao/validar-token'), ['token' => $token]);
 
         if (!$response->reachedServer()) {
@@ -42,11 +55,17 @@ class Client
         $body = $response->json();
 
         if ($response->getStatus() === 200) {
-            return $this->readValidation($body);
+            // 200 sem JSON é página de proxy/balanceador, não resposta do CultBR: não é culpa do token
+            return $response->decoded() === null ? TokenValidation::unreachable() : $this->readValidation($body);
         }
 
         if ($response->getStatus() >= 500) {
             return TokenValidation::unreachable();
+        }
+
+        // 403 é o token válido de outro tipo (um PAT): mensagem fixa, distinta das 4 recusas do 401
+        if ($response->getStatus() === 403) {
+            return TokenValidation::reject($this->translate(self::WRONG_TYPE_MESSAGE));
         }
 
         return TokenValidation::reject($this->readDetail($body, $response->getStatus(), $this->translate('A Plataforma CultBR recusou a verificação do token (HTTP %d).')));
@@ -97,12 +116,21 @@ class Client
 
     private function readValidation(array $body)
     {
-        if (!isset($body['tipo']) || $body['tipo'] !== self::TYPE_SYSTEM) {
-            return TokenValidation::reject($this->translate('Este token não é um token de sistema (ente).'));
+        // `valido` vem antes do tipo: a mensagem do tipo errado afirma que o token é válido
+        if (empty($body['valido'])) {
+            return TokenValidation::reject($this->translate('A Plataforma CultBR não reconheceu este token.'));
         }
 
-        if (empty($body['valido']) || empty($body['cnpj'])) {
+        if (!isset($body['tipo']) || $body['tipo'] !== self::TYPE_SYSTEM) {
+            return TokenValidation::reject($this->translate(self::WRONG_TYPE_MESSAGE));
+        }
+
+        if (empty($body['cnpj'])) {
             return TokenValidation::reject($this->translate('A Plataforma CultBR não reconheceu este token.'));
+        }
+
+        if (!preg_match('/^\d{14}\z/', (string) $body['cnpj'])) {
+            return TokenValidation::reject($this->translate('A Plataforma CultBR devolveu um CNPJ inválido para este token.'));
         }
 
         // o contrato declara `nome_ente`; a resposta real observada em homologação usa `nome_entidade`
