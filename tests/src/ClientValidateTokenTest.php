@@ -268,6 +268,28 @@ class ClientValidateTokenTest extends TestCase
         $this->assertStringContainsString('token', $validation->getMessage());
     }
 
+    // 404 (host ou caminho errado), 408 e 429 não dizem nada sobre o token
+    public function testTreatsNotFoundTimeoutAndRateLimitAsUnavailable()
+    {
+        foreach ([404, 408, 429] as $status) {
+            $validation = (new Client(self::HOST, FakeTransport::replying($status, ['detail' => 'Not Found'])))->validateToken('um-token');
+
+            $this->assertTrue($validation->isUnavailable(), "HTTP {$status}");
+            $this->assertFalse($validation->isAccepted());
+        }
+    }
+
+    public function testEmptyHostIsReportedAsMisconfiguredWithoutCallingTheApi()
+    {
+        $transport = FakeTransport::replying(200, ['valido' => true, 'tipo' => 'SISTEMA', 'cnpj' => '12200176000176']);
+
+        $validation = (new Client('', $transport))->validateToken('um-token');
+
+        $this->assertTrue($validation->isUnavailable());
+        $this->assertStringContainsString('CONECTAENTE_HOST', $validation->getMessage());
+        $this->assertSame([], $transport->requestedUrls);
+    }
+
     public function testHealthChecksTheRouteOutsideTheApiPrefix()
     {
         $transport = FakeTransport::replying(200, ['status' => 'ok']);
