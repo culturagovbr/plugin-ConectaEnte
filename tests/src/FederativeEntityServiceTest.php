@@ -184,6 +184,23 @@ class FederativeEntityServiceTest extends TestCase
         $this->assertSame(self::TOKEN, $ente->getToken());
     }
 
+    // a entidade é gerenciada pelo Doctrine: um flush posterior gravaria o que foi alterado em memória
+    public function testUpdateLeavesTheEntityUntouchedWhenTheNewTokenIsRejected()
+    {
+        $ente = $this->ente(1, 'Nome original', 10);
+        $this->repository->method('findById')->willReturn($ente);
+        $this->repository->method('findBySealId')->willReturn(null);
+        $this->repository->expects($this->never())->method('save');
+        $this->validation = TokenValidation::reject('recusado');
+
+        $result = $this->service()->update(1, ['nome' => 'Nome novo', 'seal_id' => 20, 'token' => 'novo-token-bem-longo']);
+
+        $this->assertSame(400, $result->getStatus());
+        $this->assertSame('Nome original', $ente->getNome());
+        $this->assertSame(10, $ente->getSealId());
+        $this->assertSame(self::TOKEN, $ente->getToken());
+    }
+
     public function testUpdateWithoutTokenDoesNotCallTheApi()
     {
         $ente = $this->ente(1, 'X', 10);

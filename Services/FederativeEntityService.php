@@ -111,12 +111,25 @@ class FederativeEntityService
             return ApiResult::error(400, $errors);
         }
 
-        if (array_key_exists('seal_id', $input) && (int) $input['seal_id'] !== $ente->getSealId()) {
+        $changeSeal = array_key_exists('seal_id', $input) && (int) $input['seal_id'] !== $ente->getSealId();
+        if ($changeSeal) {
             $conflict = $this->sealConflict($input['seal_id'], $ente->getId());
             if ($conflict) {
                 return $conflict;
             }
+        }
 
+        // o token novo só substitui o antigo depois de aceito; o mesmo token não gasta uma chamada
+        $validation = null;
+        if (array_key_exists('token', $input) && $this->text($input, 'token') !== $ente->getToken()) {
+            $validation = call_user_func($this->verifyToken, $this->text($input, 'token'));
+            if (!$validation->isAccepted()) {
+                return $this->tokenFailure($validation);
+            }
+        }
+
+        // a entidade é gerenciada pelo Doctrine: só muda depois de todas as checagens passarem
+        if ($changeSeal) {
             $ente->setSealId((int) $input['seal_id']);
         }
 
@@ -124,13 +137,7 @@ class FederativeEntityService
             $ente->setNome($this->text($input, 'nome'));
         }
 
-        // o token novo só substitui o antigo depois de aceito; o mesmo token não gasta uma chamada
-        if (array_key_exists('token', $input) && $this->text($input, 'token') !== $ente->getToken()) {
-            $validation = call_user_func($this->verifyToken, $this->text($input, 'token'));
-            if (!$validation->isAccepted()) {
-                return $this->tokenFailure($validation);
-            }
-
+        if ($validation !== null) {
             $ente->setToken($this->text($input, 'token'));
             $ente->setCnpj($validation->getDocument());
         }
