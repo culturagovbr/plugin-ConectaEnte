@@ -31,6 +31,11 @@ class FederativeEntityRepository
         return $this->em->getRepository(FederativeEntity::class)->findOneBy(['sealId' => (int) $sealId]);
     }
 
+    public function findById($id)
+    {
+        return $this->em->getRepository(FederativeEntity::class)->find((int) $id);
+    }
+
     /**
      * @return FederativeEntity[]
      */
