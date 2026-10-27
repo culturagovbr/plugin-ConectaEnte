@@ -3,6 +3,7 @@
 namespace ConectaEnte;
 
 use ConectaEnte\Repositories\FederativeEntityRepository;
+use ConectaEnte\Services\FederativeEntityService;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Exceptions\PermissionDenied;
@@ -37,7 +38,17 @@ class Plugin extends \MapasCulturais\Plugin
             $app->view->enqueueStyle('app', 'conectaente-federative-entities', 'css/conecta-ente/federative-entities.css');
             $app->view->enqueueScript('app', 'conectaente-federative-entities', 'js/conecta-ente/federative-entities.js', ['mapasculturais']);
 
-            $entities = (new FederativeEntityRepository())->findAll();
+            $repository = new FederativeEntityRepository();
+            $entities = $repository->findAll();
+
+            // o token nunca vai para a tela: só o indicador e o final dele, pela mesma regra da API
+            $service = new FederativeEntityService($repository, function () {
+                return true;
+            });
+            $tokens = [];
+            foreach ($entities as $entity) {
+                $tokens[$entity->getId()] = $service->present($entity);
+            }
 
             $seals = [];
             foreach ($app->repo('Seal')->findBy(['status' => Seal::STATUS_ENABLED], ['name' => 'ASC']) as $seal) {
@@ -54,6 +65,7 @@ class Plugin extends \MapasCulturais\Plugin
 
             $this->render('federative-entities', [
                 'entities' => $entities,
+                'tokens' => $tokens,
                 'activeSeals' => $seals,
                 'usedSealIds' => array_map(function ($entity) {
                     return $entity->getSealId();

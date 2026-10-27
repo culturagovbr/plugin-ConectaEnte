@@ -11,7 +11,11 @@
     var $seal = $form.find('[name=seal_id]');
     var $id = $form.find('[name=id]');
     var $hint = $form.find('.js-token-hint');
-    var $cancel = $form.find('.js-cancel');
+    var $tokenRequired = $form.find('.js-token-required');
+    var $sealToggle = $form.find('.js-seal-toggle');
+    var $popover = $form.find('.conectaente-seal-popover');
+    var $sealSearch = $form.find('.js-seal-search');
+    var $sealButtons = $popover.find('li button');
 
     // o corpo de erro é {error, data}: data é texto (403/404) ou um mapa campo → mensagem
     function errorText(xhr) {
@@ -29,16 +33,80 @@
         $message.text(text).toggleClass('is-success', !!success).prop('hidden', false);
     }
 
-    function resetForm() {
-        $form[0].reset();
-        $id.val('');
-        $seal.find('option[data-editing]').removeAttr('data-editing').prop('disabled', true);
-        $form.find('.js-form-title').text('Novo ente federado');
-        $hint.text($hint.data('new'));
-        $cancel.prop('hidden', true);
+    // o selo de um ente fica desabilitado "em uso"; só o do próprio ente se libera enquanto ele é editado
+    function markUsedSeals(ownSealId) {
+        $sealButtons.each(function () {
+            var $button = $(this);
+            $button.prop('disabled', !!$button.data('used') && String($button.data('id')) !== String(ownSealId));
+        });
     }
 
-    $hint.text($hint.data('new'));
+    function chooseSeal(sealId) {
+        var $button = $sealButtons.filter(function () { return String($(this).data('id')) === String(sealId); });
+
+        $seal.val(sealId || '');
+        $sealToggle.text($button.length ? $button.data('name') : $sealToggle.data('empty'));
+        closePopover();
+    }
+
+    function closePopover() {
+        $popover.prop('hidden', true);
+    }
+
+    function filterSeals() {
+        var term = $.trim($sealSearch.val()).toLowerCase();
+        var visible = 0;
+
+        $sealButtons.each(function () {
+            var match = String($(this).data('name')).toLowerCase().indexOf(term) !== -1;
+            $(this).parent().prop('hidden', !match);
+            visible += match ? 1 : 0;
+        });
+
+        $popover.find('.js-seal-none').prop('hidden', visible > 0);
+    }
+
+    function openForm(entity) {
+        $message.prop('hidden', true);
+        $form[0].reset();
+        $sealSearch.val('');
+        filterSeals();
+
+        var editing = !!entity;
+        $id.val(editing ? entity.id : '');
+        $name.val(editing ? entity.name : '');
+        markUsedSeals(editing ? entity.sealId : null);
+        chooseSeal(editing ? entity.sealId : null);
+
+        $form.find('.js-form-title').text(editing ? 'Editar Ente Federado' : 'Cadastrar Ente Federado');
+        $hint.text(editing ? $hint.data('edit') : '');
+        $tokenRequired.prop('hidden', editing);
+
+        $form.prop('hidden', false);
+        $name.focus();
+    }
+
+    function closeForm() {
+        closePopover();
+        $form.prop('hidden', true);
+    }
+
+    $page.on('click', '.js-open-form', function () { openForm(null); });
+    $form.on('click', '.js-cancel', closeForm);
+
+    $sealToggle.on('click', function () {
+        $popover.prop('hidden', !$popover.prop('hidden'));
+        if (!$popover.prop('hidden')) {
+            $sealSearch.focus();
+        }
+    });
+    $sealSearch.on('input', filterSeals);
+    $popover.on('click', 'li button', function () { chooseSeal($(this).data('id')); });
+    $(document).on('click', function (event) {
+        if (!$(event.target).closest('.conectaente-field').length) {
+            closePopover();
+        }
+    });
 
     // sugere o nome a partir do token, sem gravar; o campo continua editável
     $token.on('blur', function () {
@@ -71,7 +139,7 @@
         }
 
         $.ajax({
-            url: editing ? $page.find('tr[data-id=' + editing + ']').data('urlUpdate') : $page.data('urlCreate'),
+            url: editing ? $page.find('.conectaente-card[data-id=' + editing + ']').data('urlUpdate') : $page.data('urlCreate'),
             type: editing ? 'PATCH' : 'POST',
             data: data
         }).done(function () {
@@ -82,34 +150,32 @@
     });
 
     $page.on('click', '.js-edit', function () {
-        var $row = $(this).closest('tr');
-        var sealId = String($row.data('sealId'));
+        var $card = $(this).closest('.conectaente-card');
 
-        resetForm();
-        $id.val($row.data('id'));
-        $name.val($row.data('name'));
-
-        // o selo do próprio ente está desabilitado por "em uso": libera só enquanto edita
-        var $own = $seal.find('option[value=' + sealId + ']');
-        $own.attr('data-editing', '1').prop('disabled', false);
-        $seal.val(sealId);
-
-        $form.find('.js-form-title').text('Editar ente federado');
-        $hint.text($hint.data('edit'));
-        $cancel.prop('hidden', false);
-        $name.focus();
+        openForm({ id: $card.data('id'), name: $card.data('name'), sealId: $card.data('sealId') });
     });
 
-    $cancel.on('click', resetForm);
+    $page.find('.js-search').on('input', function () {
+        var term = $.trim($(this).val()).toLowerCase();
+        var visible = 0;
+
+        $page.find('.conectaente-card').each(function () {
+            var match = String($(this).data('search')).indexOf(term) !== -1;
+            $(this).prop('hidden', !match);
+            visible += match ? 1 : 0;
+        });
+
+        $page.find('.js-search-none').prop('hidden', visible > 0);
+    });
 
     $page.on('click', '.js-remove', function () {
-        var $row = $(this).closest('tr');
+        var $card = $(this).closest('.conectaente-card');
 
-        if (!window.confirm('Remover o ente "' + $row.data('name') + '"? Os editais com o selo deixam de ser enviados.')) {
+        if (!window.confirm('Excluir o ente "' + $card.data('name') + '"? Os editais com o selo deixam de ser enviados.')) {
             return;
         }
 
-        $.ajax({ url: $row.data('urlRemove'), type: 'DELETE' })
+        $.ajax({ url: $card.data('urlRemove'), type: 'DELETE' })
             .done(function () { window.location.reload(); })
             .fail(function (xhr) { show(errorText(xhr)); });
     });
