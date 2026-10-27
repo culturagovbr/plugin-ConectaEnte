@@ -21,7 +21,7 @@ class EnteFederadoSchemaTest extends TestCase
 
         $this->assertStringContainsString('CREATE TABLE conectaente_ente_federado', $sql);
         $this->assertStringContainsString('id INT NOT NULL', $sql);
-        $this->assertStringContainsString('nome VARCHAR(255)', $sql);
+        $this->assertStringContainsString('name VARCHAR(255)', $sql);
         $this->assertStringContainsString('seal_id INT NOT NULL', $sql);
         $this->assertStringContainsString('token TEXT NOT NULL', $sql);
         $this->assertStringContainsString('cnpj VARCHAR(14)', $sql);

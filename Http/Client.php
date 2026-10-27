@@ -46,6 +46,11 @@ class Client
             return TokenValidation::reject($this->translate('O token contém caracteres inválidos.'));
         }
 
+        // sem host em modo live a URL sairia relativa e o cURL falharia como "serviço indisponível"
+        if ($this->host === '' && !$this->transport instanceof FixtureTransport) {
+            return TokenValidation::misconfigured();
+        }
+
         $response = $this->transport->get($this->url('/api/v1/integracao/validar-token'), ['token' => $token]);
 
         if (!$response->reachedServer()) {
@@ -59,7 +64,8 @@ class Client
             return $response->decoded() === null ? TokenValidation::unreachable() : $this->readValidation($body);
         }
 
-        if ($response->getStatus() >= 500) {
+        // 404 (host ou caminho errado), 408 e 429 não dizem nada sobre o token: é a API, não o usuário
+        if ($response->getStatus() >= 500 || in_array($response->getStatus(), [404, 408, 429], true)) {
             return TokenValidation::unreachable();
         }
 

@@ -17,6 +17,8 @@ class Plugin extends \MapasCulturais\Plugin
     {
         $app = App::i();
 
+        $app->registerController('conecta-ente', Controllers\ConectaEnteController::class);
+
         $app->log->debug('[ConectaEnte] register()');
     }
 }

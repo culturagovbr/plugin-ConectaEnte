@@ -40,6 +40,16 @@ class TokenValidation
         return new self(false, true, null, null, $message);
     }
 
+    /**
+     * `CONECTAENTE_HOST` não declarado em modo live: problema da instalação, não do token nem da API.
+     */
+    public static function misconfigured()
+    {
+        $message = 'A integração com a Plataforma CultBR não está configurada (CONECTAENTE_HOST). Avise o responsável pela instalação.';
+
+        return new self(false, true, null, null, class_exists(i::class) ? i::__($message) : $message);
+    }
+
     public function isAccepted()
     {
         return $this->accepted;

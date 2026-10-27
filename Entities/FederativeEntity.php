@@ -29,9 +29,9 @@ class FederativeEntity extends \MapasCulturais\Entity
     /**
      * @var string
      *
-     * @ORM\Column(name="nome", type="string", length=255, nullable=true)
+     * @ORM\Column(name="name", type="string", length=255, nullable=true)
      */
-    protected $nome;
+    protected $name;
 
     /**
      * @var integer
@@ -73,14 +73,14 @@ class FederativeEntity extends \MapasCulturais\Entity
         return $this->id;
     }
 
-    public function getNome()
+    public function getName()
     {
-        return $this->nome;
+        return $this->name;
     }
 
-    public function setNome($nome)
+    public function setName($name)
     {
-        $this->nome = $nome;
+        $this->name = $name;
     }
 
     public function getSealId()
@@ -118,7 +118,7 @@ class FederativeEntity extends \MapasCulturais\Entity
         $this->updateTimestamp = $updateTimestamp;
     }
 
-    // o token é credencial: nunca sai na serialização da entidade
+    // o token é credencial: nunca sai na serialização da entidade (a API usa FederativeEntityService::present)
     public function jsonSerialize()
     {
         $result = parent::jsonSerialize();
@@ -127,7 +127,7 @@ class FederativeEntity extends \MapasCulturais\Entity
         return $result;
     }
 
-    // não há dono nem agente: só administrador cria, edita, remove ou consulta
+    // não há dono nem agente: só o saasSuperAdmin cria, edita, remove ou consulta
     public function canUser($action, $userOrAgent = null)
     {
         $app = App::i();
@@ -138,6 +138,6 @@ class FederativeEntity extends \MapasCulturais\Entity
 
         $user = $userOrAgent ?: $app->user;
 
-        return $user && !$user->is('guest') && $user->is('admin');
+        return $user && !$user->is('guest') && $user->is('saasSuperAdmin');
     }
 }
