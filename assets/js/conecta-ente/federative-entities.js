@@ -1,4 +1,5 @@
-(function ($) {
+// o script é carregado no <head>: só depois do DOM pronto a página existe
+jQuery(function ($) {
     var $page = $('#conectaente');
     if (!$page.length) {
         return;
@@ -179,4 +180,4 @@
             .done(function () { window.location.reload(); })
             .fail(function (xhr) { show(errorText(xhr)); });
     });
-})(jQuery);
+});
