@@ -64,6 +64,33 @@ class FederativeEntityServiceTest extends TestCase
         $this->assertSame('12345678000199', $saved->getCnpj());
     }
 
+    public function testVerifyTokenReturnsTheSuggestedNameAndCnpjWithoutSaving()
+    {
+        $this->repository->expects($this->never())->method('save');
+
+        $result = $this->service()->verifyToken(['token' => '  ' . self::TOKEN . ' ']);
+
+        $this->assertSame(200, $result->getStatus());
+        $this->assertSame(['name' => 'Governo X', 'cnpj' => '12345678000199'], $result->getBody());
+        $this->assertSame([self::TOKEN], $this->verified);
+    }
+
+    public function testVerifyTokenHandlesEmptyRejectedUnavailableAndForbidden()
+    {
+        $this->assertSame(400, $this->service()->verifyToken(['token' => ' '])->getStatus());
+        $this->assertSame([], $this->verified);
+
+        $this->validation = TokenValidation::reject('recusado');
+        $this->assertSame(400, $this->service()->verifyToken(['token' => 'x-token'])->getStatus());
+
+        $this->validation = TokenValidation::unreachable();
+        $this->assertSame(503, $this->service()->verifyToken(['token' => 'x-token'])->getStatus());
+
+        $verified = count($this->verified);
+        $this->assertSame(403, $this->service(false)->verifyToken(['token' => 'x-token'])->getStatus());
+        $this->assertCount($verified, $this->verified);
+    }
+
     public function testCreateRequiresNameSealAndToken()
     {
         $this->repository->expects($this->never())->method('save');

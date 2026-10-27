@@ -28,6 +28,11 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->respond($this->service()->create($this->input()));
     }
 
+    public function POST_verifyToken()
+    {
+        $this->respond($this->service()->verifyToken($this->input()));
+    }
+
     public function PATCH_update()
     {
         $this->respond($this->service()->update($this->entityId(), $this->input()));

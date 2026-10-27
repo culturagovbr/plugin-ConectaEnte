@@ -48,6 +48,28 @@ class FederativeEntityService
         return ApiResult::ok(array_map([$this, 'present'], $this->repository->findAll()));
     }
 
+    /**
+     * Verifica o token sem gravar nada, para a tela sugerir o nome e o CNPJ antes do cadastro.
+     */
+    public function verifyToken(array $input)
+    {
+        if (!$this->allowed()) {
+            return $this->forbidden();
+        }
+
+        $token = $this->text($input, 'token');
+        if ($token === '') {
+            return ApiResult::error(400, ['token' => $this->t('Informe o token do ente.')]);
+        }
+
+        $validation = call_user_func($this->verifyToken, $token);
+        if (!$validation->isAccepted()) {
+            return $this->tokenFailure($validation);
+        }
+
+        return ApiResult::ok(['name' => $validation->getEntityName(), 'cnpj' => $validation->getDocument()]);
+    }
+
     public function create(array $input)
     {
         if (!$this->allowed()) {
