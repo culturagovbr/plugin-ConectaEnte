@@ -1,69 +1,92 @@
 # ConectaEnte (Mapas Culturais v5)
 
-Plugin que envia ao CultBR (Plataforma Conecta Ente) os editais publicados por entes federados,
-conforme a obrigação da PNAB. Porte do plugin da v7 para a **v5** (PHP 7.2, Slim 2, Doctrine ORM 2.8,
+Plugin that sends the opportunities published by federated entities to CultBR (the Conecta Ente
+platform), as required by the PNAB. Port of the v7 plugin to **v5** (PHP 7.2, Slim 2, Doctrine ORM 2.8,
 Respect\Validation 1.x, PHPUnit 8).
 
-Especificação: issues deste repositório. Plano do porte: `ConectaEnte/plan.md` no repositório principal.
+Specification: this repository's issues. Porting plan: `ConectaEnte/plan.md` in the main repository.
 
-## Ativação
+## Activation
 
-Em `src/protected/application/conf/conf-base.d/plugins.php` (ou no `config.d` da instalação):
+In `src/protected/application/conf/conf-base.d/plugins.php` (or in the installation's `config.d`):
 
 ```php
 'ConectaEnte' => ['namespace' => 'ConectaEnte'],
 ```
 
-## Configuração
+## Configuration
 
-Cada chave vem de `$app->config['conectaente.<chave>']`, da variável de ambiente
-`CONECTAENTE_<CHAVE>` ou do padrão:
+Each key is read from `$app->config['conectaente.<key>']`, then from the environment variable
+`CONECTAENTE_<KEY>`, then falls back to the default:
 
-| Chave | Variável | Padrão | Descrição |
+| Key | Variable | Default | Description |
 |---|---|---|---|
-| `mode` | `CONECTAENTE_MODE` | `dev` | `live` envia de verdade; qualquer outro valor é simulado |
-| `host` | `CONECTAENTE_HOST` | vazio | Host da Conecta Ente (o contrato não declara `servers`) |
+| `mode` | `CONECTAENTE_MODE` | `dev` | `live` sends for real; any other value is simulated |
+| `host` | `CONECTAENTE_HOST` | empty | Conecta Ente host (the contract does not declare `servers`) |
 
-> Atenção: o padrão é **simulado**. Esquecer `CONECTAENTE_MODE=live` em produção faz o plugin simular
-> em silêncio.
+> Warning: the default is **simulated**. Forgetting `CONECTAENTE_MODE=live` in production makes the
+> plugin simulate silently.
 
-## Estrutura
+## Structure
 
 ```
-Plugin.php        _init() (hooks, job) e register() (controller, metadados)
-Config.php        leitura de configuração
+Plugin.php        _init() (hooks, job) and register() (controller, metadata)
+Config.php        configuration reader
 Controllers/ Entities/ Http/Transport/ Jobs/ Metadata/ Payload/
 Repositories/ Services/ Vocabulary/ views/ fixtures/ tests/
 ```
 
-O autoload é o do core (`namespace ConectaEnte` → `plugins/ConectaEnte/`); não usa Composer.
+Autoloading is the core's (`namespace ConectaEnte` → `plugins/ConectaEnte/`); Composer is not used.
 
-## Restrições de código (PHP 7.2)
+## Registration API (`/conecta-ente`)
 
-Sem `enum`, `readonly`, `match`, argumentos nomeados, propriedades tipadas, `?->`, `fn`
-com tipo de retorno nem first-class callable. Verificação:
+Only `saasSuperAdmin` has access. Anonymous users are redirected to the login; any other user gets `403`.
+Request bodies may be form-urlencoded or `application/json`.
+
+| Action | Route | Fields |
+|---|---|---|
+| list | `GET /conecta-ente` or `GET /conecta-ente/list` | – |
+| create | `POST /conecta-ente/create` | `name`, `seal_id`, `token` |
+| update | `PATCH /conecta-ente/update/<id>` | any of `name`, `seal_id`, `token` |
+| remove | `DELETE /conecta-ente/remove/<id>` | – |
+
+Responses carry `id`, `name`, `seal_id`, `cnpj`, `token_registered` and `token_last4`; the token itself
+is never returned. Errors use `{"error": true, "data": ...}` with `400` (validation, rejected token),
+`403`, `404`, `409` (seal already used by another entity, naming it) or `503` (CultBR unavailable or
+`CONECTAENTE_HOST` missing in live mode).
+
+## Language convention
+
+Everything in the plugin is in English: identifiers, database columns, request/response fields and
+documentation. Only the texts shown to users (wrapped in `i::__()`) stay in Portuguese, and files in
+`fixtures/` mirror the external CultBR contract and keep its field names as they are.
+
+## Code restrictions (PHP 7.2)
+
+No `enum`, `readonly`, `match`, named arguments, typed properties, `?->`, `fn` with a return type
+or first-class callables. Check with:
 
 ```bash
 docker run --rm -v "$PWD":/app -w /app php:7.2-cli sh -c \
   'find . -name "*.php" -not -path "./vendor/*" -print0 | xargs -0 -n1 php -l'
 ```
 
-## Testes
+## Tests
 
-Unitários (PHPUnit 8, PHP 7.2 em container, sem banco nem HTTP). O `tests/run.sh` resolve os
-caminhos sozinho, então funciona de qualquer diretório; só o caminho do script muda. Da raiz do
-repositório principal (`v5mapas`):
+Unit tests (PHPUnit 8, PHP 7.2 in a container, no database or HTTP). `tests/run.sh` resolves its paths
+itself, so it works from any directory; only the script path changes. From the main repository root
+(`v5mapas`):
 
 ```bash
-src/protected/application/plugins/ConectaEnte/tests/run.sh                         # toda a suíte
-src/protected/application/plugins/ConectaEnte/tests/run.sh --filter testEditalType # filtra por nome
+src/protected/application/plugins/ConectaEnte/tests/run.sh                         # whole suite
+src/protected/application/plugins/ConectaEnte/tests/run.sh --filter testEditalType # filter by name
 ```
 
-Da raiz deste plugin:
+From this plugin's root:
 
 ```bash
 tests/run.sh
 tests/run.sh --filter testEditalType
 ```
 
-Os testes ficam em `tests/src` (namespace `Tests\ConectaEnte`); `tests/bootstrap.php` carrega o autoload.
+Tests live in `tests/src` (namespace `Tests\ConectaEnte`); `tests/bootstrap.php` loads the autoload.

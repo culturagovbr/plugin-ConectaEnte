@@ -41,7 +41,7 @@ class FederativeEntityRepository
      */
     public function findAll()
     {
-        return $this->em->getRepository(FederativeEntity::class)->findBy([], ['nome' => 'ASC', 'id' => 'ASC']);
+        return $this->em->getRepository(FederativeEntity::class)->findBy([], ['name' => 'ASC', 'id' => 'ASC']);
     }
 
     /**
@@ -81,7 +81,7 @@ class FederativeEntityRepository
         $existing = $this->findBySealId($entity->getSealId());
 
         if ($existing !== null && $existing->getId() !== $entity->getId()) {
-            throw new DuplicateSealException($entity->getSealId(), $existing->getNome());
+            throw new DuplicateSealException($entity->getSealId(), $existing->getName());
         }
     }
 }

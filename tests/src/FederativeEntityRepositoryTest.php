@@ -112,7 +112,7 @@ class FederativeEntityRepositoryTest extends TestCase
     public function testFindAllOrdersByName()
     {
         $this->enteRepo->expects($this->once())->method('findBy')
-            ->with([], ['nome' => 'ASC', 'id' => 'ASC'])->willReturn([]);
+            ->with([], ['name' => 'ASC', 'id' => 'ASC'])->willReturn([]);
 
         $this->assertSame([], $this->repository->findAll());
     }
@@ -142,7 +142,7 @@ class FederativeEntityRepositoryTest extends TestCase
     }
 
     // Entity::__construct precisa do App; os testes montam a entidade sem passar por ele
-    private function ente($id, $nome, $sealId, $token, $cnpj)
+    private function ente($id, $name, $sealId, $token, $cnpj)
     {
         $ente = (new \ReflectionClass(FederativeEntity::class))->newInstanceWithoutConstructor();
 
@@ -152,7 +152,7 @@ class FederativeEntityRepositoryTest extends TestCase
             $p->setValue($ente, $value);
         };
         $set('id', $id);
-        $set('nome', $nome);
+        $set('name', $name);
         $set('sealId', $sealId);
         $set('token', $token);
         $set('cnpj', $cnpj);

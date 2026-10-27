@@ -54,11 +54,11 @@ class FederativeEntityService
             return $this->forbidden();
         }
 
-        $nome = $this->text($input, 'nome');
+        $name = $this->text($input, 'name');
         $token = $this->text($input, 'token');
         $sealId = isset($input['seal_id']) ? $input['seal_id'] : null;
 
-        $errors = $this->requiredErrors($nome, $token) + $this->sealErrors($sealId);
+        $errors = $this->requiredErrors($name, $token) + $this->sealErrors($sealId);
         if ($errors) {
             return ApiResult::error(400, $errors);
         }
@@ -74,7 +74,7 @@ class FederativeEntityService
         }
 
         $ente = call_user_func($this->newEntity);
-        $ente->setNome($nome);
+        $ente->setName($name);
         $ente->setSealId((int) $sealId);
         $ente->setToken($token);
         $ente->setCnpj($validation->getDocument());
@@ -95,8 +95,8 @@ class FederativeEntityService
 
         $errors = [];
 
-        if (array_key_exists('nome', $input) && $this->text($input, 'nome') === '') {
-            $errors['nome'] = $this->t('Informe o nome do ente.');
+        if (array_key_exists('name', $input) && $this->text($input, 'name') === '') {
+            $errors['name'] = $this->t('Informe o nome do ente.');
         }
 
         if (array_key_exists('token', $input) && $this->text($input, 'token') === '') {
@@ -133,8 +133,8 @@ class FederativeEntityService
             $ente->setSealId((int) $input['seal_id']);
         }
 
-        if (array_key_exists('nome', $input)) {
-            $ente->setNome($this->text($input, 'nome'));
+        if (array_key_exists('name', $input)) {
+            $ente->setName($this->text($input, 'name'));
         }
 
         if ($validation !== null) {
@@ -171,7 +171,7 @@ class FederativeEntityService
 
         return [
             'id' => $ente->getId(),
-            'nome' => $ente->getNome(),
+            'name' => $ente->getName(),
             'seal_id' => $ente->getSealId(),
             'cnpj' => $ente->getCnpj(),
             'token_registered' => $token !== '',
@@ -201,7 +201,7 @@ class FederativeEntityService
             return null;
         }
 
-        $e = new DuplicateSealException($sealId, $existing->getNome());
+        $e = new DuplicateSealException($sealId, $existing->getName());
 
         return ApiResult::error(409, ['seal_id' => $e->getMessage()]);
     }
@@ -212,12 +212,12 @@ class FederativeEntityService
         return ApiResult::error($validation->isUnavailable() ? 503 : 400, ['token' => $validation->getMessage()]);
     }
 
-    private function requiredErrors($nome, $token)
+    private function requiredErrors($name, $token)
     {
         $errors = [];
 
-        if (!(new NotEmpty())->validate($nome)) {
-            $errors['nome'] = $this->t('Informe o nome do ente.');
+        if (!(new NotEmpty())->validate($name)) {
+            $errors['name'] = $this->t('Informe o nome do ente.');
         }
 
         if (!(new NotEmpty())->validate($token)) {

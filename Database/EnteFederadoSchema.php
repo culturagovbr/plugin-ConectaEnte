@@ -23,7 +23,7 @@ class EnteFederadoSchema
     {
         return 'CREATE TABLE ' . self::TABLE . ' (
             id INT NOT NULL,
-            nome VARCHAR(255) DEFAULT NULL,
+            name VARCHAR(255) DEFAULT NULL,
             seal_id INT NOT NULL,
             token TEXT NOT NULL,
             cnpj VARCHAR(14) DEFAULT NULL,

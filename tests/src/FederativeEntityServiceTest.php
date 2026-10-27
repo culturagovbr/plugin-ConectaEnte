@@ -34,8 +34,8 @@ class FederativeEntityServiceTest extends TestCase
 
         foreach ([
             $service->all(),
-            $service->create(['nome' => 'X', 'seal_id' => 1, 'token' => self::TOKEN]),
-            $service->update(1, ['nome' => 'Y']),
+            $service->create(['name' => 'X', 'seal_id' => 1, 'token' => self::TOKEN]),
+            $service->update(1, ['name' => 'Y']),
             $service->remove(1),
         ] as $result) {
             $this->assertSame(403, $result->getStatus());
@@ -54,12 +54,12 @@ class FederativeEntityServiceTest extends TestCase
             return $ente;
         });
 
-        $result = $this->service()->create(['nome' => ' Governo X ', 'seal_id' => '10', 'token' => '  ' . self::TOKEN . "\n"]);
+        $result = $this->service()->create(['name' => ' Governo X ', 'seal_id' => '10', 'token' => '  ' . self::TOKEN . "\n"]);
 
         $this->assertSame(201, $result->getStatus());
         $this->assertSame([self::TOKEN], $this->verified);
         $this->assertSame(self::TOKEN, $saved->getToken());
-        $this->assertSame('Governo X', $saved->getNome());
+        $this->assertSame('Governo X', $saved->getName());
         $this->assertSame(10, $saved->getSealId());
         $this->assertSame('12345678000199', $saved->getCnpj());
     }
@@ -68,10 +68,10 @@ class FederativeEntityServiceTest extends TestCase
     {
         $this->repository->expects($this->never())->method('save');
 
-        $result = $this->service()->create(['nome' => '  ', 'token' => '']);
+        $result = $this->service()->create(['name' => '  ', 'token' => '']);
 
         $this->assertSame(400, $result->getStatus());
-        $this->assertSame(['nome', 'token', 'seal_id'], array_keys($result->getBody()['data']));
+        $this->assertSame(['name', 'token', 'seal_id'], array_keys($result->getBody()['data']));
         $this->assertSame([], $this->verified);
     }
 
@@ -81,7 +81,7 @@ class FederativeEntityServiceTest extends TestCase
         $repository->method('sealExists')->willReturn(false);
         $repository->expects($this->never())->method('save');
 
-        $result = $this->service(true, $repository)->create(['nome' => 'X', 'seal_id' => 99, 'token' => self::TOKEN]);
+        $result = $this->service(true, $repository)->create(['name' => 'X', 'seal_id' => 99, 'token' => self::TOKEN]);
 
         $this->assertSame(400, $result->getStatus());
         $this->assertArrayHasKey('seal_id', $result->getBody()['data']);
@@ -92,7 +92,7 @@ class FederativeEntityServiceTest extends TestCase
         $this->repository->method('findBySealId')->with(10)->willReturn($this->ente(3, 'Município Y', 10));
         $this->repository->expects($this->never())->method('save');
 
-        $result = $this->service()->create(['nome' => 'Outro', 'seal_id' => 10, 'token' => self::TOKEN]);
+        $result = $this->service()->create(['name' => 'Outro', 'seal_id' => 10, 'token' => self::TOKEN]);
 
         $this->assertSame(409, $result->getStatus());
         $this->assertStringContainsString('Município Y', $result->getBody()['data']['seal_id']);
@@ -104,7 +104,7 @@ class FederativeEntityServiceTest extends TestCase
         $this->repository->method('findBySealId')->willReturn(null);
         $this->repository->method('save')->willThrowException(new DuplicateSealException(10, 'Município Y'));
 
-        $result = $this->service()->create(['nome' => 'Outro', 'seal_id' => 10, 'token' => self::TOKEN]);
+        $result = $this->service()->create(['name' => 'Outro', 'seal_id' => 10, 'token' => self::TOKEN]);
 
         $this->assertSame(409, $result->getStatus());
         $this->assertStringContainsString('Município Y', $result->getBody()['data']['seal_id']);
@@ -116,7 +116,7 @@ class FederativeEntityServiceTest extends TestCase
         $this->repository->expects($this->never())->method('save');
         $this->validation = TokenValidation::reject('A Plataforma CultBR não reconheceu este token.');
 
-        $result = $this->service()->create(['nome' => 'X', 'seal_id' => 10, 'token' => self::TOKEN]);
+        $result = $this->service()->create(['name' => 'X', 'seal_id' => 10, 'token' => self::TOKEN]);
 
         $this->assertSame(400, $result->getStatus());
         $this->assertSame('A Plataforma CultBR não reconheceu este token.', $result->getBody()['data']['token']);
@@ -128,7 +128,7 @@ class FederativeEntityServiceTest extends TestCase
         $this->repository->expects($this->never())->method('save');
         $this->validation = TokenValidation::unreachable();
 
-        $result = $this->service()->create(['nome' => 'X', 'seal_id' => 10, 'token' => self::TOKEN]);
+        $result = $this->service()->create(['name' => 'X', 'seal_id' => 10, 'token' => self::TOKEN]);
 
         $this->assertSame(503, $result->getStatus());
     }
@@ -193,10 +193,10 @@ class FederativeEntityServiceTest extends TestCase
         $this->repository->expects($this->never())->method('save');
         $this->validation = TokenValidation::reject('recusado');
 
-        $result = $this->service()->update(1, ['nome' => 'Nome novo', 'seal_id' => 20, 'token' => 'novo-token-bem-longo']);
+        $result = $this->service()->update(1, ['name' => 'Nome novo', 'seal_id' => 20, 'token' => 'novo-token-bem-longo']);
 
         $this->assertSame(400, $result->getStatus());
-        $this->assertSame('Nome original', $ente->getNome());
+        $this->assertSame('Nome original', $ente->getName());
         $this->assertSame(10, $ente->getSealId());
         $this->assertSame(self::TOKEN, $ente->getToken());
     }
@@ -207,10 +207,10 @@ class FederativeEntityServiceTest extends TestCase
         $this->repository->method('findById')->willReturn($ente);
         $this->repository->method('save')->willReturn($ente);
 
-        $result = $this->service()->update(1, ['nome' => 'Novo nome']);
+        $result = $this->service()->update(1, ['name' => 'Novo nome']);
 
         $this->assertSame(200, $result->getStatus());
-        $this->assertSame('Novo nome', $ente->getNome());
+        $this->assertSame('Novo nome', $ente->getName());
         $this->assertSame([], $this->verified);
     }
 
@@ -240,7 +240,7 @@ class FederativeEntityServiceTest extends TestCase
     {
         $this->repository->method('findById')->willReturn(null);
 
-        $this->assertSame(404, $this->service()->update(7, ['nome' => 'X'])->getStatus());
+        $this->assertSame(404, $this->service()->update(7, ['name' => 'X'])->getStatus());
         $this->assertSame(404, $this->service()->remove(7)->getStatus());
     }
 
@@ -272,13 +272,13 @@ class FederativeEntityServiceTest extends TestCase
         return (new \ReflectionClass(FederativeEntity::class))->newInstanceWithoutConstructor();
     }
 
-    private function ente($id, $nome, $sealId)
+    private function ente($id, $name, $sealId)
     {
         $ente = $this->blankEntity();
         $ref = new \ReflectionProperty(FederativeEntity::class, 'id');
         $ref->setAccessible(true);
         $ref->setValue($ente, $id);
-        $ente->setNome($nome);
+        $ente->setName($name);
         $ente->setSealId($sealId);
         $ente->setToken(self::TOKEN);
 

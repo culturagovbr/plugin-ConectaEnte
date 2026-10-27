@@ -29,9 +29,9 @@ class FederativeEntity extends \MapasCulturais\Entity
     /**
      * @var string
      *
-     * @ORM\Column(name="nome", type="string", length=255, nullable=true)
+     * @ORM\Column(name="name", type="string", length=255, nullable=true)
      */
-    protected $nome;
+    protected $name;
 
     /**
      * @var integer
@@ -73,14 +73,14 @@ class FederativeEntity extends \MapasCulturais\Entity
         return $this->id;
     }
 
-    public function getNome()
+    public function getName()
     {
-        return $this->nome;
+        return $this->name;
     }
 
-    public function setNome($nome)
+    public function setName($name)
     {
-        $this->nome = $nome;
+        $this->name = $name;
     }
 
     public function getSealId()
