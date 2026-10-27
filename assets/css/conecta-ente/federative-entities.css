@@ -1,0 +1,9 @@
+.conectaente-table { width: 100%; border-collapse: collapse; margin-bottom: 2em; }
+.conectaente-table th, .conectaente-table td { padding: .5em; text-align: left; border-bottom: 1px solid #ddd; }
+.conectaente-actions { white-space: nowrap; text-align: right; }
+.conectaente-simulated { margin-bottom: 1em; }
+.conectaente-simulated small { display: block; }
+.conectaente-message { padding: .75em 1em; margin-bottom: 1em; border-left: 4px solid #c0392b; background: #fdecea; }
+.conectaente-message.is-success { border-color: #2e7d32; background: #e8f5e9; }
+.conectaente-form label { display: block; margin-bottom: 1em; }
+.conectaente-form input[type=text], .conectaente-form input[type=password], .conectaente-form select { display: block; width: 100%; max-width: 32em; }
