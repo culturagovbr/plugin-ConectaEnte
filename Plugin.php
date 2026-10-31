@@ -167,6 +167,18 @@ class Plugin extends \MapasCulturais\Plugin
      */
     private function hookCultBrTab(App $app)
     {
+        // os scripts saem no <head>, antes de o template rodar: enfileirar tem de ser antes da renderização
+        $app->hook('GET(opportunity.edit):before', function () use ($app) {
+            $opportunity = empty($this->urlData['id']) ? null : $this->repository->find($this->urlData['id']);
+
+            if ($opportunity === null || Plugin::sealedEntity($opportunity) === null) {
+                return;
+            }
+
+            $app->view->enqueueStyle('app', 'conectaente-opportunity-blocks', 'css/conecta-ente/opportunity-blocks.css');
+            $app->view->enqueueScript('app', 'conectaente-opportunity-blocks', 'js/conecta-ente/opportunity-blocks.js', ['mapasculturais']);
+        });
+
         $app->hook('template(opportunity.edit.tabs):end', function () {
             if (Plugin::sealedEntity($this->controller->requestedEntity) === null) {
                 return;

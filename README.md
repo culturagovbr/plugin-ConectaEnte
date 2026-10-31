@@ -116,8 +116,31 @@ those stored values into their text for the payload.
   sealed. Hooks: `template(opportunity.edit.tabs):end` and `template(opportunity.edit.tabs-content):end`.
 - The core does not check a `select` value against its options on save; enforcing it is up to the
   publication check (#46).
-- The four JSON blocks (`conectaente_fundingSources`, `conectaente_quotaReservation`,
-  `conectaente_registrationChannels`, `conectaente_affirmativeActions`) are still pending.
+### JSON blocks
+
+Four more metadata hold JSON, with the same shape as the `develop` branch (v7):
+
+| key | shape |
+| --- | --- |
+| `conectaente_fundingSources` | `{houveUtilizacao: "sim"\|"nao", recursosProprios, conveniosParcerias, emendasParlamentares, remanescentesCiclo1, outrasFontes: [{nomeFonte, valor}]}`; a source is `null` when unused and a number (0 included) when used |
+| `conectaente_quotaReservation` | `[{label, vagas, valorDestinado, naoAplicavel}]`: the 3 legal quotas, any extras, and "Ampla concorrência" last (it gets the vacancies left over) |
+| `conectaente_registrationChannels` | `{previstasNoEdital: "sim"\|"nao", formas: [{tipo, descricao}]}` |
+| `conectaente_affirmativeActions` | `{opcoes: [...], <option with groups>: [...], outra_legislacao_descricao}` |
+
+- The Save button of the edit page sends each metadata as a text in a form `PUT`, and the core `json`
+  serializer would encode that text again. `Metadata/JsonBlock` stores a valid JSON text as it came
+  (normalized) and encodes lists/objects; anything else clears the block. `JsonBlock::unserialize` returns
+  an associative array.
+- `Services/FundingSourceName` trims, strips HTML and cuts the free source names at 255 characters when
+  the block is saved, whatever the save path.
+- The screen (`assets/js/conecta-ente/opportunity-blocks.js`, jQuery) is configured by
+  `Metadata/BlockUiConfig` (vocabularies and texts come from PHP, never repeated in JS). Each block keeps
+  its state in an object mirrored into a hidden `.js-include-editable` field, the same mechanism the core
+  uses for date-time fields. Opening the tab writes nothing: only blocks already stored or touched are sent.
+  The scripts are enqueued by a `GET(opportunity.edit):before` hook, because they are printed in `<head>`.
+- Detailed validation of the blocks (a source without value, quota sums, e-mail format...) is issue #46.
+  Vocabulary note: `RegistrationChannel` (was `RegistrationForm`) and `ProponentType` keep the 3 extra
+  contract types the `develop` branch does not have.
 
 ## Language convention
 
