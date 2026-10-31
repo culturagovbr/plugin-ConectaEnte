@@ -109,6 +109,9 @@ jQuery(function ($) {
         }
     });
 
+    // verificação do token em andamento (ou null); o envio espera por ela para usar o nome sugerido
+    var verifying = null;
+
     // sugere o nome a partir do token, sem gravar; o campo continua editável
     $token.on('blur', function () {
         var token = $.trim($token.val());
@@ -116,23 +119,44 @@ jQuery(function ($) {
             return;
         }
 
-        $.post($page.data('urlVerify'), { token: token })
+        // a resposta só vale se o formulário ainda é o mesmo: criação, mesmo token e nome ainda em branco
+        function current() {
+            return !$id.val() && $.trim($token.val()) === token && !$.trim($name.val());
+        }
+
+        var request = $.post($page.data('urlVerify'), { token: token })
             .done(function (entity) {
+                if (!current()) {
+                    return;
+                }
                 if (entity.name) {
                     $name.val(entity.name);
                 }
                 $message.prop('hidden', true);
             })
-            .fail(function (xhr) { show(errorText(xhr)); });
+            .fail(function (xhr) {
+                if (current()) {
+                    show(errorText(xhr));
+                }
+            })
+            .always(function () {
+                if (verifying === request) {
+                    verifying = null;
+                }
+            });
+
+        verifying = request;
     });
 
-    $form.on('submit', function (event) {
-        event.preventDefault();
-        $message.prop('hidden', true);
-
+    function save() {
         var data = { name: $.trim($name.val()), seal_id: $seal.val() };
         var token = $.trim($token.val());
         var editing = $id.val();
+
+        if (!data.name) {
+            show('Informe o nome do ente.');
+            return;
+        }
 
         // em branco na edição mantém o token: mandar a chave vazia seria recusado
         if (token || !editing) {
@@ -148,6 +172,19 @@ jQuery(function ($) {
         }).fail(function (xhr) {
             show(errorText(xhr));
         });
+    }
+
+    $form.on('submit', function (event) {
+        event.preventDefault();
+        $message.prop('hidden', true);
+
+        // salvar com a verificação pendente usaria o nome vazio antes de a sugestão chegar
+        if (verifying) {
+            verifying.always(save);
+            return;
+        }
+
+        save();
     });
 
     $page.on('click', '.js-edit', function () {
