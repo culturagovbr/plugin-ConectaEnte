@@ -279,7 +279,13 @@
      * "Configuração de Cotas" de quem tem o selo SECULT); `vacancies` é o nome da v7. Vale o que
      * estiver na tela, que reflete a edição ainda não salva, e depois o que está guardado.
      */
+    var ownTotal = null;
+
     function totalSlots() {
+        if (ownTotal !== null) {
+            return ownTotal;
+        }
+
         var names = ['numberVacancies', 'vacancies'];
         var stored = window.MapasCulturais && MapasCulturais.entity && MapasCulturais.entity.object
             ? MapasCulturais.entity.object
@@ -339,13 +345,41 @@
     function quotaRender(cfg) {
         var text = cfg.text;
 
+        var $vacancies = null;
+
         return function (rows, $ui, redraw, commit, sync) {
+            // sem o campo da "Configuração de Cotas" na página, o total é digitado aqui e gravado em numberVacancies
+            var ownField = $('.js-editable[data-edit="numberVacancies"]').length === 0;
+
+            if (ownField && ownTotal === null) {
+                ownTotal = toInt(window.MapasCulturais && MapasCulturais.entity && MapasCulturais.entity.object
+                    ? MapasCulturais.entity.object.numberVacancies : 0);
+            }
+
             balanceOpenCompetition(rows);
 
             var total = totalSlots();
             var $table = el('table', {'class': 'conectaente-block__table'});
 
             $ui.append(el('p', {'class': 'registration-help', text: text.quotaIntro}));
+
+            if (ownField) {
+                if (!$vacancies) {
+                    $vacancies = $('<input class="js-include-editable" type="hidden">').appendTo($ui.parent());
+                    $vacancies.editable({name: 'numberVacancies', showbuttons: false});
+                }
+
+                $ui.append(el('div', {'class': 'conectaente-block__row'}, [
+                    el('label', {text: text.totalSlots + ': '}),
+                    numberInput(ownTotal || '', function (value) {
+                        ownTotal = toInt(value);
+                        $vacancies.editable('setValue', String(ownTotal));
+                        balanceOpenCompetition(rows);
+                        commit();
+                        redraw();
+                    })
+                ]));
+            }
             $table.append(el('thead', {}, [el('tr', {}, [
                 el('th', {text: text.quotaLabel}),
                 el('th', {text: text.quotaSlots}),
@@ -413,7 +447,9 @@
             });
 
             $ui.append($table);
-            $ui.append(el('p', {text: text.totalSlots + ': ' + (total || '—')}));
+            if (!ownField) {
+                $ui.append(el('p', {text: text.totalSlots + ': ' + (total || '—')}));
+            }
 
             var $name = el('input', {type: 'text', maxlength: 255, placeholder: text.extraQuota});
             var $add = el('button', {type: 'button', 'class': 'button', text: text.addQuota});

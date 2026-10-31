@@ -138,6 +138,10 @@ Four more metadata hold JSON, with the same shape as the `develop` branch (v7):
   its state in an object mirrored into a hidden `.js-include-editable` field, the same mechanism the core
   uses for date-time fields. Opening the tab writes nothing: only blocks already stored or touched are sent.
   The scripts are enqueued by a `GET(opportunity.edit):before` hook, because they are printed in `<head>`.
+- Total of vacancies: in Mapas v5 it is the core metadata `numberVacancies` (the v7 / issue name `vacancies`
+  does not exist here). The core only shows it in "Configuração de Cotas" (SECULT seal + technical
+  evaluation). When that field is not on the page, the quota block renders its own "Total de vagas" input
+  bound to `numberVacancies`; the open competition row is always total minus the other rows.
 - Detailed validation of the blocks (a source without value, quota sums, e-mail format...) is issue #46.
   Vocabulary note: `RegistrationChannel` (was `RegistrationForm`) and `ProponentType` keep the 3 extra
   contract types the `develop` branch does not have.
