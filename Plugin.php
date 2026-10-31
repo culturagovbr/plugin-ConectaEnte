@@ -112,20 +112,22 @@ class Plugin extends \MapasCulturais\Plugin
 
     /**
      * @param \MapasCulturais\Entities\Opportunity $opportunity
-     * @param Seal                                   $seal
-     * @param SealRelation|null                      $ignored     a própria relação, quando já existe
+     * @param Seal                                  $seal
+     * @param SealRelation|null                     $ignored     a própria relação, quando já existe
      *
      * @return string|null
      */
     public static function sealConflictMessage($opportunity, $seal, SealRelation $ignored = null)
     {
         $applied = [];
-        $counted = [SealRelation::STATUS_ENABLED, SealRelation::STATUS_PENDING];
 
         foreach (App::i()->repo('OpportunitySealRelation')->findBy(['owner' => $opportunity]) as $relation) {
-            // o pedido de selo pendente também vale: dois pendentes de entes diferentes virariam dois habilitados
-            if ($relation !== $ignored && in_array($relation->status, $counted, true)) {
-                $applied[] = $relation->seal->id;
+            if ($relation !== $ignored) {
+                $applied[] = [
+                    'seal_id' => $relation->seal->id,
+                    'status' => $relation->status,
+                    'seal_status' => $relation->seal->status,
+                ];
             }
         }
 

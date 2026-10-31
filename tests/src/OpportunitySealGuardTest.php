@@ -5,6 +5,8 @@ namespace Tests\ConectaEnte;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Repositories\FederativeEntityRepository;
 use ConectaEnte\Services\OpportunitySealGuard;
+use MapasCulturais\Entities\Seal;
+use MapasCulturais\Entities\SealRelation;
 use PHPUnit\Framework\TestCase;
 
 class OpportunitySealGuardTest extends TestCase
@@ -21,7 +23,7 @@ class OpportunitySealGuardTest extends TestCase
 
     public function testASecondEntitySealIsRefusedNamingBothEntities()
     {
-        $message = $this->guard()->conflict(20, [10]);
+        $message = $this->guard()->conflict(20, [$this->applied(10)]);
 
         $this->assertNotNull($message);
         $this->assertStringContainsString('Governo B', $message);
@@ -30,19 +32,19 @@ class OpportunitySealGuardTest extends TestCase
 
     public function testTheConflictIsFoundAmongSeveralAppliedSeals()
     {
-        $message = $this->guard()->conflict(20, [99, 98, 10]);
+        $message = $this->guard()->conflict(20, [$this->applied(99), $this->applied(98), $this->applied(10)]);
 
         $this->assertStringContainsString('Governo A', $message);
     }
 
     public function testASealThatIsNotAnEntityPasses()
     {
-        $this->assertNull($this->guard()->conflict(99, [10]));
+        $this->assertNull($this->guard()->conflict(99, [$this->applied(10)]));
     }
 
     public function testAnEntitySealPassesWhenTheOtherAppliedSealsAreNotEntities()
     {
-        $this->assertNull($this->guard()->conflict(20, [97, 98]));
+        $this->assertNull($this->guard()->conflict(20, [$this->applied(97), $this->applied(98)]));
     }
 
     public function testAnEntitySealPassesOnAnOpportunityWithoutSeals()
@@ -52,8 +54,8 @@ class OpportunitySealGuardTest extends TestCase
 
     public function testApplyingTheSameSealAgainIsIdempotent()
     {
-        $this->assertNull($this->guard()->conflict(10, [10]));
-        $this->assertNull($this->guard()->conflict('10', [10, '10']));
+        $this->assertNull($this->guard()->conflict(10, [$this->applied(10)]));
+        $this->assertNull($this->guard()->conflict('10', [$this->applied(10), $this->applied('10')]));
     }
 
     public function testASealThatAlreadyBelongsToTheSameEntityDoesNotConflict()
@@ -61,7 +63,50 @@ class OpportunitySealGuardTest extends TestCase
         // um ente tem um selo só (UNIQUE), mas a regra não pode depender disso para ser idempotente
         $this->entities[11] = $this->entities[10];
 
-        $this->assertNull($this->guard()->conflict(11, [10]));
+        $this->assertNull($this->guard()->conflict(11, [$this->applied(10)]));
+    }
+
+    public function testAPendingRequestCountsAsApplied()
+    {
+        $message = $this->guard()->conflict(20, [$this->applied(10, SealRelation::STATUS_PENDING)]);
+
+        $this->assertStringContainsString('Governo A', $message);
+    }
+
+    public function testARelationOfARelatedSealStillCounts()
+    {
+        $this->assertNotNull($this->guard()->conflict(20, [$this->applied(10, SealRelation::STATUS_ENABLED, Seal::STATUS_RELATED)]));
+    }
+
+    public function testRelationsOfAnArchivedOrTrashedSealDoNotCount()
+    {
+        // não aparecem na tela da oportunidade: ninguém conseguiria removê-las para destravar
+        foreach ([Seal::STATUS_DRAFT, Seal::STATUS_TRASH, Seal::STATUS_ARCHIVED] as $sealStatus) {
+            $this->assertNull(
+                $this->guard()->conflict(20, [$this->applied(10, SealRelation::STATUS_ENABLED, $sealStatus)]),
+                "status do selo $sealStatus"
+            );
+        }
+    }
+
+    public function testRelationsThatAreNeitherEnabledNorPendingDoNotCount()
+    {
+        foreach ([SealRelation::STATUS_DRAFT, SealRelation::STATUS_TRASH, SealRelation::STATUS_DISABLED] as $status) {
+            $this->assertNull($this->guard()->conflict(20, [$this->applied(10, $status)]), "status da relação $status");
+        }
+    }
+
+    public function testAnEntitySealOnlyConflictsWithTheCountedOnesAmongSeveral()
+    {
+        $this->assertNull($this->guard()->conflict(20, [
+            $this->applied(10, SealRelation::STATUS_ENABLED, Seal::STATUS_TRASH),
+            $this->applied(98),
+        ]));
+    }
+
+    private function applied($sealId, $status = SealRelation::STATUS_ENABLED, $sealStatus = Seal::STATUS_ENABLED)
+    {
+        return ['seal_id' => $sealId, 'status' => $status, 'seal_status' => $sealStatus];
     }
 
     private function guard()
