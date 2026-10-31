@@ -33,7 +33,7 @@ Each key is read from `$app->config['conectaente.<key>']`, then from the environ
 Plugin.php        _init() (hooks, job) and register() (controller, metadata)
 Config.php        configuration reader
 Controllers/ Entities/ Http/Transport/ Jobs/ Listeners/ Metadata/ Payload/
-Repositories/ Services/ Vocabulary/ views/ fixtures/ tests/
+Repositories/ Services/ Vocabulary/ views/ layouts/ fixtures/ tests/
 ```
 
 Autoloading is the core's (`namespace ConectaEnte` → `plugins/ConectaEnte/`); Composer is not used.
@@ -86,6 +86,38 @@ same instant can both pass the check, because each reads the database before the
 check runs in `persist()`, before the `flush` transaction opens, so a row lock would not hold, and a
 database constraint would mean changing `seal_relation`, a core table. Relations still waiting for a
 `flush` in the same request are seen.
+
+## CultBR fields on the opportunity
+
+CultBR requires data that Mapas v5 core does not have. The plugin registers it itself
+(`Metadata/CultBrMetadata`, called from `Plugin::register()`; the vocabularies are the plugin's own, so
+registration order does not matter):
+
+| key | type | vocabulary |
+| --- | --- | --- |
+| `conectaente_executionType` | select | `ExecutionType` |
+| `conectaente_segments`, `conectaente_culturalStages`, `conectaente_thematicAgendas`, `conectaente_priorityTerritories` | multiselect | `Segment`, `CulturalStage`, `ThematicAgenda`, `PriorityTerritory` |
+| `conectaente_segmentsOther`, `conectaente_culturalStagesOther`, `conectaente_thematicAgendasOther` | string | the "specify" detail of the "Other" option |
+
+Keys, labels and options follow the plugin's `develop` branch (v7), so the stored data is the same in both
+versions. Each multiselect starts with the synthetic options `TargetingOption::NOT_TARGETED`
+(`__edital_nao_se_direciona__`, text per field via `TargetingField::notTargetedText()`) and, for segments
+only, `ALL_OPTIONS` (`__todas_opcoes__`, "Todas as opções"). `CultBrMetadata::toText($value, $key)` turns
+those stored values into their text for the payload.
+
+- The core stores a multiselect as one text separated by `;` (`CultBrMetadata::SEPARATOR`). The stored
+  value is the fixed Portuguese text CultBR expects (or a synthetic value above); the label shown is the
+  translated one. `CultBrMetadata::toText()` turns the stored text into the `"a, b"` string of the payload.
+- `CultBrMetadata::missingSpecifications()` defines the rule "the Other option needs its detail". Blocking
+  publication is issue #46.
+- The tab **Ente Federado / CultBR** (`layouts/parts/conecta-ente/opportunity-cultbr.php`) is added to the
+  opportunity edit page by `Plugin::hookCultBrTab()` only when the opportunity is *sealed*
+  (`Services/SealedOpportunity`: an enabled relation to the seal of a registered entity). Phases are not
+  sealed. Hooks: `template(opportunity.edit.tabs):end` and `template(opportunity.edit.tabs-content):end`.
+- The core does not check a `select` value against its options on save; enforcing it is up to the
+  publication check (#46).
+- The four JSON blocks (`conectaente_fundingSources`, `conectaente_quotaReservation`,
+  `conectaente_registrationChannels`, `conectaente_affirmativeActions`) are still pending.
 
 ## Language convention
 

@@ -2,15 +2,18 @@
 
 namespace ConectaEnte;
 
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Repositories\FederativeEntityRepository;
 use ConectaEnte\Services\FederativeEntityService;
 use ConectaEnte\Services\OpportunitySealGuard;
+use ConectaEnte\Services\SealedOpportunity;
 use Doctrine\ORM\Events;
 use MapasCulturais\App;
 use MapasCulturais\Entities\OpportunitySealRelation;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\SealRelation;
 use MapasCulturais\Exceptions\PermissionDenied;
+use MapasCulturais\i;
 
 class Plugin extends \MapasCulturais\Plugin
 {
@@ -19,6 +22,7 @@ class Plugin extends \MapasCulturais\Plugin
         $app = App::i();
 
         $this->hookSingleEntityPerOpportunity($app);
+        $this->hookCultBrTab($app);
 
         $app->log->debug('[ConectaEnte] _init() mode=' . Config::mode());
 
@@ -152,7 +156,42 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->registerController('conecta-ente', Controllers\ConectaEnteController::class);
 
+        // os campos do CultBR que o core não tem; os vocabulários são do próprio plugin, então a ordem do registro não importa
+        CultBrMetadata::register($this);
+
         $app->log->debug('[ConectaEnte] register()');
+    }
+
+    /**
+     * Aba "Ente Federado / CultBR" na edição da oportunidade: só quando ela tem o selo de um ente cadastrado.
+     */
+    private function hookCultBrTab(App $app)
+    {
+        $app->hook('template(opportunity.edit.tabs):end', function () {
+            if (Plugin::sealedEntity($this->controller->requestedEntity) === null) {
+                return;
+            }
+
+            $this->part('tab', ['id' => 'conecta-ente-cultbr', 'label' => i::__('Ente Federado / CultBR')]);
+        });
+
+        $app->hook('template(opportunity.edit.tabs-content):end', function () {
+            $opportunity = $this->controller->requestedEntity;
+
+            if (Plugin::sealedEntity($opportunity) === null) {
+                return;
+            }
+
+            $this->part('conecta-ente/opportunity-cultbr', ['entity' => $opportunity]);
+        });
+    }
+
+    /**
+     * @return \ConectaEnte\Entities\FederativeEntity|null o ente da oportunidade; null se ela não é selada
+     */
+    public static function sealedEntity($opportunity)
+    {
+        return (new SealedOpportunity(new FederativeEntityRepository()))->entityFor($opportunity);
     }
 
     public static function canManage()

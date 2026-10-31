@@ -4,12 +4,12 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Vocabulary\AbstractVocabulary;
 use ConectaEnte\Vocabulary\AffirmativeAction;
-use ConectaEnte\Vocabulary\EditalType;
+use ConectaEnte\Vocabulary\ExecutionType;
 use ConectaEnte\Vocabulary\ProponentType;
 use ConectaEnte\Vocabulary\RegistrationForm;
 use ConectaEnte\Vocabulary\Segment;
-use ConectaEnte\Vocabulary\Stage;
-use ConectaEnte\Vocabulary\Territory;
+use ConectaEnte\Vocabulary\CulturalStage;
+use ConectaEnte\Vocabulary\PriorityTerritory;
 use ConectaEnte\Vocabulary\ThematicAgenda;
 use PHPUnit\Framework\TestCase;
 
@@ -34,11 +34,11 @@ class VocabularyTest extends TestCase
         return [
             'ProponentType' => [ProponentType::class, 8],
             'RegistrationForm' => [RegistrationForm::class, 6],
-            'EditalType' => [EditalType::class, 12],
+            'ExecutionType' => [ExecutionType::class, 12],
             'Segment' => [Segment::class, 28],
-            'Stage' => [Stage::class, 11],
+            'CulturalStage' => [CulturalStage::class, 11],
             'ThematicAgenda' => [ThematicAgenda::class, 29],
-            'Territory' => [Territory::class, 13],
+            'PriorityTerritory' => [PriorityTerritory::class, 13],
             'AffirmativeAction' => [AffirmativeAction::class, 6],
         ];
     }
@@ -143,15 +143,15 @@ class VocabularyTest extends TestCase
             'Programa Nacional de Infraestrutura Cultural',
             'Programa Nacional de Formação para Gestores',
             'Outros',
-        ], EditalType::cases());
+        ], ExecutionType::cases());
     }
 
     function testValueIsTheTextWhereTheSniicListsKeyByLabel()
     {
         $this->assertSame('Teatro', Segment::label(Segment::THEATER));
         $this->assertSame('Outros (especificar)', Segment::label(Segment::OTHER));
-        $this->assertSame('Criação', Stage::label('Criação'));
-        $this->assertSame('Território rural', Territory::label(Territory::RURAL_TERRITORY));
+        $this->assertSame('Criação', CulturalStage::label('Criação'));
+        $this->assertSame('Território rural', PriorityTerritory::label(PriorityTerritory::RURAL_TERRITORY));
         $this->assertSame('Cultura Digital', ThematicAgenda::label(ThematicAgenda::DIGITAL_CULTURE));
     }
 
