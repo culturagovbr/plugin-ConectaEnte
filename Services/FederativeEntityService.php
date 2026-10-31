@@ -266,8 +266,15 @@ class FederativeEntityService
     {
         $value = isset($input[$key]) && is_scalar($input[$key]) ? trim((string) $input[$key]) : '';
 
+        if ($key !== 'name') {
+            return $value;
+        }
+
         // espaços repetidos no meio do nome são sempre erro de digitação; o token fica intacto
-        return $key === 'name' ? preg_replace('/\s+/u', ' ', $value) : $value;
+        $collapsed = preg_replace('/\s+/u', ' ', $value);
+
+        // UTF-8 inválido faz o preg_replace devolver null: vale como vazio, e a validação responde 400 em vez de a gravação falhar com 500
+        return $collapsed === null ? '' : $collapsed;
     }
 
     private function allowed()

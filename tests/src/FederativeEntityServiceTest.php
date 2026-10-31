@@ -254,6 +254,19 @@ class FederativeEntityServiceTest extends TestCase
         $this->assertSame('MUNICIPIO DA SERRA', $ente->getName());
     }
 
+    public function testUpdateRejectsANameWithInvalidUtf8InsteadOfFailingOnSave()
+    {
+        $ente = $this->ente(1, 'X', 10);
+        $this->repository->method('findById')->willReturn($ente);
+        $this->repository->expects($this->never())->method('save');
+
+        $result = $this->service()->update(1, ['name' => "Nome \xFF  inv\xE1lido"]);
+
+        $this->assertSame(400, $result->getStatus());
+        $this->assertSame(['name'], array_keys($result->getBody()['data']));
+        $this->assertSame('X', $ente->getName());
+    }
+
     public function testUpdateWithoutTokenDoesNotCallTheApi()
     {
         $ente = $this->ente(1, 'X', 10);
