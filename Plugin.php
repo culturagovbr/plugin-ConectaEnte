@@ -7,6 +7,7 @@ use ConectaEnte\Services\FederativeEntityService;
 use ConectaEnte\Services\OpportunitySealGuard;
 use Doctrine\ORM\Events;
 use MapasCulturais\App;
+use MapasCulturais\Entities\OpportunitySealRelation;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\SealRelation;
 use MapasCulturais\Exceptions\PermissionDenied;
@@ -97,8 +98,9 @@ class Plugin extends \MapasCulturais\Plugin
             $opportunity = $this->repository->find($this->urlData['id']);
             $seal = $app->repo('Seal')->find($this->postData['sealId']);
 
-            // sem permissão para aplicar o selo, quem responde é o core (403): nada do ente vaza antes
-            if (!$opportunity || !$seal || !$opportunity->canUser('createSealRelation')) {
+            // sem permissão sobre a oportunidade e sobre o selo (o core exige as duas), quem responde é
+            // o core (403): nada do ente vaza antes
+            if (!$opportunity || !$seal || !$opportunity->canUser('createSealRelation') || !$seal->canUser('@control')) {
                 return;
             }
 
@@ -119,9 +121,19 @@ class Plugin extends \MapasCulturais\Plugin
      */
     public static function sealConflictMessage($opportunity, $seal, SealRelation $ignored = null)
     {
+        $app = App::i();
+        $relations = $app->repo('OpportunitySealRelation')->findBy(['owner' => $opportunity]);
+
+        // relações agendadas e ainda sem flush (`createSealRelation($seal, true, false)`) não estão no banco
+        foreach ($app->em->getUnitOfWork()->getScheduledEntityInsertions() as $scheduled) {
+            if ($scheduled instanceof OpportunitySealRelation && $scheduled->owner === $opportunity) {
+                $relations[] = $scheduled;
+            }
+        }
+
         $applied = [];
 
-        foreach (App::i()->repo('OpportunitySealRelation')->findBy(['owner' => $opportunity]) as $relation) {
+        foreach ($relations as $relation) {
             if ($relation !== $ignored) {
                 $applied[] = [
                     'seal_id' => $relation->seal->id,
