@@ -32,7 +32,7 @@ Each key is read from `$app->config['conectaente.<key>']`, then from the environ
 ```
 Plugin.php        _init() (hooks, job) and register() (controller, metadata)
 Config.php        configuration reader
-Controllers/ Entities/ Http/Transport/ Jobs/ Metadata/ Payload/
+Controllers/ Entities/ Http/Transport/ Jobs/ Listeners/ Metadata/ Payload/
 Repositories/ Services/ Vocabulary/ views/ fixtures/ tests/
 ```
 
@@ -63,6 +63,23 @@ is never returned. Errors use `{"error": true, "data": ...}` with `400` (validat
 formatted CNPJ, creation date) and creates, edits and removes them through the API above; the token is
 never shown, and a blank token field on edit keeps the current one. Other users get `403`. Outside
 `CONECTAENTE_MODE=live` the screen shows a "simulated mode" banner.
+
+## One entity per opportunity
+
+An opportunity cannot hold the seals of two different federative entities, so the sending never has
+to choose between tokens. Applying a second entity's seal is refused with the message naming both
+entities; a seal that is not registered as an entity, and the same entity's seal again, pass. Pending
+seal requests count as already applied. Only opportunities are checked (agents, spaces and projects
+are not), and opportunities that already hold two entity seals are left alone.
+
+Two layers enforce it (`Plugin::sealConflictMessage()`, rule in `Services/OpportunitySealGuard`):
+
+- `Listeners/SingleEntityPerOpportunityListener`, a Doctrine `prePersist` listener, covers every code
+  path that saves the relation and throws `BadRequest`. It is not the `save:before` entity hook: in v5
+  only entities with `@ORM\HasLifecycleCallbacks` fire those, and `SealRelation` does not, so the hook
+  would never run. The core does not turn `BadRequest` into a response.
+- A `POST(opportunity.createSealRelation):before` hook, used by the seals screen of the opportunity,
+  answers `400` with `{"error": true, "data": "<message>"}` (only for who may apply the seal).
 
 ## Language convention
 
