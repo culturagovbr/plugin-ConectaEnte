@@ -10,7 +10,7 @@ use MapasCulturais\App;
  *
  * Sem propriedade `status`: Entity::setStatus(int) e o MagicSetter interceptam.
  *
- * @ORM\Table(name="conectaente_ente_federado")
+ * @ORM\Table(name="conectaente_federative_entity")
  * @ORM\Entity
  * @ORM\entity(repositoryClass="MapasCulturais\Repository")
  */
@@ -22,7 +22,7 @@ class FederativeEntity extends \MapasCulturais\Entity
      * @ORM\Column(name="id", type="integer", nullable=false)
      * @ORM\Id
      * @ORM\GeneratedValue(strategy="SEQUENCE")
-     * @ORM\SequenceGenerator(sequenceName="conectaente_ente_federado_id_seq", allocationSize=1, initialValue=1)
+     * @ORM\SequenceGenerator(sequenceName="conectaente_federative_entity_id_seq", allocationSize=1, initialValue=1)
      */
     protected $id;
 

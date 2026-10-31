@@ -47,6 +47,7 @@ Request bodies may be form-urlencoded or `application/json`.
 |---|---|---|
 | list | `GET /conecta-ente` or `GET /conecta-ente/list` | – |
 | create | `POST /conecta-ente/create` | `name`, `seal_id`, `token` |
+| verify token | `POST /conecta-ente/verifyToken` | `token` (verifies only, saves nothing; returns the suggested `name` and `cnpj`) |
 | update | `PATCH /conecta-ente/update/<id>` | any of `name`, `seal_id`, `token` |
 | remove | `DELETE /conecta-ente/remove/<id>` | – |
 
@@ -54,6 +55,14 @@ Responses carry `id`, `name`, `seal_id`, `cnpj`, `token_registered` and `token_l
 is never returned. Errors use `{"error": true, "data": ...}` with `400` (validation, rejected token),
 `403`, `404`, `409` (seal already used by another entity, naming it) or `503` (CultBR unavailable or
 `CONECTAENTE_HOST` missing in live mode).
+
+## Admin screen
+
+`saasSuperAdmin` sees an "Entes Federados" item in the panel menu, leading to `/painel/federative-entities`
+(`views/panel/federative-entities.php`, assets in `assets/`). It lists the entities (name, seal name,
+formatted CNPJ, creation date) and creates, edits and removes them through the API above; the token is
+never shown, and a blank token field on edit keeps the current one. Other users get `403`. Outside
+`CONECTAENTE_MODE=live` the screen shows a "simulated mode" banner.
 
 ## Language convention
 

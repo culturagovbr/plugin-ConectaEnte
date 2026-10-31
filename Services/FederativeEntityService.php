@@ -48,6 +48,28 @@ class FederativeEntityService
         return ApiResult::ok(array_map([$this, 'present'], $this->repository->findAll()));
     }
 
+    /**
+     * Verifica o token sem gravar nada, para a tela sugerir o nome e o CNPJ antes do cadastro.
+     */
+    public function verifyToken(array $input)
+    {
+        if (!$this->allowed()) {
+            return $this->forbidden();
+        }
+
+        $token = $this->text($input, 'token');
+        if ($token === '') {
+            return ApiResult::error(400, ['token' => $this->t('Informe o token do ente.')]);
+        }
+
+        $validation = call_user_func($this->verifyToken, $token);
+        if (!$validation->isAccepted()) {
+            return $this->tokenFailure($validation);
+        }
+
+        return ApiResult::ok(['name' => $validation->getEntityName(), 'cnpj' => $validation->getDocument()]);
+    }
+
     public function create(array $input)
     {
         if (!$this->allowed()) {
@@ -119,9 +141,9 @@ class FederativeEntityService
             }
         }
 
-        // o token novo só substitui o antigo depois de aceito; o mesmo token não gasta uma chamada
+        // o token só substitui o antigo depois de aceito; reenviar o mesmo token reverifica e renova o CNPJ
         $validation = null;
-        if (array_key_exists('token', $input) && $this->text($input, 'token') !== $ente->getToken()) {
+        if (array_key_exists('token', $input)) {
             $validation = call_user_func($this->verifyToken, $this->text($input, 'token'));
             if (!$validation->isAccepted()) {
                 return $this->tokenFailure($validation);
@@ -242,7 +264,17 @@ class FederativeEntityService
 
     private function text(array $input, $key)
     {
-        return isset($input[$key]) && is_scalar($input[$key]) ? trim((string) $input[$key]) : '';
+        $value = isset($input[$key]) && is_scalar($input[$key]) ? trim((string) $input[$key]) : '';
+
+        if ($key !== 'name') {
+            return $value;
+        }
+
+        // espaços repetidos no meio do nome são sempre erro de digitação; o token fica intacto
+        $collapsed = preg_replace('/\s+/u', ' ', $value);
+
+        // UTF-8 inválido faz o preg_replace devolver null: vale como vazio, e a validação responde 400 em vez de a gravação falhar com 500
+        return $collapsed === null ? '' : $collapsed;
     }
 
     private function allowed()

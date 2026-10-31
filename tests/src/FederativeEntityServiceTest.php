@@ -64,6 +64,33 @@ class FederativeEntityServiceTest extends TestCase
         $this->assertSame('12345678000199', $saved->getCnpj());
     }
 
+    public function testVerifyTokenReturnsTheSuggestedNameAndCnpjWithoutSaving()
+    {
+        $this->repository->expects($this->never())->method('save');
+
+        $result = $this->service()->verifyToken(['token' => '  ' . self::TOKEN . ' ']);
+
+        $this->assertSame(200, $result->getStatus());
+        $this->assertSame(['name' => 'Governo X', 'cnpj' => '12345678000199'], $result->getBody());
+        $this->assertSame([self::TOKEN], $this->verified);
+    }
+
+    public function testVerifyTokenHandlesEmptyRejectedUnavailableAndForbidden()
+    {
+        $this->assertSame(400, $this->service()->verifyToken(['token' => ' '])->getStatus());
+        $this->assertSame([], $this->verified);
+
+        $this->validation = TokenValidation::reject('recusado');
+        $this->assertSame(400, $this->service()->verifyToken(['token' => 'x-token'])->getStatus());
+
+        $this->validation = TokenValidation::unreachable();
+        $this->assertSame(503, $this->service()->verifyToken(['token' => 'x-token'])->getStatus());
+
+        $verified = count($this->verified);
+        $this->assertSame(403, $this->service(false)->verifyToken(['token' => 'x-token'])->getStatus());
+        $this->assertCount($verified, $this->verified);
+    }
+
     public function testCreateRequiresNameSealAndToken()
     {
         $this->repository->expects($this->never())->method('save');
@@ -199,6 +226,45 @@ class FederativeEntityServiceTest extends TestCase
         $this->assertSame('Nome original', $ente->getName());
         $this->assertSame(10, $ente->getSealId());
         $this->assertSame(self::TOKEN, $ente->getToken());
+    }
+
+    public function testUpdateResendingTheSameTokenVerifiesAgainAndRefreshesTheCnpj()
+    {
+        $ente = $this->ente(1, 'X', 10);
+        $ente->setCnpj('00000000000191');
+        $this->repository->method('findById')->willReturn($ente);
+        $this->repository->method('save')->willReturn($ente);
+        $this->validation = TokenValidation::accept('27174093000127', null);
+
+        $result = $this->service()->update(1, ['token' => self::TOKEN]);
+
+        $this->assertSame(200, $result->getStatus());
+        $this->assertSame([self::TOKEN], $this->verified);
+        $this->assertSame('27174093000127', $ente->getCnpj());
+    }
+
+    public function testUpdateCollapsesRepeatedSpacesInTheName()
+    {
+        $ente = $this->ente(1, 'X', 10);
+        $this->repository->method('findById')->willReturn($ente);
+        $this->repository->method('save')->willReturn($ente);
+
+        $this->service()->update(1, ['name' => '  MUNICIPIO DA   SERRA ']);
+
+        $this->assertSame('MUNICIPIO DA SERRA', $ente->getName());
+    }
+
+    public function testUpdateRejectsANameWithInvalidUtf8InsteadOfFailingOnSave()
+    {
+        $ente = $this->ente(1, 'X', 10);
+        $this->repository->method('findById')->willReturn($ente);
+        $this->repository->expects($this->never())->method('save');
+
+        $result = $this->service()->update(1, ['name' => "Nome \xFF  inv\xE1lido"]);
+
+        $this->assertSame(400, $result->getStatus());
+        $this->assertSame(['name'], array_keys($result->getBody()['data']));
+        $this->assertSame('X', $ente->getName());
     }
 
     public function testUpdateWithoutTokenDoesNotCallTheApi()

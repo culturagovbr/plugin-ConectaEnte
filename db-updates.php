@@ -1,6 +1,6 @@
 <?php
 
-use ConectaEnte\Database\EnteFederadoSchema;
+use ConectaEnte\Database\FederativeEntitySchema;
 
 use function MapasCulturais\__column_exists;
 use function MapasCulturais\__exec;
@@ -9,20 +9,27 @@ use function MapasCulturais\__table_exists;
 
 // as chaves são globais na aplicação (migração de mesmo nome é descartada): sempre com prefixo conectaente
 return [
-    'create table conectaente_ente_federado' => function () {
-        if (!__sequence_exists(EnteFederadoSchema::SEQUENCE)) {
-            __exec(EnteFederadoSchema::createSequence());
+    // vem antes da criação: quem já tem a tabela com nome em português a renomeia em vez de criar outra
+    'conectaente: rename ente_federado table to federative_entity' => function () {
+        if (__table_exists(FederativeEntitySchema::LEGACY_TABLE) && !__table_exists(FederativeEntitySchema::TABLE)) {
+            foreach (FederativeEntitySchema::renameLegacyStatements() as $sql) {
+                __exec($sql);
+            }
         }
 
-        if (!__table_exists(EnteFederadoSchema::TABLE)) {
-            __exec(EnteFederadoSchema::createTable());
+        // a coluna `nome` também já existiu: renomeia onde a tabela a tenha
+        if (__column_exists(FederativeEntitySchema::TABLE, 'nome') && !__column_exists(FederativeEntitySchema::TABLE, 'name')) {
+            __exec('ALTER TABLE ' . FederativeEntitySchema::TABLE . ' RENAME COLUMN nome TO name');
         }
     },
 
-    // renomeia a coluna das instalações que criaram a tabela com o nome em português
-    'rename conectaente_ente_federado.nome to name' => function () {
-        if (__column_exists(EnteFederadoSchema::TABLE, 'nome') && !__column_exists(EnteFederadoSchema::TABLE, 'name')) {
-            __exec('ALTER TABLE ' . EnteFederadoSchema::TABLE . ' RENAME COLUMN nome TO name');
+    'conectaente: create federative_entity table' => function () {
+        if (!__sequence_exists(FederativeEntitySchema::SEQUENCE)) {
+            __exec(FederativeEntitySchema::createSequence());
+        }
+
+        if (!__table_exists(FederativeEntitySchema::TABLE)) {
+            __exec(FederativeEntitySchema::createTable());
         }
     },
 ];
