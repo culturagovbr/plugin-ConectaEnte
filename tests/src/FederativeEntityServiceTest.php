@@ -228,6 +228,32 @@ class FederativeEntityServiceTest extends TestCase
         $this->assertSame(self::TOKEN, $ente->getToken());
     }
 
+    public function testUpdateResendingTheSameTokenVerifiesAgainAndRefreshesTheCnpj()
+    {
+        $ente = $this->ente(1, 'X', 10);
+        $ente->setCnpj('00000000000191');
+        $this->repository->method('findById')->willReturn($ente);
+        $this->repository->method('save')->willReturn($ente);
+        $this->validation = TokenValidation::accept('27174093000127', null);
+
+        $result = $this->service()->update(1, ['token' => self::TOKEN]);
+
+        $this->assertSame(200, $result->getStatus());
+        $this->assertSame([self::TOKEN], $this->verified);
+        $this->assertSame('27174093000127', $ente->getCnpj());
+    }
+
+    public function testUpdateCollapsesRepeatedSpacesInTheName()
+    {
+        $ente = $this->ente(1, 'X', 10);
+        $this->repository->method('findById')->willReturn($ente);
+        $this->repository->method('save')->willReturn($ente);
+
+        $this->service()->update(1, ['name' => '  MUNICIPIO DA   SERRA ']);
+
+        $this->assertSame('MUNICIPIO DA SERRA', $ente->getName());
+    }
+
     public function testUpdateWithoutTokenDoesNotCallTheApi()
     {
         $ente = $this->ente(1, 'X', 10);

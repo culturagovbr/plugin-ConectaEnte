@@ -141,9 +141,9 @@ class FederativeEntityService
             }
         }
 
-        // o token novo só substitui o antigo depois de aceito; o mesmo token não gasta uma chamada
+        // o token só substitui o antigo depois de aceito; reenviar o mesmo token reverifica e renova o CNPJ
         $validation = null;
-        if (array_key_exists('token', $input) && $this->text($input, 'token') !== $ente->getToken()) {
+        if (array_key_exists('token', $input)) {
             $validation = call_user_func($this->verifyToken, $this->text($input, 'token'));
             if (!$validation->isAccepted()) {
                 return $this->tokenFailure($validation);
@@ -264,7 +264,10 @@ class FederativeEntityService
 
     private function text(array $input, $key)
     {
-        return isset($input[$key]) && is_scalar($input[$key]) ? trim((string) $input[$key]) : '';
+        $value = isset($input[$key]) && is_scalar($input[$key]) ? trim((string) $input[$key]) : '';
+
+        // espaços repetidos no meio do nome são sempre erro de digitação; o token fica intacto
+        return $key === 'name' ? preg_replace('/\s+/u', ' ', $value) : $value;
     }
 
     private function allowed()
