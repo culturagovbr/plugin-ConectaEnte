@@ -81,6 +81,12 @@ Two layers enforce it (`Plugin::sealConflictMessage()`, rule in `Services/Opport
 - A `POST(opportunity.createSealRelation):before` hook, used by the seals screen of the opportunity,
   answers `400` with `{"error": true, "data": "<message>"}` (only for who may apply the seal).
 
+Known limit: two administrators applying seals of different entities to the same opportunity at the
+same instant can both pass the check, because each reads the database before the other's insert. The
+check runs in `persist()`, before the `flush` transaction opens, so a row lock would not hold, and a
+database constraint would mean changing `seal_relation`, a core table. Relations still waiting for a
+`flush` in the same request are seen.
+
 ## Language convention
 
 Everything in the plugin is in English: identifiers, database columns, request/response fields and
