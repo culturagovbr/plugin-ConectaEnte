@@ -4,8 +4,11 @@ namespace ConectaEnte;
 
 use ConectaEnte\Repositories\FederativeEntityRepository;
 use ConectaEnte\Services\FederativeEntityService;
+use ConectaEnte\Services\OpportunitySealGuard;
+use Doctrine\ORM\Events;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Seal;
+use MapasCulturais\Entities\SealRelation;
 use MapasCulturais\Exceptions\PermissionDenied;
 
 class Plugin extends \MapasCulturais\Plugin
@@ -13,6 +16,8 @@ class Plugin extends \MapasCulturais\Plugin
     public function _init()
     {
         $app = App::i();
+
+        $this->hookSingleEntityPerOpportunity($app);
 
         $app->log->debug('[ConectaEnte] _init() mode=' . Config::mode());
 
@@ -73,6 +78,60 @@ class Plugin extends \MapasCulturais\Plugin
                 'simulated' => !Config::isLive(),
             ]);
         });
+    }
+
+    /**
+     * Um ente por oportunidade (#44).
+     */
+    private function hookSingleEntityPerOpportunity(App $app)
+    {
+        // defesa de todos os caminhos que gravam a relação; o core não traduz o BadRequest em resposta HTTP
+        $app->em->getEventManager()->addEventListener([Events::prePersist], new Listeners\SingleEntityPerOpportunityListener());
+
+        // a tela de selos da oportunidade chama esta ação: aqui o motivo chega ao usuário como 400 em JSON
+        $app->hook('POST(opportunity.createSealRelation):before', function () use ($app) {
+            if (empty($this->urlData['id']) || !isset($this->postData['sealId'])) {
+                return;
+            }
+
+            $opportunity = $this->repository->find($this->urlData['id']);
+            $seal = $app->repo('Seal')->find($this->postData['sealId']);
+
+            // sem permissão para aplicar o selo, quem responde é o core (403): nada do ente vaza antes
+            if (!$opportunity || !$seal || !$opportunity->canUser('createSealRelation')) {
+                return;
+            }
+
+            $message = Plugin::sealConflictMessage($opportunity, $seal);
+
+            if ($message !== null) {
+                $this->errorJson($message, 400);
+            }
+        });
+    }
+
+    /**
+     * @param \MapasCulturais\Entities\Opportunity $opportunity
+     * @param Seal                                  $seal
+     * @param SealRelation|null                     $ignored     a própria relação, quando já existe
+     *
+     * @return string|null
+     */
+    public static function sealConflictMessage($opportunity, $seal, SealRelation $ignored = null)
+    {
+        $applied = [];
+
+        foreach (App::i()->repo('OpportunitySealRelation')->findBy(['owner' => $opportunity]) as $relation) {
+            if ($relation !== $ignored) {
+                $applied[] = [
+                    'seal_id' => $relation->seal->id,
+                    'status' => $relation->status,
+                    'seal_status' => $relation->seal->status,
+                ];
+            }
+        }
+
+        return (new OpportunitySealGuard(new FederativeEntityRepository()))->conflict($seal->id, $applied);
     }
 
     public function register()
