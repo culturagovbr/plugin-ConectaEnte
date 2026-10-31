@@ -1,6 +1,7 @@
 .conectaente .panel-header p { margin: .25em 0 1em; }
 .conectaente-simulated { margin-bottom: 1em; }
 .conectaente-simulated small { display: block; }
+.conectaente-seal-warning { margin-bottom: 1em; }
 .conectaente-message { padding: .75em 1em; margin-bottom: 1em; border-left: 4px solid #c0392b; background: #fdecea; }
 .conectaente-message.is-success { border-color: #2e7d32; background: #e8f5e9; }
 

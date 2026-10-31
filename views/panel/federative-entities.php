@@ -15,9 +15,16 @@ $e = function ($text) {
 
     <header class="panel-header clearfix">
         <h2><?php i::_e('Entes Federados'); ?></h2>
+    </header>
+    <header class="panel-header clearfix">
         <p><?php i::_e('Cada Ente Federado é reconhecido pelo selo aplicado às oportunidades, e envia ao CultBR com o seu token.'); ?></p>
         <button type="button" class="btn btn-primary add js-open-form"><?php i::_e('Cadastrar Ente Federado'); ?></button>
+
     </header>
+
+    <div class="alert info conectaente-seal-warning">
+        <?php i::_e('Atenção: apagar um selo descadastra o Ente Federado associado a ele, junto com o seu token.'); ?>
+    </div>
 
     <?php if ($simulated): ?>
         <div class="alert warning conectaente-simulated">
