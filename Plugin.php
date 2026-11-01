@@ -2,15 +2,18 @@
 
 namespace ConectaEnte;
 
+use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Repositories\FederativeEntityRepository;
 use ConectaEnte\Services\FederativeEntityService;
 use ConectaEnte\Services\OpportunitySealGuard;
+use ConectaEnte\Services\SealedOpportunity;
 use Doctrine\ORM\Events;
 use MapasCulturais\App;
 use MapasCulturais\Entities\OpportunitySealRelation;
 use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\SealRelation;
 use MapasCulturais\Exceptions\PermissionDenied;
+use MapasCulturais\i;
 
 class Plugin extends \MapasCulturais\Plugin
 {
@@ -19,6 +22,7 @@ class Plugin extends \MapasCulturais\Plugin
         $app = App::i();
 
         $this->hookSingleEntityPerOpportunity($app);
+        $this->hookCultBrTab($app);
 
         $app->log->debug('[ConectaEnte] _init() mode=' . Config::mode());
 
@@ -81,9 +85,6 @@ class Plugin extends \MapasCulturais\Plugin
         });
     }
 
-    /**
-     * Um ente por oportunidade (#44).
-     */
     private function hookSingleEntityPerOpportunity(App $app)
     {
         // defesa de todos os caminhos que gravam a relação; o core não traduz o BadRequest em resposta HTTP
@@ -112,13 +113,6 @@ class Plugin extends \MapasCulturais\Plugin
         });
     }
 
-    /**
-     * @param \MapasCulturais\Entities\Opportunity $opportunity
-     * @param Seal                                  $seal
-     * @param SealRelation|null                     $ignored     a própria relação, quando já existe
-     *
-     * @return string|null
-     */
     public static function sealConflictMessage($opportunity, $seal, SealRelation $ignored = null)
     {
         $app = App::i();
@@ -152,7 +146,47 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->registerController('conecta-ente', Controllers\ConectaEnteController::class);
 
+        CultBrMetadata::register($this);
+
         $app->log->debug('[ConectaEnte] register()');
+    }
+
+    private function hookCultBrTab(App $app)
+    {
+        // os scripts saem no <head>, antes de o template rodar: enfileirar tem de ser antes da renderização
+        $app->hook('GET(opportunity.edit):before', function () use ($app) {
+            $opportunity = empty($this->urlData['id']) ? null : $this->repository->find($this->urlData['id']);
+
+            if ($opportunity === null || Plugin::sealedEntity($opportunity) === null) {
+                return;
+            }
+
+            $app->view->enqueueStyle('app', 'conectaente-opportunity-blocks', 'css/conecta-ente/opportunity-blocks.css');
+            $app->view->enqueueScript('app', 'conectaente-opportunity-blocks', 'js/conecta-ente/opportunity-blocks.js', ['mapasculturais']);
+        });
+
+        $app->hook('template(opportunity.edit.tabs):end', function () {
+            if (Plugin::sealedEntity($this->controller->requestedEntity) === null) {
+                return;
+            }
+
+            $this->part('tab', ['id' => 'conecta-ente-cultbr', 'label' => i::__('Ente Federado / CultBR')]);
+        });
+
+        $app->hook('template(opportunity.edit.tabs-content):end', function () {
+            $opportunity = $this->controller->requestedEntity;
+
+            if (Plugin::sealedEntity($opportunity) === null) {
+                return;
+            }
+
+            $this->part('conecta-ente/opportunity-cultbr', ['entity' => $opportunity]);
+        });
+    }
+
+    public static function sealedEntity($opportunity)
+    {
+        return (new SealedOpportunity(new FederativeEntityRepository()))->entityFor($opportunity);
     }
 
     public static function canManage()

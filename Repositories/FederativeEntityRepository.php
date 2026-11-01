@@ -9,9 +9,6 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use MapasCulturais\App;
 
-/**
- * Não checa permissão: quem chama (controller da #42) faz o checkPermission da entidade.
- */
 class FederativeEntityRepository
 {
     const SEAL_CLASS = 'MapasCulturais\Entities\Seal';
@@ -24,10 +21,6 @@ class FederativeEntityRepository
         $this->em = $em ?: App::i()->em;
     }
 
-    /**
-     * @return FederativeEntity|null null quando nenhum ente usa o selo (inclusive se o selo foi
-     *                               excluído: a FK remove o ente junto)
-     */
     public function findBySealId($sealId)
     {
         return $this->em->getRepository(FederativeEntity::class)->findOneBy(['sealId' => (int) $sealId]);
@@ -38,17 +31,11 @@ class FederativeEntityRepository
         return $this->em->getRepository(FederativeEntity::class)->find((int) $id);
     }
 
-    /**
-     * @return FederativeEntity[]
-     */
     public function findAll()
     {
         return $this->em->getRepository(FederativeEntity::class)->findBy([], ['name' => 'ASC', 'id' => 'ASC']);
     }
 
-    /**
-     * @throws DuplicateSealException quando o selo já pertence a outro ente
-     */
     public function save(FederativeEntity $entity)
     {
         $this->assertSealFree($entity);
