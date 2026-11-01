@@ -2,9 +2,6 @@
 
 namespace ConectaEnte\Vocabulary;
 
-/**
- * Etapas da cadeia produtiva cultural do SNIIC.
- */
 class CulturalStage extends AbstractVocabulary
 {
     const ACCESS_MEDIATION_AND_ENJOYMENT = 'Acesso, mediação e fruição';

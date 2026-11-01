@@ -4,11 +4,6 @@ namespace ConectaEnte\Vocabulary;
 
 use ConectaEnte\Metadata\CultBrMetadata;
 
-/**
- * Os quatro campos de direcionamento do edital (segmento, etapa, pauta, território): para cada um, o
- * metadado que guarda a seleção, o vocabulário das opções e o texto de "não se direciona".
- * Substitui o enum da v7, que o PHP 7.2 não compila.
- */
 class TargetingField
 {
     const SEGMENT = 'segment';
@@ -16,21 +11,11 @@ class TargetingField
     const THEMATIC_AGENDA = 'thematic_agenda';
     const PRIORITY_TERRITORY = 'priority_territory';
 
-    /**
-     * @return string[]
-     */
     public static function cases()
     {
         return [self::SEGMENT, self::CULTURAL_STAGE, self::THEMATIC_AGENDA, self::PRIORITY_TERRITORY];
     }
 
-    /**
-     * O campo cujo metadado é a chave informada; nulo se a chave não é de direcionamento.
-     *
-     * @param string $metadataKey
-     *
-     * @return string|null
-     */
     public static function fromMetadataKey($metadataKey)
     {
         foreach (self::cases() as $field) {
@@ -42,11 +27,6 @@ class TargetingField
         return null;
     }
 
-    /**
-     * @param string $field
-     *
-     * @return string o metadado que guarda a seleção do campo
-     */
     public static function metadataKey($field)
     {
         return self::pick($field, [
@@ -57,11 +37,6 @@ class TargetingField
         ]);
     }
 
-    /**
-     * @param string $field
-     *
-     * @return string classe do vocabulário (AbstractVocabulary) das opções do campo
-     */
     public static function vocabulary($field)
     {
         return self::pick($field, [
@@ -72,13 +47,6 @@ class TargetingField
         ]);
     }
 
-    /**
-     * Texto fixo em pt-br da opção "não se direciona" do campo, o que vai ao payload.
-     *
-     * @param string $field
-     *
-     * @return string
-     */
     public static function notTargetedText($field)
     {
         return self::pick($field, [

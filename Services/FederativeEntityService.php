@@ -11,10 +11,6 @@ use MapasCulturais\i;
 use Respect\Validation\Rules\IntVal;
 use Respect\Validation\Rules\NotEmpty;
 
-/**
- * Regra das ações do `ConectaEnteController`: permissão, validação, verificação do token (#41) e
- * gravação. O controller só traduz `ApiResult` em resposta HTTP.
- */
 class FederativeEntityService
 {
     private $repository;
@@ -22,11 +18,6 @@ class FederativeEntityService
     private $canManage;
     private $newEntity;
 
-    /**
-     * @param callable $canManage   devolve true só para o `saasSuperAdmin`
-     * @param callable $verifyToken recebe o token já aparado e devolve `ConectaEnte\Http\TokenValidation`
-     * @param callable $newEntity   cria a entidade; o construtor do core precisa do App, por isso é injetável
-     */
     public function __construct(FederativeEntityRepository $repository, callable $canManage, callable $verifyToken = null, callable $newEntity = null)
     {
         $this->newEntity = $newEntity ?: function () {
@@ -48,9 +39,6 @@ class FederativeEntityService
         return ApiResult::ok(array_map([$this, 'present'], $this->repository->findAll()));
     }
 
-    /**
-     * Verifica o token sem gravar nada, para a tela sugerir o nome e o CNPJ antes do cadastro.
-     */
     public function verifyToken(array $input)
     {
         if (!$this->allowed()) {
@@ -213,9 +201,6 @@ class FederativeEntityService
         return ApiResult::ok($this->present($ente), $status);
     }
 
-    /**
-     * @return ApiResult|null 409 nomeando o ente que já usa o selo
-     */
     private function sealConflict($sealId, $ownId)
     {
         $existing = $this->repository->findBySealId((int) $sealId);

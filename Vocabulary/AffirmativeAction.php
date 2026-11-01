@@ -2,9 +2,6 @@
 
 namespace ConectaEnte\Vocabulary;
 
-/**
- * Modalidades de ação afirmativa.
- */
 class AffirmativeAction extends AbstractVocabulary
 {
     const NOT_PLANNED = 'nao_previstas';
@@ -14,24 +11,12 @@ class AffirmativeAction extends AbstractVocabulary
     const SPECIFIC_CALL = 'edital_especifico';
     const OTHER_LEGISLATION = 'outra_legislacao';
 
-    /**
-     * Limite da descrição de "Outra ação afirmativa prevista em legislação local".
-     *
-     * @return int
-     */
     public static function otherLegislationMaxLength()
     {
         // método e não constante: `cases()` lista toda constante como valor aceito
         return 140;
     }
 
-    /**
-     * Se a modalidade exige escolher os grupos atendidos.
-     *
-     * @param mixed $value
-     *
-     * @return bool
-     */
     public static function hasGroups($value)
     {
         return in_array($value, [self::AGENT_BONUS, self::THEME_BONUS, self::SPECIFIC_CATEGORY, self::SPECIFIC_CALL], true);

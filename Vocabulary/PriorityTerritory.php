@@ -2,9 +2,6 @@
 
 namespace ConectaEnte\Vocabulary;
 
-/**
- * Territórios prioritários do SNIIC.
- */
 class PriorityTerritory extends AbstractVocabulary
 {
     const DISASTER_AREA = 'Área atingida por desastre natural';

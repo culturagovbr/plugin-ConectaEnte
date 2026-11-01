@@ -12,17 +12,8 @@ use ConectaEnte\Vocabulary\TargetingOption;
 use ConectaEnte\Vocabulary\ThematicAgenda;
 use MapasCulturais\i;
 
-/**
- * Metadados da oportunidade que o CultBR exige e o core do Mapas v5 não tem (#45). No CultEditais
- * quem os registra é o tema Pnab; aqui o plugin registra sozinho. Chaves, rótulos e opções seguem a
- * `develop` (v7) do plugin, para os dados serem os mesmos nas duas versões.
- *
- * Este arquivo cobre os campos de escolha com vocabulário e seus pares "especificar". Os blocos JSON
- * (recursos de outras fontes, reserva de vagas, formas de inscrição, ações afirmativas) ficam à parte.
- */
 class CultBrMetadata
 {
-    /** O que separa um campo do plugin de um campo do core. */
     const PREFIX = 'conectaente_';
 
     const EXECUTION_TYPE = 'conectaente_executionType';
@@ -34,20 +25,13 @@ class CultBrMetadata
     const THEMATIC_AGENDAS_OTHER = 'conectaente_thematicAgendasOther';
     const PRIORITY_TERRITORIES = 'conectaente_priorityTerritories';
 
-    // blocos JSON: o formato de cada um está nas constantes dos vocabulários e no README
     const FUNDING_SOURCES = 'conectaente_fundingSources';
     const QUOTA_RESERVATION = 'conectaente_quotaReservation';
     const REGISTRATION_CHANNELS = 'conectaente_registrationChannels';
     const AFFIRMATIVE_ACTIONS = 'conectaente_affirmativeActions';
 
-    /** O multiselect do core guarda os valores num texto único separado por este caractere. */
     const SEPARATOR = ';';
 
-    /**
-     * Campo principal → [campo "especificar", valor que o exige].
-     *
-     * @return array[]
-     */
     private static function specifications()
     {
         return [
@@ -57,11 +41,6 @@ class CultBrMetadata
         ];
     }
 
-    /**
-     * Rótulo do campo principal e do seu "especificar".
-     *
-     * @return string[]
-     */
     private static function labels()
     {
         return [
@@ -80,11 +59,6 @@ class CultBrMetadata
         ];
     }
 
-    /**
-     * Chave → configuração aceita por `registerOpportunityMetadata`.
-     *
-     * @return array[]
-     */
     public static function definitions()
     {
         $labels = self::labels();
@@ -103,7 +77,6 @@ class CultBrMetadata
             $definitions[$key] = [
                 'label' => self::t($labels[$key]),
                 'type' => 'multiselect',
-                // só o segmento tem "Todas as opções"
                 'options' => self::targetingOptions($field, $field === TargetingField::SEGMENT),
             ];
 
@@ -129,11 +102,6 @@ class CultBrMetadata
         return $definitions;
     }
 
-    /**
-     * Os blocos JSON → o saneamento aplicado ao gravar (nulo quando não há).
-     *
-     * @return (callable|null)[]
-     */
     public static function jsonBlocks()
     {
         return [
@@ -144,17 +112,11 @@ class CultBrMetadata
         ];
     }
 
-    /**
-     * @return string[]
-     */
     public static function keys()
     {
         return array_keys(self::definitions());
     }
 
-    /**
-     * @param object $registrar quem tem `registerOpportunityMetadata` (o plugin)
-     */
     public static function register($registrar)
     {
         foreach (self::definitions() as $key => $definition) {
@@ -162,13 +124,6 @@ class CultBrMetadata
         }
     }
 
-    /**
-     * Valores escolhidos, de um texto "a;b" (como o core guarda) ou de uma lista.
-     *
-     * @param mixed $value
-     *
-     * @return string[]
-     */
     public static function values($value)
     {
         if (is_array($value)) {
@@ -188,15 +143,6 @@ class CultBrMetadata
         }));
     }
 
-    /**
-     * O que vai ao payload: os valores num texto só, "a, b", nunca a chave crua nem a lista. As opções
-     * sintéticas viram o texto do campo (`TargetingOption::text`).
-     *
-     * @param mixed       $value
-     * @param string|null $metadataKey chave do campo, para traduzir as opções sintéticas
-     *
-     * @return string
-     */
     public static function toText($value, $metadataKey = null)
     {
         $field = $metadataKey === null ? null : TargetingField::fromMetadataKey($metadataKey);
@@ -206,15 +152,6 @@ class CultBrMetadata
         }, self::values($value)));
     }
 
-    /**
-     * Campos "especificar" que o preenchimento exige e estão vazios: o principal tem a opção
-     * "Outros / Outra (especificar)" marcada e o detalhamento não foi escrito. A regra só é definida
-     * aqui; barrar a publicação é a #46.
-     *
-     * @param array $values chave do metadado → valor
-     *
-     * @return string[] chaves dos campos "especificar" faltantes
-     */
     public static function missingSpecifications(array $values)
     {
         $missing = [];
@@ -233,15 +170,6 @@ class CultBrMetadata
         return $missing;
     }
 
-    /**
-     * Opções sintéticas primeiro, depois as do vocabulário; valor fixo → rótulo traduzido (em lista, o
-     * core faria do rótulo a chave gravada).
-     *
-     * @param string $field            um valor de TargetingField
-     * @param bool   $includesAllOptions se entra também "Todas as opções"
-     *
-     * @return string[]
-     */
     private static function targetingOptions($field, $includesAllOptions)
     {
         $options = [TargetingOption::NOT_TARGETED => TargetingOption::label(TargetingOption::NOT_TARGETED, $field)];

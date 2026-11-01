@@ -2,9 +2,6 @@
 
 namespace ConectaEnte\Vocabulary;
 
-/**
- * Grupos atendidos pelas modalidades de ação afirmativa que pedem subcategoria (`AffirmativeAction::hasGroups`).
- */
 class AffirmativeActionGroup extends AbstractVocabulary
 {
     const BLACK_PEOPLE = 'pessoas_negras';

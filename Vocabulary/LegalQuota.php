@@ -13,11 +13,6 @@ class LegalQuota extends AbstractVocabulary
     const PEOPLE_WITH_DISABILITIES = 'Pessoas com deficiência';
     const OPEN_COMPETITION = 'Ampla concorrência';
 
-    /**
-     * As três cotas da lei, na ordem em que aparecem; a ampla concorrência vem sempre por último.
-     *
-     * @return string[]
-     */
     public static function legal()
     {
         return [self::BLACK_PEOPLE, self::INDIGENOUS_PEOPLE, self::PEOPLE_WITH_DISABILITIES];

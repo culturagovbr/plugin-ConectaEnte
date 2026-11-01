@@ -2,9 +2,6 @@
 
 namespace ConectaEnte\Vocabulary;
 
-/**
- * Fontes de "recursos de outras fontes" do edital. O valor é a chave do bloco gravado.
- */
 class FundingSource extends AbstractVocabulary
 {
     const OWN_RESOURCES = 'recursosProprios';

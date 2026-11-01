@@ -4,16 +4,8 @@ use ConectaEnte\Metadata\BlockUiConfig;
 use ConectaEnte\Metadata\CultBrMetadata as Meta;
 use MapasCulturais\i;
 
-/**
- * Aba "Ente Federado / CultBR" da edição da oportunidade (#45). Só é incluída quando a oportunidade
- * tem o selo de um ente cadastrado (ver Plugin::hookCultBrTab).
- *
- * @var \MapasCulturais\Entities\Opportunity $entity
- */
-
 $definitions = Meta::definitions();
 
-// campo principal => campo "especificar" (ou null)
 $choices = [
     Meta::EXECUTION_TYPE => null,
     Meta::SEGMENTS => Meta::SEGMENTS_OTHER,
@@ -56,7 +48,6 @@ $choices = [
     <?php endforeach; ?>
 
     <?php
-    // cada bloco monta a própria interface pelo JS, com a configuração (vocabulários e textos) vinda daqui
     $blocks = [
         'funding' => Meta::FUNDING_SOURCES,
         'quota' => Meta::QUOTA_RESERVATION,

@@ -10,15 +10,8 @@ use ConectaEnte\Vocabulary\LegalQuota;
 use ConectaEnte\Vocabulary\RegistrationChannel;
 use MapasCulturais\i;
 
-/**
- * O que o JS da aba dos blocos precisa saber: as chaves dos metadados, os vocabulários (valor fixo,
- * rótulo traduzido) e os textos da tela. Tudo vem do PHP para a tela nunca repetir uma lista.
- */
 class BlockUiConfig
 {
-    /**
-     * @return array
-     */
     public static function toArray()
     {
         return [
@@ -55,12 +48,6 @@ class BlockUiConfig
         ];
     }
 
-    /**
-     * @param string   $vocabulary classe de AbstractVocabulary
-     * @param string[] $except     valores a deixar de fora
-     *
-     * @return array[] lista de {value, label}, na ordem do vocabulário
-     */
     private static function pairs($vocabulary, array $except = [])
     {
         $pairs = [];
