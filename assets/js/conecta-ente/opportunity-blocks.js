@@ -26,7 +26,7 @@
     }
 
     function toInt(value) {
-        var number = parseInt(value, 10);
+        var number = Math.floor(Number(String(value).replace(',', '.')));
 
         return isFinite(number) && number > 0 ? number : 0;
     }
@@ -304,7 +304,7 @@
                 return row(label, rows[index], true);
             });
             var extras = $.map(hasOpen ? rows.slice(lawCount, -1) : [], function (extra) {
-                return row($.trim(String((extra && extra.label) || '')), extra, false);
+                return row($.trim(String((extra && extra.label) || '')), extra, true);
             });
             var open = row(cfg.quota.open, hasOpen ? rows[rows.length - 1] : null, true);
 
@@ -320,7 +320,7 @@
             others += item.vagas;
         });
 
-        open.vagas = Math.max(0, totalSlots() - others);
+        open.vagas = open.naoAplicavel ? 0 : Math.max(0, totalSlots() - others);
     }
 
     function quotaRender(cfg) {
