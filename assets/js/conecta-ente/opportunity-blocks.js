@@ -1,15 +1,5 @@
-/**
- * Os quatro blocos JSON da aba "Ente Federado / CultBR" da oportunidade (#45): recursos de outras
- * fontes, reserva de vagas (cotas), formas de inscrição e outras ações afirmativas.
- *
- * Cada bloco guarda o estado num objeto e o espelha num campo oculto `.js-include-editable`, que o
- * "Salvar" da página já envia (o mesmo recurso que o editor de data com hora usa). Quem valida o
- * conteúdo é o servidor; aqui só se monta o formato e se evita o óbvio. Formatos iguais aos da v7.
- */
 (function ($) {
     'use strict';
-
-    // --- utilidades -------------------------------------------------------------------------------
 
     function el(tag, attrs, children) {
         var $node = $('<' + tag + '>');
@@ -96,16 +86,6 @@
         return $input;
     }
 
-    // --- montagem de um bloco -----------------------------------------------------------------------
-
-    /**
-     * @param {jQuery}   $box      contêiner do bloco
-     * @param {string}   key       metadado do bloco
-     * @param {Function} normalize recebe o guardado (ou null) e devolve o estado
-     * @param {Function} render    (state, $ui, redraw, commit, sync) preenche a interface
-     *
-     * @return {{redraw: Function}} para a aba redesenhar o bloco sem perder o que não foi salvo
-     */
     function mount($box, key, normalize, render) {
         var state = normalize(readStored(key));
         // abrir a aba não grava nada: só vale o que já estava guardado ou o que o administrador mexeu
@@ -136,12 +116,16 @@
             render(state, $ui, redraw, commit, sync);
         }
 
+        // o "Salvar" da página envia todo campo oculto, vazio ou não: sem isto, o que já estava guardado
+        // e não foi mexido seria enviado vazio e apagado
+        if (touched) {
+            write();
+        }
+
         redraw();
 
         return {redraw: redraw};
     }
-
-    // --- recursos de outras fontes ------------------------------------------------------------------
 
     function fundingNormalize(cfg) {
         return function (raw) {
@@ -272,8 +256,6 @@
         };
     }
 
-    // --- reserva de vagas (cotas) -------------------------------------------------------------------
-
     /**
      * O total de vagas da oportunidade. Na v5 é o metadado `numberVacancies` (editável só na
      * "Configuração de Cotas" de quem tem o selo SECULT); `vacancies` é o nome da v7. Vale o que
@@ -330,7 +312,6 @@
         };
     }
 
-    /** A ampla concorrência fica com o que sobra do total de vagas. */
     function balanceOpenCompetition(rows) {
         var open = rows[rows.length - 1];
         var others = 0;
@@ -367,6 +348,11 @@
                 if (!$vacancies) {
                     $vacancies = $('<input class="js-include-editable" type="hidden">').appendTo($ui.parent());
                     $vacancies.editable({name: 'numberVacancies', showbuttons: false});
+
+                    // mesmo motivo do mount(): o campo oculto vazio apagaria o total já guardado
+                    if (ownTotal > 0) {
+                        $vacancies.editable('setValue', String(ownTotal));
+                    }
                 }
 
                 $ui.append(el('div', {'class': 'conectaente-block__row'}, [
@@ -474,8 +460,6 @@
         };
     }
 
-    // --- formas de inscrição ------------------------------------------------------------------------
-
     function channelsNormalize(cfg) {
         var known = $.map(cfg.channels.channels, function (channel) {
             return channel.value;
@@ -555,8 +539,6 @@
             });
         };
     }
-
-    // --- outras ações afirmativas -------------------------------------------------------------------
 
     function affirmativeNormalize(cfg) {
         var withGroups = $.map($.grep(cfg.affirmative.options, function (option) {
@@ -672,8 +654,6 @@
             });
         };
     }
-
-    // --- início -------------------------------------------------------------------------------------
 
     // o script sai no <head>: sem esperar o DOM, a aba ainda não existe
     jQuery(function ($) {
