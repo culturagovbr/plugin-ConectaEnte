@@ -8,7 +8,7 @@ use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\i;
 
 /**
- * Confere o payload montado: o contrato exige as 30 chaves presentes e nenhuma nula.
+ * Confere o payload montado: as 30 chaves presentes e nenhuma nula.
  */
 final class PayloadValidation
 {
@@ -46,6 +46,15 @@ final class PayloadValidation
     /** Chaves que o plugin resolve sozinho: nulo nelas é inconsistência interna, não campo a preencher. */
     const INTERNAL = ['id', 'status', 'ente_federado'];
 
+    /** Opcionais no contrato, e exigidas assim mesmo pelo plugin. */
+    const PLUGIN_REQUIRED = [
+        'segmento_artistico_cultural_especificar',
+        'etapa_fazer_cultural_especificar',
+        'pauta_especifica_especificar',
+        'links_da_pagina_pnab',
+        'tipos_formas_inscricao',
+    ];
+
     public function __construct(private FieldLabels $fieldLabels)
     {
     }
@@ -67,9 +76,16 @@ final class PayloadValidation
 
             $errors[$key] = in_array($key, self::INTERNAL, true)
                 ? sprintf(i::__('O campo %s do CultBR não foi resolvido: isto é inconsistência do plugin, não dado a preencher.'), $key)
-                : sprintf(i::__('O campo "%s" está vazio, e o CultBR o exige.'), $this->fieldLabels->of($opportunity, self::SOURCES[$key]));
+                : sprintf($this->emptyFieldMessage($key), $this->fieldLabels->of($opportunity, self::SOURCES[$key]));
         }
 
         return $errors;
+    }
+
+    private function emptyFieldMessage(string $key): string
+    {
+        return in_array($key, self::PLUGIN_REQUIRED, true)
+            ? i::__('O campo "%s" está vazio, e o plugin o exige para enviar ao CultBR.')
+            : i::__('O campo "%s" está vazio, e o CultBR o exige.');
     }
 }
