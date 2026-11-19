@@ -311,18 +311,18 @@ class VocabularyTest extends TestCase
         );
     }
 
-    function testOpportunityStatusGoesToThePayloadAsIdAndName()
+    function testOpportunityStatusGoesToThePayloadAsIdAndLabel()
     {
         $payloads = array_map(fn(OpportunityStatus $status) => $status->toPayload(), OpportunityStatus::cases());
 
         $this->assertSame([
-            ['id' => 1, 'nome' => 'Ativado'],
-            ['id' => 0, 'nome' => 'Rascunho'],
-            ['id' => -1, 'nome' => 'Fase'],
-            ['id' => -2, 'nome' => 'Arquivado'],
-            ['id' => -9, 'nome' => 'Desabilitado'],
-            ['id' => -10, 'nome' => 'Lixeira'],
-            ['id' => -20, 'nome' => 'Fase de recurso'],
+            ['id' => 1, 'label' => 'Ativado'],
+            ['id' => 0, 'label' => 'Rascunho'],
+            ['id' => -1, 'label' => 'Fase'],
+            ['id' => -2, 'label' => 'Arquivado'],
+            ['id' => -9, 'label' => 'Desabilitado'],
+            ['id' => -10, 'label' => 'Lixeira'],
+            ['id' => -20, 'label' => 'Fase de recurso'],
         ], $payloads);
     }
 
