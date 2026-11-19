@@ -107,7 +107,12 @@ class Client
         }
 
         if ($response->status === 200) {
-            return SendResult::ok($response->decoded() ?? []);
+            $body = $response->decoded();
+
+            // sem o corpo não há id_par_edital, e o resultado do edital não teria para onde ir
+            return $body === null
+                ? SendResult::failed(i::__('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).'))
+                : SendResult::ok($body);
         }
 
         return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));

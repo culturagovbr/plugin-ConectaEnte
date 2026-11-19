@@ -64,6 +64,7 @@ class OpportunitySender
         $outcome = match (true) {
             $result->unreachable => SendOutcome::unavailable($this->unavailableReason($result)),
             $result->accepted => SendOutcome::success(),
+            $result->failed => SendOutcome::error($result->message),
             default => SendOutcome::rejected($result->message ?? i::__('A Plataforma CultBR recusou o envio.')),
         };
 

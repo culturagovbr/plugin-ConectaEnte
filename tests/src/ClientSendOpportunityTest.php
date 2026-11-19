@@ -3,6 +3,7 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Http\Client;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 
@@ -17,7 +18,37 @@ class ClientSendOpportunityTest extends TestCase
         $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', ['id' => 7]);
 
         $this->assertTrue($result->accepted);
+        $this->assertFalse($result->failed);
         $this->assertSame(42, $result->response['id_par_edital']);
+    }
+
+    public static function bodiesThatAreNotJson(): array
+    {
+        return [
+            'html' => ['<html>Bad Gateway</html>'],
+            'vazio' => [''],
+            'null' => ['null'],
+            'texto JSON' => ['"ok"'],
+        ];
+    }
+
+    #[DataProvider('bodiesThatAreNotJson')]
+    function testATwoHundredWithoutJsonIsAFailureInsteadOfAnAcceptance(string $body)
+    {
+        $result = (new Client(self::HOST, FakeTransport::replying(200, $body)))->sendOpportunity('um-token', []);
+
+        $this->assertFalse($result->accepted, 'Sem o corpo não há id_par_edital: aceitar gravaria um envio inútil.');
+        $this->assertTrue($result->failed);
+        $this->assertFalse($result->unreachable, 'O CultBR respondeu: retentar não traria o corpo de volta.');
+        $this->assertSame('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).', $result->message);
+    }
+
+    function testATwoHundredWithAnEmptyJsonListIsStillAccepted()
+    {
+        $result = (new Client(self::HOST, FakeTransport::replying(200, [])))->sendOpportunity('um-token', []);
+
+        $this->assertTrue($result->accepted, 'Lista vazia é JSON: a regra é sobre o corpo imprestável, não sobre o conteúdo.');
+        $this->assertFalse($result->failed);
     }
 
     function testSendsTheBodyAsJsonWithTheTokenHeader()
@@ -55,6 +86,7 @@ class ClientSendOpportunityTest extends TestCase
 
             $this->assertFalse($result->accepted);
             $this->assertFalse($result->unreachable, "status {$status} não pode virar unreachable");
+            $this->assertFalse($result->failed, "status {$status} é recusa, não falha");
             $this->assertSame('motivo', $result->message);
         }
     }
@@ -158,6 +190,7 @@ class ClientSendOpportunityTest extends TestCase
 
         $this->assertTrue($result->unreachable);
         $this->assertFalse($result->accepted);
+        $this->assertFalse($result->failed, 'O 5xx segue retentável: não é a falha definitiva do 200 sem JSON.');
     }
 
     function testTransportFailureIsUnreachable()

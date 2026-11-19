@@ -3,7 +3,7 @@
 namespace ConectaEnte\Http;
 
 /**
- * Desfecho de `POST /api/v1/oportunidades/`: aceito, recusado sem retentativa (4xx),
+ * Desfecho de `POST /api/v1/oportunidades/`: aceito, recusado (4xx), falho (200 sem JSON)
  * ou indisponível (5xx/falha de conexão) — este último é o único retentável.
  */
 final class SendResult
@@ -15,6 +15,7 @@ final class SendResult
         public readonly ?string $message = null,
         public readonly int $status = 0,
         public readonly ?string $transportError = null,
+        public readonly bool $failed = false,
     ) {
     }
 
@@ -26,6 +27,11 @@ final class SendResult
     public static function rejected(string $message): self
     {
         return new self(accepted: false, unreachable: false, message: $message);
+    }
+
+    public static function failed(string $message): self
+    {
+        return new self(accepted: false, unreachable: false, message: $message, failed: true);
     }
 
     public static function unreachable(int $status = 0, ?string $transportError = null): self

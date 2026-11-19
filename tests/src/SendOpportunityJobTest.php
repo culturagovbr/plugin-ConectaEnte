@@ -14,6 +14,7 @@ use MapasCulturais\App;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use Monolog\Handler\TestHandler;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
@@ -42,6 +43,26 @@ class SendOpportunityJobTest extends TestCase
         $sendAt = (string) $reloaded->getMetadata(CultBrMetadata::SEND_AT);
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $sendAt, 'O formato é o que o histórico vai ler.');
         $this->assertEqualsWithDelta(time(), strtotime($sendAt), 5, 'A data é a do envio que acabou de acontecer, não uma data fixa nem a de publicação.');
+    }
+
+    public static function twoHundredBodiesWithoutJson(): array
+    {
+        return ['html' => ['<html>Bad Gateway</html>'], 'vazio' => ['']];
+    }
+
+    #[DataProvider('twoHundredBodiesWithoutJson')]
+    function testATwoHundredWithoutJsonIsRecordedAsErrorAndDoesNotRetry(string $body)
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, $body);
+
+        $this->executeSend($opportunity->id);
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $reloaded->getMetadata(CultBrMetadata::SEND_STATUS), 'É o error que a aba mostra como falha.');
+        $this->assertSame('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).', $reloaded->getMetadata(CultBrMetadata::SEND_REASON));
+        $this->assertSame([], $this->enqueuedSendJobs(), 'O CultBR respondeu: retentar não é o caminho.');
+        $this->assertNull($reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
     }
 
     function testClientErrorIsRejectedAndDoesNotRetry()
