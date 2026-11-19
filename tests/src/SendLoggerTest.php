@@ -12,6 +12,7 @@ use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use Monolog\Handler\TestHandler;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
@@ -180,7 +181,7 @@ class SendLoggerTest extends TestCase
         $log = $this->logger()->startOrResume($this->createOpportunity());
         $recusada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 400);
         $quebrada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 500);
-        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200);
+        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200, responseBody: '{"id_par_edital": 1}');
 
         $this->logger()->recordAttempts($log, [$recusada, $quebrada, $aceita], SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
 
@@ -201,6 +202,31 @@ class SendLoggerTest extends TestCase
         $this->logger()->recordAttempts($log, [$criado], SendOutcome::REJECTED, attempt: 1, maxAttempts: 3);
 
         $this->assertSame(SendOutcome::REJECTED, $this->attemptsOf($log)[0]->outcome, 'Envelope e tentativa não podem discordar sobre a mesma resposta.');
+    }
+
+    public static function twoHundredBodies(): array
+    {
+        return [
+            'objeto JSON' => ['{"id_par_edital": 1}', SendOutcome::SUCCESS],
+            'lista JSON vazia' => ['[]', SendOutcome::SUCCESS],
+            'html' => ['<html>Bad Gateway</html>', SendOutcome::ERROR],
+            'sem corpo' => [null, SendOutcome::ERROR],
+            'null' => ['null', SendOutcome::ERROR],
+            'texto JSON' => ['"ok"', SendOutcome::ERROR],
+        ];
+    }
+
+    // a mesma régua do cliente: um 200 sem JSON é falha, e a tentativa não pode dizer que deu certo
+    #[DataProvider('twoHundredBodies')]
+    function testATwoHundredAttemptIsSuccessOnlyWithAJsonBody(?string $body, string $expected)
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $resposta = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200, responseBody: $body);
+
+        $this->logger()->recordAttempts($log, [$resposta], SendOutcome::ERROR, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame($expected, $this->attemptsOf($log)[0]->outcome);
     }
 
     function testAnAttemptWithoutResponseKeepsTheOutcomeOfTheSend()

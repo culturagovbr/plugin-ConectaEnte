@@ -102,7 +102,8 @@ class SendLogger
     {
         return match (true) {
             $exchange->status === null => $sendOutcome,
-            $exchange->status === 200 => SendOutcome::SUCCESS,
+            $exchange->status === 200 && $exchange->hasJsonBody() => SendOutcome::SUCCESS,
+            $exchange->status === 200 => SendOutcome::ERROR,
             $exchange->status >= 500 => SendOutcome::ERROR,
             default => SendOutcome::REJECTED,
         };

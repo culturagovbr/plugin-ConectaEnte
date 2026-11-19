@@ -36,10 +36,31 @@ class SendHistoryTest extends TestCase
         $this->assertSame(SendOutcome::SUCCESS, $log->outcome);
         $tentativa = $this->attemptsOf($log)[0];
         $this->assertSame(200, $tentativa->httpStatus);
+        $this->assertSame(SendOutcome::SUCCESS, $tentativa->outcome);
         $this->assertSame('req-7', $tentativa->requestId, 'O x-request-id é o que correlaciona a linha com o log do outro lado.');
         $this->assertSame(120, $tentativa->durationMs);
         $this->assertStringContainsString('53781', $tentativa->responseBody);
         $this->assertSame(53781, $log->parEditalId, 'O id do edital no CultBR fica em coluna própria: sem ele, correlacionar os dois lados obriga a abrir o payload.');
+    }
+
+    function testATwoHundredWithoutJsonClosesTheEnvelopeAsErrorAndKeepsTheBody()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, '<html>Bad Gateway</html>');
+
+        $this->executeSend($opportunity->id);
+
+        $log = $this->logOf($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $log->outcome);
+        $this->assertNull($log->parEditalId);
+        $tentativa = $this->attemptsOf($log)[0];
+        $this->assertSame(200, $tentativa->httpStatus);
+        $this->assertSame(SendOutcome::ERROR, $tentativa->outcome, 'Envelope e tentativa não podem discordar sobre a mesma resposta.');
+        $this->assertSame('<html>Bad Gateway</html>', $tentativa->responseBody, 'O corpo recebido é o que permite entender a falha.');
+        $this->assertSame(
+            $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS),
+            $log->outcome,
+        );
     }
 
     function testTheEnvelopeAndTheOpportunityAgreeOnTheOutcome()

@@ -19,4 +19,10 @@ final class HttpExchange
         public readonly ?int $durationMs = null,
     ) {
     }
+
+    /** Se a resposta veio com um corpo JSON, que é o que o cliente exige para aceitar um 200. */
+    public function hasJsonBody(): bool
+    {
+        return $this->responseBody !== null && is_array(json_decode($this->responseBody, true));
+    }
 }
