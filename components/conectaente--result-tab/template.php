@@ -7,6 +7,7 @@
 use MapasCulturais\i;
 
 $this->import('
+    conectaente--result-mapping
     mc-card
     mc-container
     mc-icon
@@ -154,6 +155,8 @@ $this->import('
                         </div>
                     </template>
                 </mc-card>
+
+                <conectaente--result-mapping :entity="entity"></conectaente--result-mapping>
             </template>
         </main>
 

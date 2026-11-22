@@ -131,3 +131,36 @@ aside .conectaente-result-tab__send:disabled {
         font-size: 0.875rem;
     }
 }
+
+.conectaente-result-mapping {
+    h4 {
+        margin: 1.5rem 0 0.5rem;
+    }
+
+    select {
+        width: 100%;
+    }
+}
+
+.conectaente-result-mapping__hint {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--mc-gray-700);
+}
+
+.conectaente-result-mapping__suggestion {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--mc-gray-100);
+}
+
+.conectaente-result-mapping__equivalence label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
