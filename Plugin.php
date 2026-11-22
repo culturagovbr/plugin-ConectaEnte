@@ -11,6 +11,7 @@ use ConectaEnte\Http\Transport\FixtureTransport;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Payload\OpportunityPayload;
+use ConectaEnte\Payload\ResultPayload;
 use ConectaEnte\Payload\PayloadValidation;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Jobs\ParInformationFetchJob;
@@ -145,6 +146,11 @@ class Plugin extends \MapasCulturais\Plugin
     function resultAnswers(): ResultAnswers
     {
         return new ResultAnswers();
+    }
+
+    function resultPayload(): ResultPayload
+    {
+        return new ResultPayload($this);
     }
 
     function resultAttachments(): ResultAttachments
