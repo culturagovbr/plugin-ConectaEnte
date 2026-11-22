@@ -27,6 +27,7 @@ final class ResultSender
     const STATUS_SIMULATED = 'simulated';
     const STATUS_UNCERTAIN = 'uncertain';
     const MAX_STORED_ERRORS = 200;
+    const DOCUMENT_KEYS = ['cpf', 'cnpj'];
 
     public function __construct(private Plugin $plugin)
     {
@@ -140,6 +141,8 @@ final class ResultSender
             $recorded['linhas'] = ['total' => $built['totalLines'], 'hash' => $built['linesHash']];
         }
 
+        $recorded['respostas'] = $this->withoutDocuments($recorded['respostas'] ?? []);
+
         $client = $this->plugin->client();
         $result = $client->sendResult($token, $parEditalId, $built['payload'], $recorded, $built['files']);
         $outcome = $this->outcomeOf($result);
@@ -153,6 +156,20 @@ final class ResultSender
         };
 
         $this->plugin->sendLogger()->finish($log, $outcome);
+    }
+
+    // a tabela da comissão também traz CPF de terceiros
+    private function withoutDocuments(array $value): array
+    {
+        foreach ($value as $key => $item) {
+            if (is_array($item)) {
+                $value[$key] = $this->withoutDocuments($item);
+            } elseif (in_array($key, self::DOCUMENT_KEYS, true) && $item !== null && $item !== '') {
+                $value[$key] = '***';
+            }
+        }
+
+        return $value;
     }
 
     private function outcomeOf(ResultSendResult $result): string

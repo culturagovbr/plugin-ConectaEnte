@@ -334,6 +334,25 @@ class ResultSendTest extends TestCase
         $this->assertSame(SendOutcome::SUCCESS, $this->reloadedLog($log)->outcome);
     }
 
+    function testTheCommitteeDocumentIsMaskedInTheHistoryButSentInFull()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(404, self::NOT_FOUND)]);
+        $this->app->hook('conectaente.resultPayload', function ($opportunity, &$payload) {
+            $payload['respostas'][] = ['id_par_questao' => 13933, 'resposta' => ['resposta' => [['nome' => 'Fulana de Tal Teste', 'cpf' => '529.982.247-25']]]];
+        });
+
+        try {
+            $log = $this->runSend($opportunity);
+        } finally {
+            $this->app->clearHooks('conectaente.resultPayload');
+        }
+
+        $attempt = $this->app->repo(\ConectaEnte\Entities\LogAttempt::class)->findOneBy(['log' => $log->id], ['id' => 'DESC']);
+        $this->assertStringNotContainsString('529.982.247-25', (string) $attempt->requestPayload);
+        $this->assertStringContainsString('Fulana de Tal Teste', (string) $attempt->requestPayload);
+        $this->assertSame('529.982.247-25', $this->postedBody()['respostas'][0]['resposta']['resposta'][0]['cpf']);
+    }
+
     function testInDevModeTheSendIsSimulatedWithoutKeepingTheHash()
     {
         $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(404, self::NOT_FOUND)]);
