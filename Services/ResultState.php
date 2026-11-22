@@ -16,12 +16,14 @@ final class ResultState implements JsonSerializable
     const AWAITING_FINAL_PUBLICATION = 'awaitingFinalPublication';
     const NO_FORM = 'noForm';
     const CULTBR_UNAVAILABLE = 'cultbrUnavailable';
-    const AVAILABLE = 'available';
+    const PENDING = 'pending';
+    const COMPLETE = 'complete';
 
     private function __construct(
         public readonly string $state,
         public readonly ?string $reason = null,
         public readonly ?array $structure = null,
+        public readonly array $form = [],
     ) {
     }
 
@@ -30,9 +32,14 @@ final class ResultState implements JsonSerializable
         return new self($state, $reason);
     }
 
-    public static function available(array $structure): self
+    /**
+     * O formulário aberto: pendente enquanto houver obrigatória sem resposta.
+     *
+     * @param array{answers: array, computed: array, suggested: array, missing: int[], stale: bool} $form
+     */
+    public static function withForm(array $structure, array $form): self
     {
-        return new self(self::AVAILABLE, structure: $structure);
+        return new self($form['missing'] ? self::PENDING : self::COMPLETE, structure: $structure, form: $form);
     }
 
     /** Se a aba de resultado aparece para esta oportunidade. */
@@ -51,6 +58,7 @@ final class ResultState implements JsonSerializable
                 'versionId' => $this->structure['id_formulario_versao'] ?? null,
                 'version' => $this->structure['versao'] ?? null,
             ] : null,
-        ];
+            'structure' => $this->structure,
+        ] + $this->form;
     }
 }

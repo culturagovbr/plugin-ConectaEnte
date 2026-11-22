@@ -77,7 +77,7 @@ class ResultStateTest extends TestCase
         $opportunity->save(true);
         Plugin::instance()->transport = FakeTransport::replying(200, self::STRUCTURE);
 
-        $this->assertSame(ResultState::AVAILABLE, $this->stateOf($opportunity)->state, 'O edital encerrado ainda presta contas do resultado.');
+        $this->assertSame(ResultState::COMPLETE, $this->stateOf($opportunity)->state, 'O edital encerrado ainda presta contas do resultado.');
     }
 
     function testWithoutTheParEditalIdThereIsNowhereToSend()
@@ -105,14 +105,14 @@ class ResultStateTest extends TestCase
         $this->assertSame([], $transport->requestedUrls, 'O que é local se confere sem chamar o CultBR.');
     }
 
-    function testAReadyEditalIsAvailableWithItsFormVersion()
+    function testAReadyEditalOpensTheFormWithItsVersion()
     {
         $opportunity = $this->readyOpportunity();
         Plugin::instance()->transport = FakeTransport::replying(200, self::STRUCTURE);
 
         $state = $this->stateOf($opportunity)->jsonSerialize();
 
-        $this->assertSame(ResultState::AVAILABLE, $state['state']);
+        $this->assertSame(ResultState::COMPLETE, $state['state']);
         $this->assertSame(['id' => 109, 'versionId' => 541, 'version' => 12], $state['form']);
     }
 
@@ -152,7 +152,7 @@ class ResultStateTest extends TestCase
             Response::received(200, json_encode(self::STRUCTURE)),
         );
 
-        $this->assertSame(ResultState::AVAILABLE, $this->stateOf($opportunity)->state);
+        $this->assertSame(ResultState::COMPLETE, $this->stateOf($opportunity)->state);
         $this->assertSame('1', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID), 'O tipo só vinha no eco do envio do edital; o acervo sem ele o ganha aqui.');
     }
 
@@ -182,7 +182,7 @@ class ResultStateTest extends TestCase
         Plugin::instance()->transport = FakeTransport::replying(200, self::STRUCTURE);
 
         $this->assertSame(200, $this->send($this->resultRoute($opportunity->id)));
-        $this->assertSame(ResultState::AVAILABLE, json_decode((string) $this->app->response->getBody(), true)['state']);
+        $this->assertSame(ResultState::COMPLETE, json_decode((string) $this->app->response->getBody(), true)['state']);
     }
 
     function testTheRouteRefusesWhoDoesNotControlTheEdital()

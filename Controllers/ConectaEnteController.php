@@ -340,6 +340,22 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
     }
 
+    /**
+     * Grava o formulário de resultado inteiro: aplica as respostas válidas e devolve o erro das recusadas.
+     */
+    function POST_resultAnswers()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $this->refuseOtherSubsite($opportunity);
+        $opportunity->checkPermission('@control');
+
+        $errors = Plugin::instance()->resultService()->saveAnswers($opportunity, (array) ($this->postData['answers'] ?? []));
+
+        $this->json(['errors' => (object) $errors, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]);
+    }
+
     // o histórico carrega o payload, com o documento do Ente dentro: informar o id de outra instalação não pode bastar
     private function refuseOtherSubsite(Opportunity $opportunity): void
     {

@@ -50,6 +50,7 @@ final class CultBrMetadata
     const PAR_ACTION_TYPE_ID = 'conectaente_parTipoAcaoId';
     // o CNPJ, e não o id local: Ente Federado excluído e recadastrado continua sendo o mesmo
     const PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT = 'conectaente_parEditalFederativeEntityDocument';
+    const RESULT_FORM = 'conectaente_resultForm';
 
     /** O que aconteceu com esta oportunidade e quem ela é no CultBR: não se copia para uma duplicata. */
     const SEND_STATE_KEYS = [
@@ -59,6 +60,7 @@ final class CultBrMetadata
         self::PAR_EDITAL_ID,
         self::PAR_ACTION_TYPE_ID,
         self::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT,
+        self::RESULT_FORM,
     ];
 
     /**
@@ -109,6 +111,8 @@ final class CultBrMetadata
         self::registerText($plugin, self::PAR_EDITAL_ID, i::__('Id do edital no CultBR'));
         self::registerText($plugin, self::PAR_ACTION_TYPE_ID, i::__('Tipo de ação do edital no PAR'));
         self::registerText($plugin, self::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT, i::__('CNPJ do Ente Federado que enviou o edital'));
+        // as respostas trazem o CPF da comissão avaliadora
+        $plugin->registerOpportunityMetadata(self::RESULT_FORM, ['label' => i::__('Respostas do resultado do edital'), 'type' => 'json', 'private' => true]);
     }
 
     private static function serializeDateTime(mixed $value): ?string

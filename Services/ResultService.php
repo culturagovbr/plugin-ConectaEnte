@@ -9,6 +9,7 @@ use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\i;
 
 final class ResultService
 {
@@ -73,10 +74,36 @@ final class ResultService
         $read = is_array($cached) ? ApiRead::ok($cached) : $this->freshStructure($opportunity);
 
         return match (true) {
-            $read->body !== null => ResultState::available($read->body),
+            $read->body !== null => $this->formState($opportunity, $read->body),
             $read->notFound => ResultState::of(ResultState::NO_FORM),
             default => ResultState::of(ResultState::CULTBR_UNAVAILABLE, $this->unavailableReason($read)),
         };
+    }
+
+    private function formState(Opportunity $opportunity, array $structure): ResultState
+    {
+        $form = new ResultForm($structure);
+        $answers = $this->plugin->resultAnswers();
+
+        return ResultState::withForm($structure, [
+            'answers' => (object) $answers->saved($opportunity)['answers'],
+            'computed' => (object) $answers->computed($opportunity, $form),
+            'suggested' => (object) $answers->suggested($opportunity, $form),
+            'missing' => $answers->missing($opportunity, $form),
+            'stale' => $answers->isStale($opportunity, $form),
+        ]);
+    }
+
+    /** Grava as respostas na estrutura que vale agora; devolve o erro de cada uma recusada. */
+    public function saveAnswers(Opportunity $opportunity, array $answers): array
+    {
+        $state = $this->stateOf($opportunity);
+
+        if (!$state->structure) {
+            return ['_' => sprintf(i::__('O formulário de resultado não está disponível (%s).'), $state->state)];
+        }
+
+        return $this->plugin->resultAnswers()->save($opportunity, new ResultForm($state->structure), $answers);
     }
 
     // o tipo de ação só vem no eco do envio do edital; para o acervo sem ele, o modelo de planilha o devolve
