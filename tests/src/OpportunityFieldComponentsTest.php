@@ -12,7 +12,7 @@ class OpportunityFieldComponentsTest extends TestCase
     // o cadastro de Ente Federado é entidade do plugin, e nele gravar do próprio componente é o esperado
     const FEDERATIVE_ENTITY_COMPONENTS = ['conectaente--entity-card', 'conectaente--entity-form'];
     // as respostas do resultado são do plugin e têm rota própria, fora do "Salvar" da oportunidade
-    const RESULT_COMPONENTS = ['conectaente--result-tab', 'conectaente--result-mapping'];
+    const RESULT_COMPONENTS = ['conectaente--result-tab', 'conectaente--result-mapping', 'conectaente--result-rows'];
 
     function testNoFieldComponentWritesOnItsOwn()
     {

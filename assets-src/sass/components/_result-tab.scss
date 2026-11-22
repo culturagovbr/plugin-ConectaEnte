@@ -164,3 +164,28 @@ aside .conectaente-result-tab__send:disabled {
     gap: 0.75rem;
     margin-bottom: 0.5rem;
 }
+
+.conectaente-result-rows__scroll {
+    overflow-x: auto;
+
+    input,
+    select {
+        min-width: 10rem;
+    }
+}
+
+.conectaente-result-rows__row--pending td:first-child {
+    border-left: 3px solid var(--mc-warning-500);
+}
+
+.conectaente-result-rows__cell--pending {
+    background: color-mix(in srgb, var(--mc-warning-500) 12%, transparent);
+}
+
+.conectaente-result-rows__pages {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+}
