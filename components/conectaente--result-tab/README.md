@@ -28,7 +28,7 @@ As regras de visibilidade (`eq` e `includes`) são avaliadas no navegador a cada
 
 **Escolhas** se gravam pelo `id` da opção; a opção com complemento, como `{id, complemento}`.
 
-**Envio:** o botão da lateral chama `POST conectaente/resultSend/{id}`. Ele aparece em `pending`, `complete` e `sent` (onde vira "Retificar no CultBR"), e some em `sending` e `uncertain`. A recusa da rota aparece sob o botão, e as pendências devolvidas atualizam a lista do que falta. Em `sending`, a aba relê o estado a cada 5 s, sem tocar nas respostas em edição.
+**Envio:** o botão da lateral chama `POST conectaente/resultSend/{id}`. Ele aparece em `pending`, `complete` e `sent` (onde vira "Retificar no CultBR", quando o `/publicado` tem resultado), e some em `sending` e `uncertain`. A recusa da rota aparece sob o botão, e as pendências devolvidas atualizam a lista do que falta. Em `sending`, a aba relê o estado a cada 5 s, sem tocar nas respostas em edição.
 
 **Último envio:** o card mostra a situação e a data do último desfecho, a mensagem (`lastSend.outcome.message`, montada no servidor), a lista de recusas e o resultado vigente no CultBR. Tudo vem do metadado do envio, não do histórico.
 

@@ -115,15 +115,29 @@ class ResultSendTest extends TestCase
         $this->assertTrue($this->resultService()->requestSend($this->reloaded($opportunity))['queued'], 'O hash vale para o id do edital em que foi enviado.');
     }
 
-    function testASentResultOffersTheRetification()
+    function testWhenThePublishedCannotBeReadTheResultSentHereOffersTheRetification()
     {
-        $opportunity = $this->readyEdital();
+        $opportunity = $this->readyEdital(publishedReplies: [Response::failed('timeout')]);
         $this->markAsSent($opportunity, 'outro-conteudo', (int) $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
 
         $state = $this->resultService()->stateOf($this->reloaded($opportunity));
 
         $this->assertSame(ResultState::SENT, $state->state);
         $this->assertTrue($state->hasSendButton());
+    }
+
+    function testAResultPublishedOutsideThePluginAlsoOffersTheRetification()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20073])]);
+
+        $this->assertSame(ResultState::SENT, $this->resultService()->stateOf($opportunity)->state, 'O 20073 do 53781 não foi enviado por aqui.');
+    }
+
+    function testWithoutAPublishedResultTheButtonIsTheFirstSend()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(404, self::NOT_FOUND)]);
+
+        $this->assertSame(ResultState::COMPLETE, $this->resultService()->stateOf($opportunity)->state);
     }
 
     function testTheRouteRefusesWhoDoesNotControlTheEdital()
@@ -263,7 +277,7 @@ class ResultSendTest extends TestCase
         $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20073])]);
         $log = $this->unansweredSend($opportunity, seenResultId: 20073);
 
-        $this->assertSame(ResultState::COMPLETE, $this->resultService()->stateOf($this->reloaded($opportunity))->state);
+        $this->assertSame(ResultState::SENT, $this->resultService()->stateOf($this->reloaded($opportunity))->state, 'O 20073 publicado mantém o Retificar.');
         $this->assertNotNull($this->reloadedLog($log)->reconciledAt);
         $this->assertNull(Plugin::instance()->resultSender()->unsettledSend($this->reloaded($opportunity)), 'Conciliado uma vez, a aba não lê o publicado a cada carga.');
     }

@@ -105,7 +105,7 @@ As respostas se gravam sozinhas, 1,5 s depois da última alteração. Inscritos,
 
 **Anexos.** As questões de anexo recebem arquivo privado (grupo `conectaenteResultAttachment`), e o envio passa a ir em multipart. Em homologação, em 22/11/2026, o storage do CultBR ainda recusava o upload.
 
-**Enviar e Retificar.** O botão vale para o edital, não para as linhas. Com pendência, ele devolve a lista do que falta, sem enfileirar. Completo, o pedido vai para a fila, e o job lê `/resultado/publicado`: sem resultado publicado, envia o final (`id_tipo` 2); com resultado publicado, envia o retificado (3). Depois do primeiro aceite, o botão passa a "Retificar". O envio não retenta: repetir um POST que pode ter chegado publicaria dois resultados.
+**Enviar e Retificar.** O botão vale para o edital, não para as linhas. Com pendência, ele devolve a lista do que falta, sem enfileirar. Completo, o pedido vai para a fila, e o job lê `/resultado/publicado`: sem resultado publicado, envia o final (`id_tipo` 2); com resultado publicado, envia o retificado (3). Quando o `/publicado` tem resultado, inclusive criado por fora do plugin, o botão passa a "Retificar"; a leitura fica um minuto em cache. O envio não retenta: repetir um POST que pode ter chegado publicaria dois resultados.
 
 **Guarda por hash.** O conteúdo enviado (respostas, linhas e arquivos, sem tipo nem data) tem um hash gravado com o `parEditalId` em que foi aceito. O mesmo conteúdo para o mesmo id é recusado com "nada mudou"; com outro id, segue. Quando o edital muda de id no CultBR, o estado do resultado é apagado.
 

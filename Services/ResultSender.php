@@ -198,6 +198,8 @@ final class ResultSender
 
     private function recordSuccess(Opportunity $opportunity, ?int $resultId, string $hash, int $type): void
     {
+        App::i()->mscache->delete(ResultService::PUBLISHED_CACHE_PREFIX . (int) $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
+
         $opportunity->{CultBrMetadata::RESULT_ID} = $resultId === null ? null : (string) $resultId;
         $opportunity->{CultBrMetadata::RESULT_TYPE} = (string) $type;
         $opportunity->{CultBrMetadata::RESULT_SENT_HASH} = ['hash' => $hash, 'parEditalId' => (int) $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID)];

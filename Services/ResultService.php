@@ -17,6 +17,8 @@ final class ResultService
 {
     const STRUCTURE_CACHE_SECONDS = 300;
     const REQUEST_TIME_LIMIT_SECONDS = 10;
+    const PUBLISHED_CACHE_PREFIX = 'conectaente:result-published:';
+    const PUBLISHED_CACHE_SECONDS = 60;
 
     // arquivado segue: o edital encerrado ainda presta contas do resultado
     const STATUSES_WITH_RESULT = [Opportunity::STATUS_ENABLED, Opportunity::STATUS_ARCHIVED];
@@ -96,7 +98,26 @@ final class ResultService
             'missing' => $answers->missing($opportunity, $form),
             'stale' => $answers->isStale($opportunity, $form),
             'spreadsheetPending' => $this->plugin->resultRows()->pendingRowCount($opportunity),
-        ], $this->sendState($opportunity), $this->plugin->resultSender()->hasSentResult($opportunity));
+        ], $sendState = $this->sendState($opportunity), $sendState === null && $this->hasPublishedResult($opportunity));
+    }
+
+    // o publicado enxerga resultado criado por fora; sem leitura conclusiva, vale o que foi aceito por aqui
+    private function hasPublishedResult(Opportunity $opportunity): bool
+    {
+        $key = self::PUBLISHED_CACHE_PREFIX . (int) $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID);
+        $cached = App::i()->mscache->fetch($key);
+
+        if (is_bool($cached)) {
+            return $cached;
+        }
+
+        $token = $this->plugin->sealedOpportunity()->federativeEntityOf($opportunity)?->token;
+        $published = $this->plugin->client()->getPublishedResult((string) $token, (int) $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
+
+        $exists = $published->known ? $published->exists() : $this->plugin->resultSender()->hasSentResult($opportunity);
+        App::i()->mscache->save($key, $exists, self::PUBLISHED_CACHE_SECONDS);
+
+        return $exists;
     }
 
     // em envio esconde o botão; incerto só sai com uma leitura determinada do publicado, que concilia o envio sem resposta
