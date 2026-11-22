@@ -34,12 +34,12 @@ class SendHistoryTest extends TestCase
 
         $log = $this->logOf($opportunity);
         $this->assertSame(SendOutcome::SUCCESS, $log->outcome);
-        $tentativa = $this->attemptsOf($log)[0];
-        $this->assertSame(200, $tentativa->httpStatus);
-        $this->assertSame(SendOutcome::SUCCESS, $tentativa->outcome);
-        $this->assertSame('req-7', $tentativa->requestId, 'O x-request-id é o que correlaciona a linha com o log do outro lado.');
-        $this->assertSame(120, $tentativa->durationMs);
-        $this->assertStringContainsString('53781', $tentativa->responseBody);
+        $storedAttempt = $this->attemptsOf($log)[0];
+        $this->assertSame(200, $storedAttempt->httpStatus);
+        $this->assertSame(SendOutcome::SUCCESS, $storedAttempt->outcome);
+        $this->assertSame('req-7', $storedAttempt->requestId, 'O x-request-id é o que correlaciona a linha com o log do outro lado.');
+        $this->assertSame(120, $storedAttempt->durationMs);
+        $this->assertStringContainsString('53781', $storedAttempt->responseBody);
         $this->assertSame(53781, $log->parEditalId, 'O id do edital no CultBR fica em coluna própria: sem ele, correlacionar os dois lados obriga a abrir o payload.');
     }
 
@@ -53,10 +53,10 @@ class SendHistoryTest extends TestCase
         $log = $this->logOf($opportunity);
         $this->assertSame(SendOutcome::ERROR, $log->outcome);
         $this->assertNull($log->parEditalId);
-        $tentativa = $this->attemptsOf($log)[0];
-        $this->assertSame(200, $tentativa->httpStatus);
-        $this->assertSame(SendOutcome::ERROR, $tentativa->outcome, 'Envelope e tentativa não podem discordar sobre a mesma resposta.');
-        $this->assertSame('<html>Bad Gateway</html>', $tentativa->responseBody, 'O corpo recebido é o que permite entender a falha.');
+        $storedAttempt = $this->attemptsOf($log)[0];
+        $this->assertSame(200, $storedAttempt->httpStatus);
+        $this->assertSame(SendOutcome::ERROR, $storedAttempt->outcome, 'Envelope e tentativa não podem discordar sobre a mesma resposta.');
+        $this->assertSame('<html>Bad Gateway</html>', $storedAttempt->responseBody, 'O corpo recebido é o que permite entender a falha.');
         $this->assertSame(
             $this->reloaded($opportunity)->getMetadata(CultBrMetadata::SEND_STATUS),
             $log->outcome,
@@ -122,15 +122,15 @@ class SendHistoryTest extends TestCase
         $opportunity = $this->liveSealedOpportunity();
         Plugin::instance()->transport = FakeTransport::replying(500, 'Internal Server Error');
         $this->executeSend($opportunity->id, attempt: 1);
-        $primeiro = $this->logOf($opportunity);
+        $firstLog = $this->logOf($opportunity);
 
         Plugin::instance()->transport = FakeTransport::replying(200, ['id_par_edital' => 53781]);
-        $this->executeSend($opportunity->id, attempt: 2, logUuid: $primeiro->uuid);
+        $this->executeSend($opportunity->id, attempt: 2, logUuid: $firstLog->uuid);
 
         $this->assertSame(1, $this->storedLogCountOf($opportunity), 'Três tentativas pertencem a um envio só.');
         $log = $this->logOf($opportunity);
         $this->assertSame(SendOutcome::SUCCESS, $log->outcome);
-        $this->assertSame([1, 2], array_map(fn ($tentativa) => $tentativa->attempt, $this->attemptsOf($log)));
+        $this->assertSame([1, 2], array_map(fn ($storedAttempt) => $storedAttempt->attempt, $this->attemptsOf($log)));
     }
 
     function testExhaustingTheAttemptsClosesTheEnvelopeAsError()
@@ -149,18 +149,18 @@ class SendHistoryTest extends TestCase
     function testAnIncompletePayloadBecomesAnAttemptWithoutRequest()
     {
         $opportunity = $this->liveSealedOpportunity();
-        Plugin::instance()->transport = $transporte = FakeTransport::replying(200);
+        Plugin::instance()->transport = $transport = FakeTransport::replying(200);
         $this->removeFromPayload('numero_previsto_vagas');
 
         $this->executeSend($opportunity->id);
 
         $log = $this->logOf($opportunity);
-        $this->assertSame([], $transporte->requestedUrls, 'Premissa do teste: o payload incompleto não chega a ser enviado.');
+        $this->assertSame([], $transport->requestedUrls, 'Premissa do teste: o payload incompleto não chega a ser enviado.');
         $this->assertSame(SendOutcome::ERROR, $log->outcome);
-        $tentativa = $this->attemptsOf($log)[0];
-        $this->assertNull($tentativa->httpStatus, 'Falha anterior à requisição é tentativa sem status.');
-        $this->assertNotNull($tentativa->errorMessage);
-        $this->assertStringContainsString('/api/v1/oportunidades/', $tentativa->endpoint, 'O destino continua nomeado, mesmo sem a requisição ter saído.');
+        $storedAttempt = $this->attemptsOf($log)[0];
+        $this->assertNull($storedAttempt->httpStatus, 'Falha anterior à requisição é tentativa sem status.');
+        $this->assertNotNull($storedAttempt->errorMessage);
+        $this->assertStringContainsString('/api/v1/oportunidades/', $storedAttempt->endpoint, 'O destino continua nomeado, mesmo sem a requisição ter saído.');
     }
 
     function testASimulatedSendIsStoredAsSimulated()
@@ -195,9 +195,9 @@ class SendHistoryTest extends TestCase
 
         $log = $this->logOf($opportunity);
         $this->assertSame(SendOutcome::ERROR, $log->outcome);
-        $tentativa = $this->attemptsOf($log)[0];
-        $this->assertNull($tentativa->httpStatus);
-        $this->assertNotNull($tentativa->errorMessage, 'O motivo público entra na tentativa; a mensagem da exceção fica no log.');
+        $storedAttempt = $this->attemptsOf($log)[0];
+        $this->assertNull($storedAttempt->httpStatus);
+        $this->assertNotNull($storedAttempt->errorMessage, 'O motivo público entra na tentativa; a mensagem da exceção fica no log.');
     }
 
     private bool $removingFromPayload = false;
