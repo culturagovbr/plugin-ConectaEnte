@@ -8,7 +8,7 @@ Aba "Resultado CultBR" da gestão da oportunidade: o formulário de resultado do
 
 ### Comportamento
 
-Ao montar, lê `GET conectaente/result/{id}`, que devolve o estado do resultado, a estrutura do formulário, as respostas gravadas, as calculadas pelo Mapas, as sugestões e as obrigatórias que faltam. Fora dos estados `pending` e `complete`, a aba mostra só a frase do estado.
+Ao montar, lê `GET conectaente/result/{id}`, que devolve o estado do resultado, a estrutura do formulário, as respostas gravadas, as calculadas pelo Mapas, as sugestões e as obrigatórias que faltam. Fora dos estados `pending`, `complete`, `sent`, `sending` e `uncertain`, a aba mostra só a frase do estado.
 
 Com o formulário aberto:
 
@@ -19,7 +19,7 @@ Com o formulário aberto:
 | `texto`, `textarea`, `número`, `moeda`, `data`, `booleano` | o campo do tipo, com os limites declarados |
 | `radio`, `múltipla escolha`, `checkbox` | as opções da lista; a opção com complemento abre o campo de texto, e a exclusiva desmarca as outras |
 | `tabela`, `Tabela Dinâmica` | editor de linhas pelas colunas declaradas |
-| `anexo`, `múltiplos anexos` | o nome do modelo, quando a estrutura o traz |
+| `anexo`, `múltiplos anexos` | envio de arquivo pelo formato e pelo limite declarados; o arquivo fica privado na oportunidade |
 | tipo desconhecido | erro visível, nunca um campo de texto genérico |
 
 As regras de visibilidade (`eq` e `includes`) são avaliadas no navegador a cada resposta, com a mesma lógica do validador do servidor.
@@ -27,6 +27,10 @@ As regras de visibilidade (`eq` e `includes`) são avaliadas no navegador a cada
 **Gravação:** o formulário inteiro vai a `POST conectaente/resultAnswers/{id}` 1,5 s depois da última alteração, uma requisição por vez. O servidor aplica as respostas válidas e devolve o erro das recusadas, que aparece sob a questão. A lateral mostra as obrigatórias que faltam, com um link para cada uma.
 
 **Escolhas** se gravam pelo `id` da opção; a opção com complemento, como `{id, complemento}`.
+
+**Envio:** o botão da lateral chama `POST conectaente/resultSend/{id}`. Ele aparece em `pending`, `complete` e `sent` (onde vira "Retificar no CultBR"), e some em `sending` e `uncertain`. A recusa da rota aparece sob o botão, e as pendências devolvidas atualizam a lista do que falta. Em `sending`, a aba relê o estado a cada 5 s, sem tocar nas respostas em edição.
+
+**Último envio:** o card mostra a situação e a data do último desfecho, a mensagem (`lastSend.outcome.message`, montada no servidor), a lista de recusas e o resultado vigente no CultBR. Tudo vem do metadado do envio, não do histórico.
 
 ### Onde é injetado
 

@@ -95,6 +95,30 @@ O envio tem tempos próprios — 30 s para conectar, 60 no total —, mais largo
 
 O job confere a elegibilidade na hora de executar, não só no momento do disparo: entre enfileirar e rodar, o edital pode ter ido para a lixeira ou perdido um campo obrigatório. São três condições, e o motivo registrado em log diz qual falhou, nomeando os campos pelo rótulo que aparece na tela.
 
+# Resultado do edital ao CultBR
+
+Depois que o CultBR aceita o edital, quem tem `@control` sobre ele ganha a aba **"Resultado CultBR"**, que só aparece na raiz selada. O formulário vem da estrutura que o CultBR publica para o tipo de ação do edital (`conectaente_parTipoAcaoId`, gravado no aceite), com cache de 5 minutos. Ele só abre com o edital publicado ou arquivado, com `parEditalId` gravado, com o Ente Federado do selo igual ao que enviou o edital e com a fase final publicada; fora disso, a aba diz qual dessas condições falta.
+
+As respostas se gravam sozinhas, 1,5 s depois da última alteração. Inscritos, contemplados e categorias são calculados pelo Mapas; o valor repassado vem sugerido (valor por vaga da faixa × contemplados) e fica editável. Respostas, de/para e células da grade ficam fora do alcance da API do core: só o plugin as escreve, e as células, que trazem CPF e CNPJ de terceiros, vivem em tabela própria (`conectaente_result_row`), não em metadado.
+
+**Planilha de contemplados.** Só existe quando o modelo do edital no CultBR traz colunas (`possui_planilha`). O de/para liga cada coluna a um campo da ficha; a grade mostra uma linha por inscrição aprovada na fase final, e o valor preenchido na grade vale sobre o da ficha.
+
+**Anexos.** As questões de anexo recebem arquivo privado (grupo `conectaenteResultAttachment`), e o envio passa a ir em multipart. Em homologação, em 22/11/2026, o storage do CultBR ainda recusava o upload.
+
+**Enviar e Retificar.** O botão vale para o edital, não para as linhas. Com pendência, ele devolve a lista do que falta, sem enfileirar. Completo, o pedido vai para a fila, e o job lê `/resultado/publicado`: sem resultado publicado, envia o final (`id_tipo` 2); com resultado publicado, envia o retificado (3). Depois do primeiro aceite, o botão passa a "Retificar". O envio não retenta: repetir um POST que pode ter chegado publicaria dois resultados.
+
+**Guarda por hash.** O conteúdo enviado (respostas, linhas e arquivos, sem tipo nem data) tem um hash gravado com o `parEditalId` em que foi aceito. O mesmo conteúdo para o mesmo id é recusado com "nada mudou"; com outro id, segue. Quando o edital muda de id no CultBR, o estado do resultado é apagado.
+
+**Um envio por vez.** Enquanto há envio em andamento, o segundo clique é recusado e a aba acompanha o estado até o job terminar. O envio que passa de 10 minutos sem desfecho fecha como erro.
+
+**Desfecho incerto.** Se o POST ficou sem resposta (timeout ou 5xx), não há como saber se ele chegou. A aba pede conferência no CultBR, e o botão só volta depois de uma leitura determinada do `/publicado`: se apareceu um id novo, o envio chegou e é reconhecido sem reenviar; se o id é o mesmo de antes do POST, ele não chegou.
+
+**O que a aba mostra.** A situação do último envio (aceito, recusado, não enviado, sem resposta ou simulado), com a data, e o resultado vigente no CultBR. A recusa aparece em lista: as questões pelo texto da estrutura, as linhas pela linha, pela coluna e pela inscrição. O `valor_recebido` das linhas recusadas nunca é guardado, porque pode ser o CPF de um contemplado. O histórico de envio separa o edital do resultado, e no resultado guarda só o total e o hash das linhas, nunca o conteúdo.
+
+**Limites.** A planilha só existe para o edital cujo modelo no CultBR a declara. Ação sem formulário de resultado no CultBR fica com a aba no estado "sem formulário". No modo `dev`, nada é enviado: a fixture `publicado.json` sempre tem resultado, então a aba sempre oferece "Retificar", e um edital sem `parEditalId` gravado fica parado em "sem `parEditalId`", porque nenhum envio do edital acontece.
+
+**Implantação.** O mapeamento do histórico (`conectaente_log`) mudou. Depois de atualizar o plugin, rode o `db-update` e limpe o cache de metadados do Doctrine (`/tmp/symfony-cache` do container): com o cache antigo, a aba responde 500.
+
 # Selo do Ente Federado
 
 O selo cadastrado no Ente Federado deve ser criado **sem período de validade**: um selo com prazo expiraria a integração sem aviso. O plugin recusa o vínculo de selo com validade — a mensagem manda editar o selo e remover a validade — e, se um selo já vinculado ganhar validade depois, a listagem avisa. Só relação de selo concedida traz a oportunidade para a integração. A caixinha `+` e o cadastro só oferecem selos que nenhum Ente Federado usa — inclusive na lixeira, que continua ocupando o selo.

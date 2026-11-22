@@ -1,6 +1,6 @@
 # Componente `<conectaente--send-history>`
 
-Mostra o histórico de envio do edital ao CultBR em três níveis — envio, tentativa e conteúdo da troca —, lendo a rota `conectaente/sendHistory/{id}`.
+Mostra o histórico de envio do edital ao CultBR em três níveis — envio, tentativa e conteúdo da troca —, lendo a rota `conectaente/sendHistory/{id}`. Cada envio traz a ação, "Edital" ou "Resultado", e a rota filtra por ela com `?action=opportunity|result`.
 
 **Só o `saasSuperAdmin` chega aqui** (`Plugin::OPERATOR_ROLE`). A rota exige o papel, e quem não o tem não recebe nem o componente: o `conectaente--opportunity-tab` só importa este template e monta a aba depois de perguntar ao `Plugin::canReadSendHistory()`. O payload gravado carrega o documento do Ente e o retrato inteiro do edital.
 
