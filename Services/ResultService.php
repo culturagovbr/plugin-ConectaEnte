@@ -89,7 +89,7 @@ final class ResultService
         $answers = $this->plugin->resultAnswers();
 
         return ResultState::withForm($structure, [
-            'lastSend' => $this->lastSend($opportunity),
+            'lastSend' => $this->lastSend($opportunity, $form),
             'answers' => (object) $answers->saved($opportunity)['answers'],
             'computed' => (object) $answers->computed($opportunity, $form),
             'suggested' => (object) $answers->suggested($opportunity, $form),
@@ -164,8 +164,8 @@ final class ResultService
         return ['queued' => true, 'message' => $deferred ? i::__('O resultado foi para a fila. A conferência do conteúdo continua no envio.') : null, 'missing' => [], 'pendingRows' => 0];
     }
 
-    /** O desfecho do último envio de resultado, como a aba o mostra. */
-    public function lastSend(Opportunity $opportunity): ?array
+    /** O desfecho do último envio de resultado e o resultado vigente, como a aba os mostra. */
+    public function lastSend(Opportunity $opportunity, ?ResultForm $form = null): ?array
     {
         $status = $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_STATUS);
 
@@ -173,7 +173,7 @@ final class ResultService
             return null;
         }
 
-        return [
+        $sent = [
             'status' => $status,
             'at' => $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_AT),
             'reason' => $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_REASON),
@@ -182,6 +182,17 @@ final class ResultService
             // só a propriedade passa pelo tipo json
             'errors' => json_decode(json_encode($opportunity->{CultBrMetadata::RESULT_SEND_ERRORS}), true),
         ];
+
+        $columnLabels = empty($sent['errors']['rows']) ? [] : $this->columnLabels($opportunity);
+
+        return $sent + ['outcome' => (new ResultOutcome($form, $columnLabels))->describe($sent)];
+    }
+
+    private function columnLabels(Opportunity $opportunity): array
+    {
+        $fields = $this->plugin->resultSpreadsheet()->model($opportunity)->body['campos'] ?? [];
+
+        return array_column(array_filter($fields, 'is_array'), 'nome', 'coluna');
     }
 
     /** Grava as respostas na estrutura que vale agora; devolve o erro de cada uma recusada. */
