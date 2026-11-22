@@ -345,6 +345,25 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->json(['errors' => (object) $errors, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]);
     }
 
+    /**
+     * O modelo de planilha do edital e o de/para dos campos da ficha, para quem controla a oportunidade.
+     */
+    function GET_resultMapping()
+    {
+        $this->json(Plugin::instance()->resultSpreadsheet()->mappingView($this->controlledOpportunity()));
+    }
+
+    /**
+     * Grava o de/para; devolve o erro de cada escolha recusada e a tela atualizada.
+     */
+    function POST_resultMapping()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $errors = Plugin::instance()->resultSpreadsheet()->save($opportunity, (array) $this->postData);
+
+        $this->json(['errors' => (object) $errors, 'mapping' => Plugin::instance()->resultSpreadsheet()->mappingView($opportunity)]);
+    }
+
     private function controlledOpportunity(): Opportunity
     {
         $this->requireAuthentication();
