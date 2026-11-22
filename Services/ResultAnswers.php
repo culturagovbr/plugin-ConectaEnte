@@ -82,8 +82,10 @@ final class ResultAnswers
         $kept = array_intersect_key($this->saved($opportunity)['answers'], $form->questions());
         $errors = [];
 
+        $validator = new ResultValidator($form);
+
         foreach ($answers as $id => $value) {
-            $error = $this->refusal($form, $computed, (int) $id);
+            $error = $this->refusal($form, $computed, (int) $id) ?? $validator->error($form->question((int) $id), $value);
 
             if ($error) {
                 $errors[(int) $id] = $error;
@@ -100,20 +102,10 @@ final class ResultAnswers
         return $errors;
     }
 
-    /** @return int[] obrigatórias editáveis ainda sem resposta */
+    /** @return int[] obrigatórias visíveis e editáveis ainda sem resposta */
     public function missing(Opportunity $opportunity, ResultForm $form): array
     {
-        $computed = $this->computed($opportunity, $form);
-        $answers = $this->saved($opportunity)['answers'];
-        $missing = [];
-
-        foreach ($form->questions() as $id => $question) {
-            if ($this->isPending($form, $question, $computed, $id) && $this->isEmpty($answers[$id] ?? null)) {
-                $missing[] = $id;
-            }
-        }
-
-        return $missing;
+        return (new ResultValidator($form))->missing($this->saved($opportunity)['answers'], $this->computed($opportunity, $form));
     }
 
     /** Se as respostas gravadas são de outra versão do formulário. */
@@ -133,21 +125,6 @@ final class ResultAnswers
             $form->isReadOnly($question) || array_key_exists($id, $computed) => i::__('Esta questão é calculada pelo Mapas.'),
             default => null,
         };
-    }
-
-    // anexo e questão com regra de visibilidade ficam para o validador, que sabe o que está visível
-    private function isPending(ResultForm $form, array $question, array $computed, int $id): bool
-    {
-        return !empty($question['requerida'])
-            && !$form->isReadOnly($question)
-            && !array_key_exists($id, $computed)
-            && !in_array($question['tipo_questao'] ?? null, ['anexo', 'múltiplos anexos'], true)
-            && empty($question['config']['regras']['itens']);
-    }
-
-    private function isEmpty(mixed $value): bool
-    {
-        return $value === null || $value === '' || $value === [];
     }
 
     private function automaticValue(Opportunity $opportunity, ResultForm $form, array $question): mixed

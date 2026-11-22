@@ -189,19 +189,16 @@ class ResultAnswersTest extends TestCase
 
     private function everyRequiredAnswer(): array
     {
-        $answers = [];
-
-        foreach ($this->form()->questions() as $id => $question) {
-            $answers[$id] = match ($question['tipo_questao']) {
-                'número', 'moeda' => 1,
-                'booleano' => false,
-                'data' => '2026-12-15',
-                'múltipla escolha', 'tabela' => ['x'],
-                default => 'x',
-            };
-        }
-
-        return array_diff_key($answers, array_flip([self::ENROLLED, self::AWARDED, self::CATEGORIES, 13916, 13917]));
+        return [
+            self::EXECUTION_FORM => 'fe_tec',
+            self::TRANSFERRED => 15000,
+            13921 => ['heteroidentificacao'],
+            13923 => true,
+            13924 => '2026-12-15',
+            13925 => 'Execução realizada conforme o planejado.',
+            13933 => [['nome' => 'Fulana de Tal Teste', 'cpf' => '529.982.247-25', 'vinculo' => 'servidor público', 'categoria_grupo' => 'Todas as propostas']],
+            self::DECLARATIONS => ['declaracao_integral'],
+        ];
     }
 
     private function readyOpportunity(array $ranges = []): Opportunity
