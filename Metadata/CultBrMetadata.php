@@ -47,9 +47,19 @@ final class CultBrMetadata
     const PAR_EDITAL_ID = 'conectaente_parEditalId';
     const SEND_REASON = 'conectaente_sendReason';
     const SEND_AT = 'conectaente_sendAt';
+    const PAR_ACTION_TYPE_ID = 'conectaente_parTipoAcaoId';
+    // o CNPJ, e não o id local: Ente Federado excluído e recadastrado continua sendo o mesmo
+    const PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT = 'conectaente_parEditalFederativeEntityDocument';
 
     /** O que aconteceu com esta oportunidade e quem ela é no CultBR: não se copia para uma duplicata. */
-    const SEND_STATE_KEYS = [self::SEND_STATUS, self::SEND_REASON, self::SEND_AT, self::PAR_EDITAL_ID];
+    const SEND_STATE_KEYS = [
+        self::SEND_STATUS,
+        self::SEND_REASON,
+        self::SEND_AT,
+        self::PAR_EDITAL_ID,
+        self::PAR_ACTION_TYPE_ID,
+        self::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT,
+    ];
 
     /**
      * Registra na oportunidade os campos que o CultBR exige; quem os torna obrigatórios é a regra de publicação.
@@ -97,6 +107,8 @@ final class CultBrMetadata
         self::registerText($plugin, self::SEND_REASON, i::__('Motivo da situação do envio ao CultBR'));
         self::registerText($plugin, self::SEND_AT, i::__('Data da última tentativa de envio ao CultBR'));
         self::registerText($plugin, self::PAR_EDITAL_ID, i::__('Id do edital no CultBR'));
+        self::registerText($plugin, self::PAR_ACTION_TYPE_ID, i::__('Tipo de ação do edital no PAR'));
+        self::registerText($plugin, self::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT, i::__('CNPJ do Ente Federado que enviou o edital'));
     }
 
     private static function serializeDateTime(mixed $value): ?string

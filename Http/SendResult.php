@@ -44,4 +44,17 @@ final class SendResult
     {
         return $this->accepted ? $this->response['id_par_edital'] : null;
     }
+
+    public function parActionTypeId(): ?int
+    {
+        return self::actionTypeOf($this->accepted ? $this->response : null);
+    }
+
+    /** O `acao.id_par_tipo_acao` do eco, só quando vem inteiro positivo. */
+    public static function actionTypeOf(?array $response): ?int
+    {
+        $id = $response['acao']['id_par_tipo_acao'] ?? null;
+
+        return is_int($id) && $id > 0 ? $id : null;
+    }
 }

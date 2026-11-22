@@ -2,6 +2,7 @@
 
 namespace ConectaEnte\Services;
 
+use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\Log;
 use ConectaEnte\Http\HttpExchange;
 use ConectaEnte\Http\SendResult;
@@ -60,7 +61,7 @@ class OpportunitySender
         // o cliente precisa sobreviver à chamada: é dele que saem as trocas que viram tentativas
         $client = $this->plugin->client();
         $result = $client->sendOpportunity($federativeEntity->token, $payload);
-        $owner = $result->accepted ? $this->opportunityOwningParEdital($result->parEditalId(), $opportunity) : null;
+        $owner = $result->accepted ? $this->ownerOfParEdital($result->parEditalId(), $opportunity) : null;
 
         $outcome = match (true) {
             $result->unreachable => SendOutcome::unavailable($this->unavailableReason($result)),
@@ -71,7 +72,7 @@ class OpportunitySender
         };
 
         if ($outcome->status === SendOutcome::SUCCESS) {
-            $this->keepParEditalId($opportunity, $result->parEditalId(), $log);
+            $this->keepParEditalId($opportunity, $result, $federativeEntity, $log);
         }
 
         $this->recordAttempts($log, $client->exchanges(), $outcome, $attempt);
@@ -127,9 +128,17 @@ class OpportunitySender
         return trim(implode(' ', $shown) . ($rest > 0 ? ' ' . sprintf(i::__('E outros %d campos.'), $rest) : ''));
     }
 
-    private function keepParEditalId(Opportunity $opportunity, int $id, ?Log $log): void
+    private function keepParEditalId(Opportunity $opportunity, SendResult $result, FederativeEntity $federativeEntity, ?Log $log): void
     {
+        $id = $result->parEditalId();
         $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, (string) $id);
+        $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT, $federativeEntity->document);
+
+        // eco sem a ação não apaga o tipo que um envio anterior trouxe
+        if ($actionType = $result->parActionTypeId()) {
+            $opportunity->setMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID, (string) $actionType);
+        }
+
         $opportunity->saveMetadata();
 
         if ($log) {
@@ -144,8 +153,8 @@ class OpportunitySender
         return sprintf(i::__('O CultBR devolveu o edital %d, que já pertence à oportunidade %d. O id não foi gravado.'), $id, $owner);
     }
 
-    // um edital do CultBR pertence a uma oportunidade só: gravar o id de outra é pior do que não gravar
-    private function opportunityOwningParEdital(int $id, Opportunity $opportunity): ?int
+    /** A outra oportunidade que já guarda este edital do CultBR, se houver: o edital tem uma dona só. */
+    public function ownerOfParEdital(int $id, Opportunity $opportunity): ?int
     {
         $rows = App::i()->repo(OpportunityMeta::class)->findBy(['key' => CultBrMetadata::PAR_EDITAL_ID, 'value' => (string) $id]);
 
