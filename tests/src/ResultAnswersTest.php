@@ -144,6 +144,15 @@ class ResultAnswersTest extends TestCase
         $this->assertSame([], $this->enqueuedSendJobs(), 'Salvar a oportunidade selada a reenviaria ao CultBR.');
     }
 
+    function testTheCoreApiCannotWriteTheAnswers()
+    {
+        $opportunity = $this->readyOpportunity();
+
+        $this->send($this->requestFactory->PATCH('opportunity', 'single', [$opportunity->id], [CultBrMetadata::RESULT_FORM => ['answers' => [self::TRANSFERRED => 1]]]));
+
+        $this->assertNull($this->reloaded($opportunity)->getMetadata(CultBrMetadata::RESULT_FORM), 'Por fora, as respostas fugiriam do validador.');
+    }
+
     function testTheStateIsPendingUntilEveryRequiredAnswerArrives()
     {
         $opportunity = $this->readyOpportunity();

@@ -411,6 +411,13 @@ class Plugin extends \MapasCulturais\Plugin
             }
         });
 
+        // private só filtra a leitura: sem isto, quem edita a oportunidade escreveria as respostas por fora do validador
+        $dropResultKeys = function (&$data) {
+            $data = array_diff_key((array) $data, array_flip(CultBrMetadata::RESULT_KEYS));
+        };
+        $app->hook('PATCH(opportunity.single):data', $dropResultKeys);
+        $app->hook('PUT(opportunity.single):data', $dropResultKeys);
+
         // a cópia é salva antes e depois de receber os metadados: a marca dura a requisição inteira
         $app->hook('ALL(opportunity.duplicate):before', function () {
             Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);

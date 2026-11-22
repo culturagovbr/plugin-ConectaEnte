@@ -52,6 +52,9 @@ final class CultBrMetadata
     const PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT = 'conectaente_parEditalFederativeEntityDocument';
     const RESULT_FORM = 'conectaente_resultForm';
 
+    /** Só o plugin as escreve: a API do core as tira do corpo antes de salvar a oportunidade. */
+    const RESULT_KEYS = [self::RESULT_FORM];
+
     /** O que aconteceu com esta oportunidade e quem ela é no CultBR: não se copia para uma duplicata. */
     const SEND_STATE_KEYS = [
         self::SEND_STATUS,
