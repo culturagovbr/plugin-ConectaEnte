@@ -60,6 +60,14 @@ final class ResultRows
     /** @return list<array<string, string>>|null as linhas prontas para o envio, ou null se alguma tem pendência */
     public function completeRows(Opportunity $opportunity): ?array
     {
+        $rows = $this->completeRowsByRegistration($opportunity);
+
+        return $rows === null ? null : array_values($rows);
+    }
+
+    /** @return array<int, array<string, string>>|null as mesmas linhas, na mesma ordem, pelo id da inscrição */
+    public function completeRowsByRegistration(Opportunity $opportunity): ?array
+    {
         $context = $this->context($opportunity);
         $rows = [];
 
@@ -69,7 +77,7 @@ final class ResultRows
                     return null;
                 }
 
-                $rows[] = array_map(fn($cell) => (string) ($cell['value'] ?? ''), $row['cells']);
+                $rows[$row['registrationId']] = array_map(fn($cell) => (string) ($cell['value'] ?? ''), $row['cells']);
             }
         }
 

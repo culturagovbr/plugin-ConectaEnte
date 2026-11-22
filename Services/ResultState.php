@@ -18,6 +18,9 @@ final class ResultState implements JsonSerializable
     const CULTBR_UNAVAILABLE = 'cultbrUnavailable';
     const PENDING = 'pending';
     const COMPLETE = 'complete';
+    const SENDING = 'sending';
+    const UNCERTAIN = 'uncertain';
+    const SENT = 'sent';
 
     private function __construct(
         public readonly string $state,
@@ -37,11 +40,23 @@ final class ResultState implements JsonSerializable
      *
      * @param array{answers: array, computed: array, suggested: array, missing: int[], stale: bool} $form
      */
-    public static function withForm(array $structure, array $form): self
+    public static function withForm(array $structure, array $form, ?string $sendState = null, bool $sent = false): self
     {
         $complete = !$form['missing'] && empty($form['spreadsheetPending']);
 
-        return new self($complete ? self::COMPLETE : self::PENDING, structure: $structure, form: $form);
+        return new self($sendState ?? ($complete ? ($sent ? self::SENT : self::COMPLETE) : self::PENDING), structure: $structure, form: $form);
+    }
+
+    /** Se o formulário e a planilha estão completos, qualquer que seja a situação do envio. */
+    public function isFormComplete(): bool
+    {
+        return $this->structure !== null && !$this->form['missing'] && empty($this->form['spreadsheetPending']);
+    }
+
+    /** Se o botão de envio aparece. */
+    public function canSend(): bool
+    {
+        return in_array($this->state, [self::COMPLETE, self::SENT], true);
     }
 
     /** Se a aba de resultado aparece para esta oportunidade. */
@@ -55,6 +70,7 @@ final class ResultState implements JsonSerializable
         return [
             'state' => $this->state,
             'reason' => $this->reason,
+            'canSend' => $this->canSend(),
             'form' => $this->structure ? [
                 'id' => $this->structure['id_formulario'] ?? null,
                 'versionId' => $this->structure['id_formulario_versao'] ?? null,

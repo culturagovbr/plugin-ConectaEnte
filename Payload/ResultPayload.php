@@ -26,18 +26,20 @@ final class ResultPayload
     /**
      * Monta o envio; devolve o motivo em `error` quando a planilha tem linha incompleta.
      *
-     * @return array{payload: ?array, files: array, hash: ?string, linesHash: ?string, totalLines: int, error: ?string}
+     * @return array{payload: ?array, files: array, hash: ?string, linesHash: ?string, totalLines: int, lineRegistrationIds: int[], error: ?string}
      */
     public function build(Opportunity $opportunity, ResultForm $form, int $type): array
     {
         $answers = $this->plugin->resultAnswers();
         $known = $answers->computed($opportunity, $form) + $answers->saved($opportunity)['answers'];
         $files = $this->plugin->resultAttachments()->files($opportunity);
-        $lines = $this->lines($opportunity);
+        $linesByRegistration = $this->lines($opportunity);
 
-        if ($lines === false) {
-            return ['payload' => null, 'files' => [], 'hash' => null, 'linesHash' => null, 'totalLines' => 0, 'error' => i::__('A planilha de contemplados tem linhas com pendência. Complete a grade antes de enviar.')];
+        if ($linesByRegistration === false) {
+            return ['payload' => null, 'files' => [], 'hash' => null, 'linesHash' => null, 'totalLines' => 0, 'lineRegistrationIds' => [], 'error' => i::__('A planilha de contemplados tem linhas com pendência. Complete a grade antes de enviar.')];
         }
+
+        $lines = $linesByRegistration === null ? null : array_values($linesByRegistration);
 
         $content = ['respostas' => $this->responses($form, $known, $files)];
 
@@ -55,6 +57,7 @@ final class ResultPayload
             'hash' => $this->hash($content, $files),
             'linesHash' => $lines ? hash('sha256', json_encode($lines)) : null,
             'totalLines' => $lines ? count($lines) : 0,
+            'lineRegistrationIds' => $linesByRegistration ? array_keys($linesByRegistration) : [],
             'error' => null,
         ];
     }
@@ -97,7 +100,7 @@ final class ResultPayload
             return null;
         }
 
-        return $this->plugin->resultRows()->completeRows($opportunity) ?? false;
+        return $this->plugin->resultRows()->completeRowsByRegistration($opportunity) ?? false;
     }
 
     private function responses(ResultForm $form, array $known, array $files): array

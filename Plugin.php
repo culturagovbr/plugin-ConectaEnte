@@ -17,6 +17,7 @@ use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Jobs\ParInformationFetchJob;
 use ConectaEnte\Jobs\ParInformationSyncJob;
 use ConectaEnte\Jobs\SendOpportunityJob;
+use ConectaEnte\Jobs\SendResultJob;
 use ConectaEnte\Services\FieldLabels;
 use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\OpportunitySender;
@@ -29,6 +30,7 @@ use ConectaEnte\Services\ModelSeal;
 use ConectaEnte\Services\ResultAnswers;
 use ConectaEnte\Services\ResultAttachments;
 use ConectaEnte\Services\ResultRows;
+use ConectaEnte\Services\ResultSender;
 use ConectaEnte\Services\ResultService;
 use ConectaEnte\Services\ResultSpreadsheet;
 use ConectaEnte\Services\SealedOpportunity;
@@ -146,6 +148,11 @@ class Plugin extends \MapasCulturais\Plugin
     function resultAnswers(): ResultAnswers
     {
         return new ResultAnswers();
+    }
+
+    function resultSender(): ResultSender
+    {
+        return new ResultSender($this);
     }
 
     function resultPayload(): ResultPayload
@@ -348,6 +355,7 @@ class Plugin extends \MapasCulturais\Plugin
         $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
         $app->registerJobType(new ParInformationFetchJob(ParInformationFetchJob::SLUG));
         $app->registerJobType(new SendOpportunityJob(SendOpportunityJob::SLUG));
+        $app->registerJobType(new SendResultJob(SendResultJob::SLUG));
 
         try {
             $this->scheduleParSync();

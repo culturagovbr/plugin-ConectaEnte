@@ -25,6 +25,7 @@ use MapasCulturais\Entities\User;
  * @property string|null $publicationDate
  * @property bool $posted
  * @property \DateTime|null $startedAt
+ * @property \DateTime|null $reconciledAt
  *
  * @ORM\Table(name="conectaente_log")
  * @ORM\Entity(repositoryClass="MapasCulturais\Repository")
@@ -143,6 +144,12 @@ class Log extends \MapasCulturais\Entity
      * @ORM\Column(name="started_at", type="datetime", nullable=true)
      */
     protected $startedAt;
+
+    /**
+     * @var \DateTime|null
+     * @ORM\Column(name="reconciled_at", type="datetime", nullable=true)
+     */
+    protected $reconciledAt;
 
     /**
      * @var LogAttempt[]

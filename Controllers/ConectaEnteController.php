@@ -413,6 +413,17 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
     }
 
+    /**
+     * Confere e enfileira o envio do resultado ao CultBR; a recusa volta com o motivo e as pendências.
+     */
+    function POST_resultSend()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $request = Plugin::instance()->resultService()->requestSend($opportunity);
+
+        $request['queued'] ? $this->json(['queued' => true, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]) : $this->errorJson($request, 400);
+    }
+
     private function controlledOpportunity(): Opportunity
     {
         $this->requireAuthentication();

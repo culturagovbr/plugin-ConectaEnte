@@ -172,4 +172,8 @@ return [
                 FOREIGN KEY (registration_id) REFERENCES registration(id) ON DELETE CASCADE");
         }
     },
+
+    'conectaente: o envio de resultado registra a conciliação do envio sem resposta' => function () {
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMP(0) NULL");
+    },
 ];

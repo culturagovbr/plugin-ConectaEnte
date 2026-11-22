@@ -5,6 +5,8 @@ namespace ConectaEnte\Services;
 use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Http\ApiRead;
 use ConectaEnte\Http\SendResult;
+use ConectaEnte\Jobs\SendResultJob;
+use ConectaEnte\Payload\ResultPayload;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use MapasCulturais\App;
@@ -14,6 +16,7 @@ use MapasCulturais\i;
 final class ResultService
 {
     const STRUCTURE_CACHE_SECONDS = 300;
+    const REQUEST_TIME_LIMIT_SECONDS = 10;
 
     // arquivado segue: o edital encerrado ainda presta contas do resultado
     const STATUSES_WITH_RESULT = [Opportunity::STATUS_ENABLED, Opportunity::STATUS_ARCHIVED];
@@ -86,13 +89,99 @@ final class ResultService
         $answers = $this->plugin->resultAnswers();
 
         return ResultState::withForm($structure, [
+            'lastSend' => $this->lastSend($opportunity),
             'answers' => (object) $answers->saved($opportunity)['answers'],
             'computed' => (object) $answers->computed($opportunity, $form),
             'suggested' => (object) $answers->suggested($opportunity, $form),
             'missing' => $answers->missing($opportunity, $form),
             'stale' => $answers->isStale($opportunity, $form),
             'spreadsheetPending' => $this->plugin->resultRows()->pendingRowCount($opportunity),
-        ]);
+        ], $this->sendState($opportunity), $this->plugin->resultSender()->hasSentResult($opportunity));
+    }
+
+    // em envio esconde o botão; incerto só sai com uma leitura determinada do publicado, que concilia o envio sem resposta
+    private function sendState(Opportunity $opportunity): ?string
+    {
+        $sender = $this->plugin->resultSender();
+
+        if ($this->plugin->sendLogger()->pendingResultSend($opportunity)) {
+            return ResultState::SENDING;
+        }
+
+        if (!$sender->unsettledSend($opportunity)) {
+            return null;
+        }
+
+        return $sender->reconcile($opportunity) ? null : ResultState::UNCERTAIN;
+    }
+
+    /**
+     * Confere o pedido de envio e o enfileira; devolve a recusa, ou a confirmação de que foi para a fila.
+     *
+     * @return array{queued: bool, message: ?string, missing: int[], pendingRows: int} a mensagem acompanha a fila quando a conferência ficou para o job
+     */
+    public function requestSend(Opportunity $opportunity): array
+    {
+        $startedAt = microtime(true);
+        $state = $this->stateOf($opportunity);
+        $refusal = fn(string $message) => ['queued' => false, 'message' => $message, 'missing' => $state->form['missing'] ?? [], 'pendingRows' => (int) ($state->form['spreadsheetPending'] ?? 0)];
+
+        $message = match ($state->state) {
+            ResultState::COMPLETE, ResultState::SENT => null,
+            ResultState::SENDING => i::__('Um envio deste resultado já está em andamento.'),
+            ResultState::UNCERTAIN => i::__('O último envio pode ter chegado ao CultBR. Confira lá antes de enviar de novo.'),
+            ResultState::PENDING => i::__('O resultado tem pendências. Complete o formulário e a planilha antes de enviar.'),
+            default => i::__('O resultado deste edital não pode ser enviado agora.'),
+        };
+
+        if ($message) {
+            return $refusal($message);
+        }
+
+        // acima do teto a conferência do conteúdo fica para o job, que a repete antes do POST
+        $deferred = microtime(true) - $startedAt >= self::REQUEST_TIME_LIMIT_SECONDS;
+
+        if (!$deferred) {
+            $built = $this->plugin->resultPayload()->build($opportunity, new ResultForm($state->structure), ResultPayload::TYPE_FINAL);
+
+            if ($built['error']) {
+                return $refusal($built['error']);
+            }
+
+            if ($this->plugin->resultSender()->isAlreadySent($opportunity, $built['hash'])) {
+                return $refusal(i::__('Nada mudou desde o último resultado enviado.'));
+            }
+        }
+
+        $log = $this->plugin->sendLogger()->openResultSend($opportunity);
+
+        if (!$log) {
+            return $refusal(i::__('Um envio deste resultado já está em andamento.'));
+        }
+
+        App::i()->enqueueJob(SendResultJob::SLUG, SendResultJob::dataFor($opportunity, $log), 'now', '', 1);
+
+        return ['queued' => true, 'message' => $deferred ? i::__('O resultado foi para a fila. A conferência do conteúdo continua no envio.') : null, 'missing' => [], 'pendingRows' => 0];
+    }
+
+    /** O desfecho do último envio de resultado, como a aba o mostra. */
+    public function lastSend(Opportunity $opportunity): ?array
+    {
+        $status = $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_STATUS);
+
+        if (!$status) {
+            return null;
+        }
+
+        return [
+            'status' => $status,
+            'at' => $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_AT),
+            'reason' => $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_REASON),
+            'resultId' => $opportunity->getMetadata(CultBrMetadata::RESULT_ID),
+            'type' => $opportunity->getMetadata(CultBrMetadata::RESULT_TYPE),
+            // só a propriedade passa pelo tipo json
+            'errors' => json_decode(json_encode($opportunity->{CultBrMetadata::RESULT_SEND_ERRORS}), true),
+        ];
     }
 
     /** Grava as respostas na estrutura que vale agora; devolve o erro de cada uma recusada. */
