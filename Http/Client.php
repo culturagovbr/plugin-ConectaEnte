@@ -79,8 +79,13 @@ class Client
             return ParInformationResult::ok(ParInformation::fromApiListResponse($body, $this->enteDocument($body, $document)));
         }
 
-        if ($response->status === 404) {
+        // o contrato não declara 404 aqui: só o corpo do CultBR distingue "sem PAR" de um 404 de proxy
+        if ($response->status === 404 && $this->isCultBrNotFound($response)) {
             return ParInformationResult::notFound();
+        }
+
+        if ($response->status === 404) {
+            return ParInformationResult::unreachable();
         }
 
         if ($response->status >= 500) {
@@ -157,6 +162,13 @@ class Client
             errorMessage: $response->transportError,
             durationMs: $response->durationMs,
         );
+    }
+
+    private function isCultBrNotFound(Response $response): bool
+    {
+        $body = $response->decoded();
+
+        return $body !== null && !array_is_list($body) && is_string($body['detail'] ?? null);
     }
 
     private function readValidation(array $body): TokenValidation
