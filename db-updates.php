@@ -132,4 +132,8 @@ return [
         __try("CREATE UNIQUE INDEX IF NOT EXISTS unq_conectaente_par_edital_id
             ON opportunity_meta (value) WHERE key = 'conectaente_parEditalId'");
     },
+
+    'conectaente: recupera do histórico o tipo de ação e o Ente Federado de cada edital enviado' => function () {
+        \ConectaEnte\Migrations\RecoverParEditalOrigin::run();
+    },
 ];

@@ -2,18 +2,22 @@
 
 namespace Tests\ConectaEnte;
 
+use ConectaEnte\Http\HttpExchange;
 use ConectaEnte\Jobs\SendOpportunityJob;
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Migrations\RecoverParEditalOrigin;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\User;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 use Tests\ConectaEnte\Traits\SendQueue;
 
 /**
- * O tipo de ação e o Ente Federado de cada edital enviado, gravados no envio.
+ * O tipo de ação e o Ente Federado de cada edital enviado: gravados no envio e recuperados do histórico.
  */
 class ParEditalOriginTest extends TestCase
 {
@@ -54,6 +58,99 @@ class ParEditalOriginTest extends TestCase
         $this->executeSend($opportunity->id);
 
         $this->assertNull($this->reloaded($opportunity)->getMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID), 'Tipo em texto não é o que o contrato devolve.');
+    }
+
+    function testTheMigrationTakesTheDocumentFromThePayloadNotFromTheSealOfToday()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $sender = $this->createFederativeEntity('Município que enviou', '11222333000181');
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->acceptedAttempt($opportunity, 53781, $sender->document);
+
+        RecoverParEditalOrigin::run();
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame('11222333000181', $reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT), 'Pelo selo de hoje, o edital que trocou de Ente Federado nunca seria barrado.');
+        $this->assertSame('1', $reloaded->getMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID));
+    }
+
+    function testTheMigrationRestoresAMissingParEditalId()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->acceptedAttempt($opportunity, 53786, $this->resolveFederativeEntity($opportunity)->document);
+
+        RecoverParEditalOrigin::run();
+
+        $this->assertSame('53786', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'É o caso do 12461, aceito no histórico e sem o id gravado.');
+    }
+
+    function testTheMigrationKeepsWhatIsAlreadyStored()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, '99999');
+        $opportunity->setMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID, '7');
+        $opportunity->saveMetadata();
+        $this->acceptedAttempt($opportunity, 53781, $this->resolveFederativeEntity($opportunity)->document);
+
+        RecoverParEditalOrigin::run();
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame('99999', $reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
+        $this->assertSame('7', $reloaded->getMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID));
+    }
+
+    function testTheMigrationDoesNotGiveAnOwnedIdToASecondOpportunity()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $owner = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $owner->setMetadata(CultBrMetadata::PAR_EDITAL_ID, '53781');
+        $owner->saveMetadata();
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->acceptedAttempt($opportunity, 53781, $this->resolveFederativeEntity($opportunity)->document);
+
+        RecoverParEditalOrigin::run();
+
+        $this->assertNull($this->reloaded($opportunity)->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
+    }
+
+    function testTheMigrationIgnoresADocumentWithoutARegisteredFederativeEntity()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->acceptedAttempt($opportunity, 53781, '99888777000166');
+
+        RecoverParEditalOrigin::run();
+
+        $this->assertNull($this->reloaded($opportunity)->getMetadata(CultBrMetadata::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT));
+    }
+
+    function testTheMigrationDoesNotResendTheEdital()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        Plugin::instance()->mode = Plugin::MODE_LIVE;
+        $this->acceptedAttempt($opportunity, 53786, $this->resolveFederativeEntity($opportunity)->document);
+        $this->purgeSendJobs();
+
+        RecoverParEditalOrigin::run();
+
+        $this->assertSame([], $this->enqueuedSendJobs(), 'Salvar a oportunidade selada a reenviaria ao CultBR.');
+    }
+
+    private function acceptedAttempt(Opportunity $opportunity, int $parEditalId, string $document): void
+    {
+        $this->login($this->app->repo(User::class)->find($this->app->user->id));
+        $log = Plugin::instance()->sendLogger()->startOrResume($opportunity);
+        $exchange = new HttpExchange(
+            endpoint: 'https://cultbr.example/api/v1/oportunidades/',
+            status: 200,
+            requestPayload: ['id' => $opportunity->id, 'ente_federado' => ['cnpj' => $document, 'nome' => 'Ente']],
+            responseBody: json_encode(['id_par_edital' => $parEditalId, 'acao' => ['id_par_tipo_acao' => 1]]),
+        );
+        Plugin::instance()->sendLogger()->recordAttempt($log, $exchange, SendOutcome::SUCCESS, 1, 3);
+        $this->app->em->clear();
     }
 
     private function liveSealedOpportunity(): Opportunity
