@@ -24,6 +24,7 @@ use ConectaEnte\Services\PublicationContext;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
+use ConectaEnte\Services\ModelSeal;
 use ConectaEnte\Services\SealedOpportunity;
 use ConectaEnte\Services\SendEligibility;
 use ConectaEnte\Services\SendStatusView;
@@ -133,6 +134,11 @@ class Plugin extends \MapasCulturais\Plugin
     function publicationRequirements(): PublicationRequirements
     {
         return new PublicationRequirements($this->publicationStamp(), $this->parInformationService());
+    }
+
+    function modelSeal(): ModelSeal
+    {
+        return new ModelSeal();
     }
 
     function fieldLabels(): FieldLabels
@@ -325,6 +331,14 @@ class Plugin extends \MapasCulturais\Plugin
         });
 
         $app->hook('entity(OpportunitySealRelation).save:before', function () use ($app) {
+            $plugin = Plugin::instance();
+
+            // a geração do modelo copia o selo, e o modelo o solta ao terminar de salvar
+            if ($plugin->modelSeal()->isModel($this->owner) && $plugin->modelSeal()->isFederativeSeal($this->seal)
+                && !$plugin->publicationStamp()->isDuplicatingInto($this->owner)) {
+                throw new BadRequest(i::__('Modelo de oportunidade não recebe o selo de Ente Federado.'));
+            }
+
             $federativeEntity = $app->repo(FederativeEntitySeal::class)->findConflictingEntity($this->owner, $this->seal);
 
             if ($federativeEntity) {
@@ -378,6 +392,16 @@ class Plugin extends \MapasCulturais\Plugin
         // a cópia é salva antes e depois de receber os metadados: a marca dura a requisição inteira
         $app->hook('ALL(opportunity.duplicate):before', function () {
             Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
+        });
+        // modelo e oportunidade gerada dele são cópias, com a mesma marca
+        $app->hook('ALL(opportunity.generatemodel):before', function () {
+            Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
+        });
+        $app->hook('ALL(opportunity.generateopportunity):before', function () {
+            Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
+        });
+        $app->hook('entity(Opportunity).save:after', function () {
+            Plugin::instance()->modelSeal()->release($this);
         });
         $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationStamp()->duplicationFinished());
 

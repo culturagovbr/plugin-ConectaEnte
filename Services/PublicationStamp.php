@@ -23,7 +23,7 @@ final class PublicationStamp
      */
     public function stamp(Opportunity $opportunity): void
     {
-        if ($this->isCopyBeingDuplicated($opportunity)) {
+        if ($this->isDuplicatingInto($opportunity)) {
             $this->clearCopiedState($opportunity);
             return;
         }
@@ -92,7 +92,7 @@ final class PublicationStamp
         $this->duplicationSourceId = null;
     }
 
-    private function isCopyBeingDuplicated(Opportunity $opportunity): bool
+    public function isDuplicatingInto(Opportunity $opportunity): bool
     {
         return $this->duplicationSourceId !== null && $opportunity->id !== $this->duplicationSourceId && !$opportunity->parent;
     }
