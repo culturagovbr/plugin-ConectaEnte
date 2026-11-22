@@ -15,4 +15,7 @@ return [
     'motivo_status' => '',
     'motivo_null' => '',
     'erro_arquivo' => i::__('Não foi possível enviar o arquivo agora.'),
+    'enviar' => i::__('Enviar ao CultBR'),
+    'retificar' => i::__('Retificar no CultBR'),
+    'erro_envio' => i::__('Não foi possível pedir o envio agora. Tente de novo em alguns minutos.'),
 ];

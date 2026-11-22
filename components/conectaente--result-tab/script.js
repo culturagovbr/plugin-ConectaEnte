@@ -1,7 +1,7 @@
 // escopo próprio: o componente roda ao lado dos do tema, que declaram nomes no global
 (() => {
     const AUTOSAVE_DELAY = 1500;
-    const OPEN_STATES = ['pending', 'complete'];
+    const OPEN_STATES = ['pending', 'complete', 'sent', 'sending', 'uncertain'];
     const CHOICE_LIST_TYPES = ['múltipla escolha', 'checkbox'];
     const TABLE_TYPES = ['tabela', 'Tabela Dinâmica'];
     const ATTACHMENT_TYPES = ['anexo', 'múltiplos anexos'];
@@ -39,6 +39,8 @@
                 saveAgain: false,
                 saveTimer: null,
                 saveFailed: false,
+                requestingSend: false,
+                sendRefusal: null,
             };
         },
 
@@ -136,6 +138,25 @@
                         this.saveAgain = false;
                         this.save();
                     }
+                }
+            },
+
+            async send() {
+                this.requestingSend = true;
+                this.sendRefusal = null;
+
+                try {
+                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultSend', [this.entity.id]), {});
+                    const body = await response.json().catch(() => null);
+
+                    if (!response.ok) {
+                        this.sendRefusal = body?.data?.message || this.text('erro_envio');
+                        return;
+                    }
+
+                    this.result = { ...body.result, answers: this.result.answers };
+                } finally {
+                    this.requestingSend = false;
                 }
             },
 
