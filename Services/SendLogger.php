@@ -382,7 +382,8 @@ class SendLogger
     {
         $user = App::i()->user;
 
-        return $user instanceof User ? $user : null;
+        // referência, não a instância: depois de um clear do EntityManager ela está destacada e o flush recusa
+        return $user instanceof User ? App::i()->em->getReference(User::class, $user->id) : null;
     }
 
     private function sanitized(?string $value, int $maxBytes = self::MAX_STORED_BYTES): ?string
