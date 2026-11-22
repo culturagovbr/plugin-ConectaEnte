@@ -12,6 +12,7 @@ use MapasCulturais\Entities\Seal;
 use MapasCulturais\Entities\SealRelation;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
+use Tests\ConectaEnte\Traits\CapturesLog;
 use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
 
 /**
@@ -19,11 +20,22 @@ use Tests\ConectaEnte\Traits\ConectaEnteFixtures;
  */
 class ParInformationSyncJobTest extends TestCase
 {
+    use CapturesLog;
     use ConectaEnteFixtures;
+
+    private bool $logsJobs = false;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->logsJobs = (bool) ($this->app->config['app.log.jobs'] ?? false);
+    }
 
     protected function tearDown(): void
     {
         Plugin::instance()->transport = null;
+        $this->app->config['app.log.jobs'] = $this->logsJobs;
+        $this->popCapturedLog();
 
         parent::tearDown();
     }
@@ -167,6 +179,43 @@ class ParInformationSyncJobTest extends TestCase
         $this->assertCount(1, $jobs);
         $this->assertSame(1, $jobs[0]->iterations, 'Uma iteração por agendamento: é o que deixa a limpeza de job preso do core funcionar.');
         $this->assertGreaterThan(new \DateTime('+1 minute'), $jobs[0]->nextExecutionTimestamp, 'O agendado de rotina espera o intervalo; imediato é só o do ente salvo.');
+    }
+
+    function testAWaitingSyncIsNotEnqueuedAgain()
+    {
+        $this->purgeScheduledSync();
+        Plugin::instance()->scheduleParSync();
+        $log = $this->captureLog();
+        $this->app->config['app.log.jobs'] = true;
+
+        Plugin::instance()->scheduleParSync();
+
+        $this->assertFalse($log->hasDebugThatContains('ENQUEUED JOB: ' . ParInformationSyncJob::SLUG), 'Agendado e esperando, a requisição não passa pelo core, que escreveria a linha a cada página.');
+    }
+
+    function testAMissingSyncIsEnqueued()
+    {
+        $this->purgeScheduledSync();
+
+        Plugin::instance()->scheduleParSync();
+
+        $this->assertCount(1, $this->app->repo(Job::class)->findBy(['id' => $this->scheduledSyncId()]));
+    }
+
+    function testASyncStuckInProcessingIsHandedToTheCoreToBeRecreated()
+    {
+        $this->purgeScheduledSync();
+        Plugin::instance()->scheduleParSync();
+        $this->app->em->getConnection()->update('job', [
+            'status' => Job::STATUS_PROCESSING,
+            'create_timestamp' => (new \DateTime('-1 hour'))->format('Y-m-d H:i:s'),
+        ], ['id' => $this->scheduledSyncId()]);
+        $this->app->em->clear();
+
+        Plugin::instance()->scheduleParSync();
+
+        $job = $this->app->repo(Job::class)->findOneBy(['id' => $this->scheduledSyncId()]);
+        $this->assertSame(Job::STATUS_WAITING, $job->status, 'Pular também o preso deixaria o aquecimento do PAR parado para sempre.');
     }
 
     function testSavingAFederativeEntityEnqueuesOnlyItsOwnFetch()

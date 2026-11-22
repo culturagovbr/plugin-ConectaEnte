@@ -222,7 +222,17 @@ class Plugin extends \MapasCulturais\Plugin
      */
     function scheduleParSync(): void
     {
-        App::i()->enqueueJob(ParInformationSyncJob::SLUG, [], "+{$this->_config['parSyncIntervalMinutes']} minutes", '', 1);
+        $app = App::i();
+        $start = "+{$this->_config['parSyncIntervalMinutes']} minutes";
+        $jobType = $app->getRegisteredJobType(ParInformationSyncJob::SLUG);
+        $scheduled = $app->repo(Job::class)->findOneBy(['id' => $jobType->generateId([], $start, '', 1)]);
+
+        // o core loga antes de deduplicar, e isto roda a cada requisição; o preso em PROCESSING segue para o core recolher
+        if ($scheduled?->status === Job::STATUS_WAITING) {
+            return;
+        }
+
+        $app->enqueueJob(ParInformationSyncJob::SLUG, [], $start, '', 1);
     }
 
     /** Enfileira a busca da árvore deste ente para agora, se ele estiver ativo. */
