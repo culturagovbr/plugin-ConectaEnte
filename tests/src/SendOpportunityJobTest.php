@@ -489,7 +489,12 @@ class SendOpportunityJobTest extends TestCase
 
         $this->assertNull($this->reloaded($outra)->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'Gravar o id de outra oportunidade é pior do que não gravar.');
         $this->assertSame('53781', $this->reloaded($dona)->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'E a dona do id não pode perdê-lo nesse caminho.');
-        $this->assertSame(SendOutcome::SUCCESS, $this->reloaded($outra)->getMetadata(CultBrMetadata::SEND_STATUS), 'O envio foi aceito: recusar o id não derruba o desfecho.');
+        $this->assertSame(SendOutcome::ERROR, $this->reloaded($outra)->getMetadata(CultBrMetadata::SEND_STATUS), 'Sem o id gravado, o resultado do edital não teria para onde ir.');
+        $this->assertSame(
+            "O CultBR devolveu o edital 53781, que já pertence à oportunidade {$dona->id}. O id não foi gravado.",
+            $this->reloaded($outra)->getMetadata(CultBrMetadata::SEND_REASON),
+        );
+        $this->assertSame([], $this->enqueuedSendJobs(), 'Retentar devolveria o mesmo id.');
     }
 
     private function liveSealedOpportunity(): Opportunity

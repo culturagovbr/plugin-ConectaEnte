@@ -98,12 +98,13 @@ class SendLogger
         }
     }
 
-    // a régua do cliente: faixa mais larga faria a tentativa discordar do envio
+    // a régua do cliente; aceite com envio em erro é o id recusado depois da resposta, e a tentativa acompanha
     private function outcomeOf(HttpExchange $exchange, string $sendOutcome): string
     {
         return match (true) {
             $exchange->status === null => $sendOutcome,
-            SendAcceptance::isAccepted(SendAcceptance::OPPORTUNITY, $exchange->status, $exchange->responseBody) => SendOutcome::SUCCESS,
+            SendAcceptance::isAccepted(SendAcceptance::OPPORTUNITY, $exchange->status, $exchange->responseBody)
+                => $sendOutcome === SendOutcome::ERROR ? SendOutcome::ERROR : SendOutcome::SUCCESS,
             $exchange->status === 200 => SendOutcome::ERROR,
             $exchange->status >= 500 => SendOutcome::ERROR,
             default => SendOutcome::REJECTED,

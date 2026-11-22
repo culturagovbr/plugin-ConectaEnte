@@ -78,6 +78,23 @@ class SendHistoryTest extends TestCase
         $this->assertSame('{}', $storedAttempt->responseBody);
     }
 
+    function testAParEditalIdOwnedByAnotherOpportunityClosesTheEnvelopeAndTheAttemptAsError()
+    {
+        $owner = $this->liveSealedOpportunity();
+        $owner->setMetadata(CultBrMetadata::PAR_EDITAL_ID, '53781');
+        $owner->saveMetadata();
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, ['id_par_edital' => 53781]);
+
+        $this->executeSend($opportunity->id);
+
+        $log = $this->logOf($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $log->outcome);
+        $this->assertNull($log->parEditalId, 'O id de outra oportunidade não entra nem no envelope.');
+        $this->assertSame(SendOutcome::ERROR, $this->attemptsOf($log)[0]->outcome);
+        $this->assertStringContainsString('53781', $this->attemptsOf($log)[0]->responseBody, 'A resposta fica guardada para mostrar de onde veio o id.');
+    }
+
     function testTheEnvelopeAndTheOpportunityAgreeOnTheOutcome()
     {
         $opportunity = $this->liveSealedOpportunity();

@@ -231,6 +231,17 @@ class SendLoggerTest extends TestCase
         $this->assertSame($expected, $this->attemptsOf($log)[0]->outcome);
     }
 
+    function testAnAcceptedAttemptFollowsASendThatClosedAsError()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $exchange = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200, responseBody: '{"id_par_edital": 1}');
+
+        $this->logger()->recordAttempts($log, [$exchange], SendOutcome::ERROR, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame(SendOutcome::ERROR, $this->attemptsOf($log)[0]->outcome, 'O id recusado depois da resposta fecha o envio em erro, e a tentativa não pode dizer sucesso.');
+    }
+
     function testAnAttemptWithoutResponseKeepsTheOutcomeOfTheSend()
     {
         $this->loginAsSaasSuperAdmin();
