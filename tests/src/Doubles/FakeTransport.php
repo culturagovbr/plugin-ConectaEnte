@@ -55,6 +55,16 @@ class FakeTransport implements TransportInterface
         return $this->recorded('POST', $url, $body, $headers);
     }
 
+    /** @var list<array{fields: array, files: array}> */
+    public array $sentMultiparts = [];
+
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response
+    {
+        $this->sentMultiparts[] = ['fields' => $fields, 'files' => $files];
+
+        return $this->recorded('POST', $url, [], $headers);
+    }
+
     private function recorded(string $verb, string $url, array $body, array $headers): Response
     {
         $this->sentVerbs[] = $verb;

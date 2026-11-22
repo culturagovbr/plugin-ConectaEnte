@@ -4,6 +4,7 @@ namespace ConectaEnte\Http;
 
 use ConectaEnte\Dto\ParInformation;
 use ConectaEnte\Http\Transport\CurlTransport;
+use ConectaEnte\Http\Transport\JsonBody;
 use ConectaEnte\Http\Transport\TransportInterface;
 use MapasCulturais\i;
 
@@ -171,10 +172,12 @@ class Client
     /**
      * Publica o resultado do edital; o histórico pode guardar um corpo diferente do enviado.
      */
-    public function sendResult(string $token, int $parEditalId, array $payload, ?array $recordedPayload = null): ResultSendResult
+    public function sendResult(string $token, int $parEditalId, array $payload, ?array $recordedPayload = null, array $files = []): ResultSendResult
     {
         $url = $this->sendResultUrl($parEditalId);
-        $response = $this->transport->post($url, $payload, ['token' => $token]);
+        $response = $files
+            ? $this->transport->postMultipart($url, $this->multipartFields($payload, $files), $this->multipartFiles($files), ['token' => $token])
+            : $this->transport->post($url, $payload, ['token' => $token]);
 
         $this->exchanges[] = $this->exchangeOf('POST', $url, $recordedPayload ?? $payload, $response);
 
@@ -189,6 +192,31 @@ class Client
         $errors = ApiErrors::fromBody($response->json());
 
         return ResultSendResult::rejected($response->status, $errors, $errors->summary(sprintf(i::__('A Plataforma CultBR recusou o resultado do edital (HTTP %d).'), $response->status)));
+    }
+
+    // no multipart as respostas vão como texto JSON em `respostas_json`, e cada arquivo tem a descrição na mesma ordem
+    private function multipartFields(array $payload, array $files): array
+    {
+        $fields = [];
+
+        foreach (['id_tipo', 'id_status', 'data_publicacao'] as $key) {
+            if (isset($payload[$key])) {
+                $fields[] = [$key, (string) $payload[$key]];
+            }
+        }
+
+        $fields[] = ['respostas_json', JsonBody::encode($payload['respostas'] ?? [])];
+
+        foreach ($files as $file) {
+            $fields[] = ['descricoes', (string) ($file['description'] ?? $file['name'])];
+        }
+
+        return $fields;
+    }
+
+    private function multipartFiles(array $files): array
+    {
+        return array_map(fn($file) => ['name' => 'arquivos', 'path' => $file['path'], 'filename' => $file['name'], 'mime' => $file['mime'] ?: 'application/octet-stream'], $files);
     }
 
     /** A rota do envio do resultado, para o histórico nomear o destino. */

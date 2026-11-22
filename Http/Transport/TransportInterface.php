@@ -17,4 +17,10 @@ interface TransportInterface
 
     /** Cria na coleção da url, ou atualiza quando o corpo traz um id que o CultBR já conhece. */
     public function post(string $url, array $body, array $headers = []): Response;
+
+    /**
+     * @param list<array{0: string, 1: string}> $fields
+     * @param list<array{name: string, path: string, filename: string, mime: string}> $files
+     */
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response;
 }

@@ -42,6 +42,11 @@ class FixtureTransport implements TransportInterface
         return $this->refuseWriting('post', $url);
     }
 
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response
+    {
+        return $this->refuseWriting('postMultipart', $url);
+    }
+
     private function refuseWriting(string $verb, string $url): Response
     {
         App::i()->log->warning("ConectaEnte em modo dev: {$verb}() não deveria ser chamado, rota {$this->routeOf($url)}");
