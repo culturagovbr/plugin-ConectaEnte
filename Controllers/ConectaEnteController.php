@@ -12,6 +12,7 @@ use ConectaEnte\Http\TokenValidation;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
+use ConectaEnte\Services\ResultRows;
 use ConectaEnte\Services\SendHistory;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
@@ -362,6 +363,31 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $errors = Plugin::instance()->resultSpreadsheet()->save($opportunity, (array) $this->postData);
 
         $this->json(['errors' => (object) $errors, 'mapping' => Plugin::instance()->resultSpreadsheet()->mappingView($opportunity)]);
+    }
+
+    /**
+     * Uma página da grade de contemplados, com as pendências de cada linha.
+     */
+    function GET_resultRows()
+    {
+        $opportunity = $this->controlledOpportunity();
+
+        $this->json(Plugin::instance()->resultRows()->page(
+            $opportunity,
+            (int) ($this->data['page'] ?? 1),
+            min((int) ($this->data['pageSize'] ?? ResultRows::DEFAULT_PAGE_SIZE), ResultRows::BATCH_SIZE),
+        ));
+    }
+
+    /**
+     * Grava a célula do gestor; null devolve a célula à ficha.
+     */
+    function POST_resultRows()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $error = Plugin::instance()->resultRows()->saveCell($opportunity, (int) ($this->postData['registrationId'] ?? 0), (string) ($this->postData['column'] ?? ''), $this->postData['value'] ?? null);
+
+        $error ? $this->errorJson(['value' => [$error]], 400) : $this->json(true);
     }
 
     private function controlledOpportunity(): Opportunity

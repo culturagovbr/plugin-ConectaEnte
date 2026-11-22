@@ -91,6 +91,7 @@ final class ResultService
             'suggested' => (object) $answers->suggested($opportunity, $form),
             'missing' => $answers->missing($opportunity, $form),
             'stale' => $answers->isStale($opportunity, $form),
+            'spreadsheetPending' => $this->plugin->resultRows()->pendingRowCount($opportunity),
         ]);
     }
 

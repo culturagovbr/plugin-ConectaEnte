@@ -136,4 +136,27 @@ return [
     'conectaente: recupera do histórico o tipo de ação e o Ente Federado de cada edital enviado' => function () {
         \ConectaEnte\Migrations\RecoverParEditalOrigin::run();
     },
+
+    // CPF e CNPJ de terceiros, em volume: fora dos metadados, que as revisões do core copiam
+    'conectaente: cria a tabela das células da grade de contemplados' => function () {
+        if (!__table_exists('conectaente_result_row')) {
+            __try("CREATE SEQUENCE conectaente_result_row_id_seq INCREMENT BY 1 MINVALUE 1 START 1");
+
+            __try("CREATE TABLE conectaente_result_row (
+                id INT NOT NULL DEFAULT nextval('conectaente_result_row_id_seq'),
+                opportunity_id INT NOT NULL,
+                registration_id INT NOT NULL,
+                column_key VARCHAR(100) NOT NULL,
+                value TEXT NULL,
+                update_timestamp TIMESTAMP(0) NOT NULL,
+                PRIMARY KEY(id)
+            )");
+
+            __try("CREATE UNIQUE INDEX unq_conectaente_result_row_cell ON conectaente_result_row (registration_id, column_key)");
+            __try("CREATE INDEX idx_conectaente_result_row_opportunity ON conectaente_result_row (opportunity_id)");
+            __try("ALTER TABLE conectaente_result_row
+                ADD CONSTRAINT fk_conectaente_result_row_registration
+                FOREIGN KEY (registration_id) REFERENCES registration(id) ON DELETE CASCADE");
+        }
+    },
 ];

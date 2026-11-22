@@ -26,6 +26,7 @@ use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\ModelSeal;
 use ConectaEnte\Services\ResultAnswers;
+use ConectaEnte\Services\ResultRows;
 use ConectaEnte\Services\ResultService;
 use ConectaEnte\Services\ResultSpreadsheet;
 use ConectaEnte\Services\SealedOpportunity;
@@ -142,6 +143,11 @@ class Plugin extends \MapasCulturais\Plugin
     function resultAnswers(): ResultAnswers
     {
         return new ResultAnswers();
+    }
+
+    function resultRows(): ResultRows
+    {
+        return new ResultRows($this->resultSpreadsheet());
     }
 
     function resultSpreadsheet(): ResultSpreadsheet

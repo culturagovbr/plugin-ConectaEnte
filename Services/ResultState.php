@@ -33,13 +33,15 @@ final class ResultState implements JsonSerializable
     }
 
     /**
-     * O formulário aberto: pendente enquanto houver obrigatória sem resposta.
+     * O formulário aberto: pendente enquanto houver obrigatória sem resposta ou linha da planilha incompleta.
      *
      * @param array{answers: array, computed: array, suggested: array, missing: int[], stale: bool} $form
      */
     public static function withForm(array $structure, array $form): self
     {
-        return new self($form['missing'] ? self::PENDING : self::COMPLETE, structure: $structure, form: $form);
+        $complete = !$form['missing'] && empty($form['spreadsheetPending']);
+
+        return new self($complete ? self::COMPLETE : self::PENDING, structure: $structure, form: $form);
     }
 
     /** Se a aba de resultado aparece para esta oportunidade. */

@@ -171,9 +171,10 @@ class ResultStateTest extends TestCase
         Plugin::instance()->transport = $transport = FakeTransport::replying(200, self::STRUCTURE);
 
         $this->stateOf($opportunity);
+        $afterFirst = count($transport->requestedUrls);
         $this->stateOf($opportunity);
 
-        $this->assertCount(1, $transport->requestedUrls);
+        $this->assertSame($afterFirst, count($transport->requestedUrls), 'A estrutura e o modelo de planilha vêm do cache na segunda leitura.');
     }
 
     function testTheRouteAnswersTheStateToWhoControlsTheEdital()
