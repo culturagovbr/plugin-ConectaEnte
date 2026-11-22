@@ -331,13 +331,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
      */
     function GET_result()
     {
-        $this->requireAuthentication();
-
-        $opportunity = $this->requestedOpportunity();
-        $this->refuseOtherSubsite($opportunity);
-        $opportunity->checkPermission('@control');
-
-        $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
+        $this->json(Plugin::instance()->resultService()->stateOf($this->controlledOpportunity()));
     }
 
     /**
@@ -345,15 +339,21 @@ class ConectaEnteController extends \MapasCulturais\Controller
      */
     function POST_resultAnswers()
     {
+        $opportunity = $this->controlledOpportunity();
+        $errors = Plugin::instance()->resultService()->saveAnswers($opportunity, (array) ($this->postData['answers'] ?? []));
+
+        $this->json(['errors' => (object) $errors, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]);
+    }
+
+    private function controlledOpportunity(): Opportunity
+    {
         $this->requireAuthentication();
 
         $opportunity = $this->requestedOpportunity();
         $this->refuseOtherSubsite($opportunity);
         $opportunity->checkPermission('@control');
 
-        $errors = Plugin::instance()->resultService()->saveAnswers($opportunity, (array) ($this->postData['answers'] ?? []));
-
-        $this->json(['errors' => (object) $errors, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]);
+        return $opportunity;
     }
 
     // o histórico carrega o payload, com o documento do Ente dentro: informar o id de outra instalação não pode bastar
