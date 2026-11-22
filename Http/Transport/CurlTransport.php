@@ -14,14 +14,14 @@ class CurlTransport implements TransportInterface
     const QUEUED_CONNECT_TIMEOUT = 30;
     const QUEUED_TIMEOUT = 60;
 
-    public function get(string $url, array $headers = []): Response
+    public function get(string $url, array $headers = [], bool $queued = false): Response
     {
         $curl = curl_init($url);
 
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => self::INTERACTIVE_CONNECT_TIMEOUT,
-            CURLOPT_TIMEOUT => self::INTERACTIVE_TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => $queued ? self::QUEUED_CONNECT_TIMEOUT : self::INTERACTIVE_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => $queued ? self::QUEUED_TIMEOUT : self::INTERACTIVE_TIMEOUT,
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 

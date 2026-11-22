@@ -5,15 +5,21 @@ namespace ConectaEnte\Http;
 final class SendAcceptance
 {
     const OPPORTUNITY = 'opportunity';
+    const RESULT = 'result';
 
     private const ACCEPTED_STATUS = [
         self::OPPORTUNITY => 200,
+        self::RESULT => 201,
     ];
 
-    /** Se a resposta é um aceite da operação: o status dela e o `id_par_edital` inteiro positivo. */
+    /** Se a resposta é um aceite da operação: o status dela e, no edital, o `id_par_edital` inteiro positivo. */
     public static function isAccepted(string $operation, ?int $status, ?string $body): bool
     {
-        return $status === self::ACCEPTED_STATUS[$operation] && self::parEditalIdOf($body) !== null;
+        if ($status !== self::ACCEPTED_STATUS[$operation]) {
+            return false;
+        }
+
+        return $operation === self::RESULT || self::parEditalIdOf($body) !== null;
     }
 
     public static function parEditalIdOf(?string $body): ?int

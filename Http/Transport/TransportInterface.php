@@ -10,7 +10,7 @@ use ConectaEnte\Http\Response;
  */
 interface TransportInterface
 {
-    public function get(string $url, array $headers = []): Response;
+    public function get(string $url, array $headers = [], bool $queued = false): Response;
 
     /** Atualiza o recurso da url. */
     public function put(string $url, array $body, array $headers = []): Response;

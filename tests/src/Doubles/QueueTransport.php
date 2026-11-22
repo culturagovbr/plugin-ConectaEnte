@@ -23,7 +23,7 @@ class QueueTransport implements TransportInterface
         return new self($queue);
     }
 
-    public function get(string $url, array $headers = []): Response
+    public function get(string $url, array $headers = [], bool $queued = false): Response
     {
         $this->requestedUrls[] = $url;
 

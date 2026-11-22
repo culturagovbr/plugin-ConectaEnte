@@ -14,7 +14,7 @@ class FixtureTransport implements TransportInterface
     {
     }
 
-    public function get(string $url, array $headers = []): Response
+    public function get(string $url, array $headers = [], bool $queued = false): Response
     {
         $route = $this->routeOf($url);
         $file = "{$this->directory}/{$route}.json";

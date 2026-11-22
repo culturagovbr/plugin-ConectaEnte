@@ -10,6 +10,7 @@ use MapasCulturais\i;
 class Client
 {
     const TYPE_SYSTEM = 'SISTEMA';
+    const RESULT_FORM_MODULE = 'RESULTADO_EDITAL';
 
     private TransportInterface $transport;
 
@@ -138,6 +139,64 @@ class Client
         return $this->url('/api/v1/oportunidades/');
     }
 
+    /** Se o edital tem planilha de resultado e quais são as colunas dela. */
+    public function getResultSpreadsheetModel(string $token, int $parEditalId): ApiRead
+    {
+        return $this->read($token, "/api/v1/oportunidades/{$parEditalId}/resultado/modelo-planilha", i::__('A Plataforma CultBR recusou a consulta ao modelo de planilha (HTTP %d).'));
+    }
+
+    /** As questões do formulário de resultado do tipo de ação. */
+    public function getResultFormStructure(string $token, int $actionTypeId): ApiRead
+    {
+        // com barra final a API responde 307
+        $path = '/api/v1/par/formularios/estrutura?' . http_build_query(['modulo' => self::RESULT_FORM_MODULE, 'id_tipo_acao' => $actionTypeId]);
+
+        return $this->read($token, $path, i::__('A Plataforma CultBR recusou a consulta ao formulário de resultado (HTTP %d).'));
+    }
+
+    /** O resultado publicado mais recente do edital; só o 404 com a frase do CultBR quer dizer que não há. */
+    public function getPublishedResult(string $token, int $parEditalId, bool $queued = false): PublishedResult
+    {
+        $response = $this->transport->get($this->url("/api/v1/oportunidades/{$parEditalId}/resultado/publicado"), ['token' => $token], $queued);
+        $body = $response->decoded();
+
+        return match (true) {
+            !$response->reachedServer() => PublishedResult::unknown(i::__('A Plataforma CultBR não respondeu à consulta do resultado publicado.')),
+            $response->status === 200 && is_int($body['id_par_edital_resultado'] ?? null) => PublishedResult::published($body['id_par_edital_resultado'], $body),
+            $response->status === 404 && ($body['detail'] ?? null) === PublishedResult::NOT_FOUND_DETAIL => PublishedResult::none(),
+            default => PublishedResult::unknown(sprintf(i::__('A consulta do resultado publicado não teve resposta conclusiva (HTTP %d).'), $response->status)),
+        };
+    }
+
+    /**
+     * Publica o resultado do edital; o histórico pode guardar um corpo diferente do enviado.
+     */
+    public function sendResult(string $token, int $parEditalId, array $payload, ?array $recordedPayload = null): ResultSendResult
+    {
+        $url = $this->sendResultUrl($parEditalId);
+        $response = $this->transport->post($url, $payload, ['token' => $token]);
+
+        $this->exchanges[] = $this->exchangeOf('POST', $url, $recordedPayload ?? $payload, $response);
+
+        if (!$response->reachedServer() || $response->status >= 500) {
+            return ResultSendResult::unreachable($response->status, $response->transportError);
+        }
+
+        if (SendAcceptance::isAccepted(SendAcceptance::RESULT, $response->status, $response->body)) {
+            return ResultSendResult::accepted($response->decoded());
+        }
+
+        $errors = ApiErrors::fromBody($response->json());
+
+        return ResultSendResult::rejected($response->status, $errors, $errors->summary(sprintf(i::__('A Plataforma CultBR recusou o resultado do edital (HTTP %d).'), $response->status)));
+    }
+
+    /** A rota do envio do resultado, para o histórico nomear o destino. */
+    public function sendResultUrl(int $parEditalId): string
+    {
+        return $this->url("/api/v1/oportunidades/{$parEditalId}/resultado");
+    }
+
     /**
      * As trocas desta execução, na ordem em que aconteceram.
      *
@@ -162,6 +221,21 @@ class Client
             errorMessage: $response->transportError,
             durationMs: $response->durationMs,
         );
+    }
+
+    private function read(string $token, string $path, string $refusal): ApiRead
+    {
+        $response = $this->transport->get($this->url($path), ['token' => $token]);
+        $body = $response->decoded();
+
+        return match (true) {
+            !$response->reachedServer(), $response->status >= 500 => ApiRead::unreachable($response->transportError),
+            $response->status === 200 && $body !== null => ApiRead::ok($body),
+            $response->status === 200 => ApiRead::unreachable(i::__('A resposta da API não é um JSON válido.')),
+            $response->status === 404 && $this->isCultBrNotFound($response) => ApiRead::notFound($body['detail']),
+            $response->status === 404 => ApiRead::unreachable(),
+            default => ApiRead::rejected($this->readDetail($response->json(), $response->status, $refusal)),
+        };
     }
 
     private function isCultBrNotFound(Response $response): bool
