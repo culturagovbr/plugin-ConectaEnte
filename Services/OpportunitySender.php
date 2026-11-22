@@ -131,6 +131,14 @@ class OpportunitySender
     private function keepParEditalId(Opportunity $opportunity, SendResult $result, FederativeEntity $federativeEntity, ?Log $log): void
     {
         $id = $result->parEditalId();
+
+        // o resultado enviado era do edital antigo: com outro id, o estado dele não vale para o novo
+        if ((string) $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID) !== (string) $id) {
+            foreach (CultBrMetadata::RESULT_STATE_KEYS as $key) {
+                $opportunity->{$key} = null;
+            }
+        }
+
         $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, (string) $id);
         $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT, $federativeEntity->document);
 
