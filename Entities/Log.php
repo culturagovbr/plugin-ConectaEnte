@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use MapasCulturais\Entities\User;
 
 /**
- * Um envio de edital ao CultBR, com as tentativas que ele produziu.
+ * Um envio ao CultBR, do edital ou do resultado, com as tentativas que ele produziu.
  *
  * @property int $id
  * @property string $uuid
@@ -17,12 +17,23 @@ use MapasCulturais\Entities\User;
  * @property \DateTime $createTimestamp
  * @property \DateTime|null $updateTimestamp
  * @property LogAttempt[] $attempts
+ * @property string $action
+ * @property int|null $seenResultId
+ * @property bool|null $seenResultRead
+ * @property string|null $contentHash
+ * @property int|null $resultType
+ * @property string|null $publicationDate
+ * @property bool $posted
+ * @property \DateTime|null $startedAt
  *
  * @ORM\Table(name="conectaente_log")
  * @ORM\Entity(repositoryClass="MapasCulturais\Repository")
  */
 class Log extends \MapasCulturais\Entity
 {
+    const ACTION_OPPORTUNITY = 'opportunity';
+    const ACTION_RESULT = 'result';
+
     /**
      * @var integer
      *
@@ -84,6 +95,54 @@ class Log extends \MapasCulturais\Entity
      * @ORM\Column(name="update_timestamp", type="datetime", nullable=true)
      */
     protected $updateTimestamp;
+
+    /**
+     * @var string
+     * @ORM\Column(name="action", type="string", length=20, nullable=false)
+     */
+    protected $action = self::ACTION_OPPORTUNITY;
+
+    /**
+     * @var integer|null
+     * @ORM\Column(name="seen_result_id", type="integer", nullable=true)
+     */
+    protected $seenResultId;
+
+    /**
+     * @var boolean|null
+     * @ORM\Column(name="seen_result_read", type="boolean", nullable=true)
+     */
+    protected $seenResultRead;
+
+    /**
+     * @var string|null
+     * @ORM\Column(name="content_hash", type="string", length=64, nullable=true)
+     */
+    protected $contentHash;
+
+    /**
+     * @var integer|null
+     * @ORM\Column(name="result_type", type="smallint", nullable=true)
+     */
+    protected $resultType;
+
+    /**
+     * @var string|null
+     * @ORM\Column(name="publication_date", type="string", length=40, nullable=true)
+     */
+    protected $publicationDate;
+
+    /**
+     * @var boolean
+     * @ORM\Column(name="posted", type="boolean", nullable=false)
+     */
+    protected $posted = false;
+
+    /**
+     * @var \DateTime|null
+     * @ORM\Column(name="started_at", type="datetime", nullable=true)
+     */
+    protected $startedAt;
 
     /**
      * @var LogAttempt[]

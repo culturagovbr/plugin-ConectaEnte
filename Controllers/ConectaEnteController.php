@@ -324,6 +324,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
             $opportunity,
             (int) ($this->data['page'] ?? 1),
             (int) ($this->data['pageSize'] ?? SendHistory::DEFAULT_PAGE_SIZE),
+            $this->data['action'] ?? null,
         ));
     }
 

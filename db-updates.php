@@ -137,6 +137,19 @@ return [
         \ConectaEnte\Migrations\RecoverParEditalOrigin::run();
     },
 
+    // as linhas existentes são todas envio de edital: o default as marca assim
+    'conectaente: o histórico de envio separa o edital do resultado' => function () {
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS action VARCHAR(20) NOT NULL DEFAULT 'opportunity'");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS seen_result_id INT NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS seen_result_read BOOLEAN NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64) NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS result_type SMALLINT NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS publication_date VARCHAR(40) NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS posted BOOLEAN NOT NULL DEFAULT FALSE");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS started_at TIMESTAMP(0) NULL");
+        __try("CREATE INDEX IF NOT EXISTS idx_conectaente_log_opportunity_action ON conectaente_log (opportunity_id, action, create_timestamp DESC)");
+    },
+
     // CPF e CNPJ de terceiros, em volume: fora dos metadados, que as revisões do core copiam
     'conectaente: cria a tabela das células da grade de contemplados' => function () {
         if (!__table_exists('conectaente_result_row')) {

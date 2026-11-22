@@ -24,6 +24,7 @@ $this->import('
                 <template #title>
                     <span class="conectaente-send-history__heading">
                         <mc-icon :name="outcomeIcon(send.outcome)" :class="'conectaente-send-history__outcome--' + send.outcome" :title="outcomeLabel(send.outcome)" :aria-label="outcomeLabel(send.outcome)"></mc-icon>
+                        <strong class="conectaente-send-history__action">{{ text('acao_' + (send.action || 'opportunity')) }}</strong>
                         <code class="conectaente-send-history__uuid">{{ send.uuid }}</code>
                         <small>{{ formatDate(send.startedAt) }}</small>
                         <small v-if="send.triggeredByUserId">{{ text('por_usuario', { id: send.triggeredByUserId }) }}</small>
