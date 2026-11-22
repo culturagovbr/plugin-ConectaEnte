@@ -10,10 +10,11 @@ Mostra, no cabeçalho da edição da oportunidade, a situação do último envio
 
 Lê `conectaente_sendStatus` e `conectaente_sendAt` — dois dos metadados que o `OpportunitySender` grava a cada envio — direto da entidade, sem requisição. São metadados públicos, então já chegam no payload da página.
 
-O indicador é um badge discreto, logo abaixo do título, e distingue seis situações:
+O indicador é um badge discreto, logo abaixo do título, e distingue sete situações:
 
 | Quando | O que diz |
 |---|---|
+| a ação escolhida saiu do PAR em cache | "Envio ao CultBR suspenso", mesmo com desfecho gravado |
 | houve envio | "Enviado", "Falha ao enviar", "O CultBR recusou" ou "Envio simulado", com a data |
 | selada, pronta, sem envio ainda | "Aguardando o envio ao CultBR" |
 | selada e barrada pelo gate | "Ainda não enviada ao CultBR" |
@@ -22,6 +23,8 @@ O indicador é um badge discreto, logo abaixo do título, e distingue seis situa
 **Simulado não se parece com enviado** — em modo dev nada sai para o CultBR, e o badge diz isso. E **não enviada não se parece com falhou**: era a confusão que o CultEditais colapsa numa frase só.
 
 O motivo gravado em `conectaente_sendReason` **não** é exibido aqui: por que falhou é detalhe de integração e vive na aba de histórico, do `saasSuperAdmin`. O que falta **preencher** continua no card "Campos pendentes" da aba CultBR, que é de quem edita.
+
+A suspensão vem do servidor em `$MAPAS.config.conectaenteSendStatus.suspended`, pela mesma checagem de cadeia que barra o envio (`PublicationRequirements::isParChainBroken`), e prevalece sobre o desfecho gravado: o envio anterior não pode esconder que o próximo está barrado.
 
 As três situações sem envio vêm decididas do servidor, em `$MAPAS.config.conectaenteSendStatus.pendingSendState` (`awaiting`, `ineligible` ou nulo), pelo `Services\SendStatusView` — que pergunta ao mesmo `SendEligibility` do envio, em vez de repetir a regra. Com desfecho gravado o servidor devolve nulo: o desfecho manda, e as onze validações do gate não chegam a rodar.
 

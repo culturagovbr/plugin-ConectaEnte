@@ -5,6 +5,7 @@ const SEND_STATUS_ICONS = {
     error: 'exclamation',
     awaiting: 'clock',
     ineligible: 'info',
+    suspended: 'exclamation',
 };
 
 app.component('conectaente--send-status', {
@@ -29,7 +30,11 @@ app.component('conectaente--send-status', {
     computed: {
         // sem selo não há badge, nem com desfecho gravado: o que vale é a integração de agora
         state() {
-            return this.config.sealed ? this.entity.conectaente_sendStatus || this.config.pendingSendState : null;
+            if (!this.config.sealed) {
+                return null;
+            }
+
+            return this.config.suspended ? 'suspended' : this.entity.conectaente_sendStatus || this.config.pendingSendState;
         },
 
         icon() {

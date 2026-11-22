@@ -25,6 +25,12 @@ final class PublicationRequirements
     const MINIMUM_QUOTA_COUNT = 4;
     const YES = 'sim';
     const NO = 'nao';
+    const PAR_CHAIN_KEYS = [
+        CultBrMetadata::PAR_EXERCISE_ID,
+        CultBrMetadata::PAR_GOAL_ID,
+        CultBrMetadata::PAR_ACTION_ID,
+        CultBrMetadata::PAR_ACTIVITY_ID,
+    ];
 
     public function __construct(
         private PublicationStamp $publicationStamp,
@@ -118,25 +124,26 @@ final class PublicationRequirements
         return $errors ?: $this->parChainErrors($opportunity);
     }
 
-    // a publicação nunca espera a API: sem árvore no cache, a consistência fica para o envio
     private function parChainErrors(Opportunity $opportunity): array
     {
-        $result = $this->parInformationService->cachedForOpportunity($opportunity);
+        return $this->isParChainBroken($opportunity) ? [
+            CultBrMetadata::PAR_ACTIVITY_ID => [i::__('A seleção do PAR não forma uma cadeia válida de exercício, meta, ação e atividade.')],
+        ] : [];
+    }
 
-        if (!$result?->tree) {
-            return [];
+    /** Se a seleção do PAR já feita não existe mais na árvore em cache. */
+    public function isParChainBroken(Opportunity $opportunity): bool
+    {
+        $chain = array_map(fn($key) => trim((string) $opportunity->$key), self::PAR_CHAIN_KEYS);
+
+        if (in_array('', $chain, true)) {
+            return false;
         }
 
-        $isConsistent = $result->tree->isConsistentPath(
-            (string) $opportunity->{CultBrMetadata::PAR_EXERCISE_ID},
-            (string) $opportunity->{CultBrMetadata::PAR_GOAL_ID},
-            (string) $opportunity->{CultBrMetadata::PAR_ACTION_ID},
-            (string) $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID},
-        );
+        // a publicação nunca espera a API: sem árvore no cache, a consistência fica para o envio
+        $result = $this->parInformationService->cachedForOpportunity($opportunity);
 
-        return $isConsistent ? [] : [
-            CultBrMetadata::PAR_ACTIVITY_ID => [i::__('A seleção do PAR não forma uma cadeia válida de exercício, meta, ação e atividade.')],
-        ];
+        return (bool) $result?->tree && !$result->tree->isConsistentPath(...$chain);
     }
 
     private function rulesErrors(Opportunity $opportunity): array

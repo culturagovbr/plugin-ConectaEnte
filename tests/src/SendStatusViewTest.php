@@ -4,6 +4,7 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\ParInformationService;
 use ConectaEnte\Services\SendOutcome;
 use ConectaEnte\Services\SendStatusView;
 use MapasCulturais\Entities\Opportunity;
@@ -70,6 +71,47 @@ class SendStatusViewTest extends TestCase
         $opportunity->saveMetadata();
 
         $this->assertFalse($this->view($opportunity)['sealed']);
+    }
+
+    function testAnOpportunityWhoseParActionLeftTheTreeIsSuspendedEvenWithARecordedOutcome()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $opportunity->setMetadata(CultBrMetadata::SEND_STATUS, SendOutcome::SUCCESS);
+        $opportunity->saveMetadata();
+        $this->primeParInformationCache($this->resolveFederativeEntity($opportunity), [['id' => '2024', 'ano' => '2024', 'metas' => []]]);
+
+        $this->assertTrue($this->view($opportunity)['suspended'], 'O desfecho anterior não pode esconder que o próximo envio está barrado.');
+    }
+
+    function testAConsistentParChainIsNotSuspended()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+
+        $this->assertFalse($this->view($opportunity)['suspended']);
+    }
+
+    function testAnIncompleteParSelectionIsIneligibleRatherThanSuspended()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $opportunity->{CultBrMetadata::PAR_ACTIVITY_ID} = '';
+        $opportunity->save(true);
+
+        $this->assertFalse($this->view($opportunity)['suspended'], 'Seleção por fazer é campo pendente, não ação que saiu do PAR.');
+    }
+
+    function testWithoutATreeInTheCacheNothingIsSuspended()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $this->app->mscache->delete(ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
+
+        $this->assertFalse($this->view($opportunity)['suspended'], 'Sem árvore não há como afirmar que a ação saiu.');
+    }
+
+    function testAnUnsealedOpportunityIsNeverSuspended()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $this->assertFalse($this->view($this->createOpportunity())['suspended']);
     }
 
     private function view(?Opportunity $opportunity): array

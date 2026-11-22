@@ -12,10 +12,12 @@ final class SendStatusView
 {
     const AWAITING = 'awaiting';
     const INELIGIBLE = 'ineligible';
+    const SUSPENDED = 'suspended';
 
     public function __construct(
         private SealedOpportunity $sealedOpportunity,
         private SendEligibility $sendEligibility,
+        private PublicationRequirements $publicationRequirements,
     ) {
     }
 
@@ -25,6 +27,7 @@ final class SendStatusView
 
         return [
             'sealed' => $sealed,
+            'suspended' => $sealed && $this->publicationRequirements->isParChainBroken($opportunity),
             'pendingSendState' => $sealed ? $this->pendingSendState($opportunity) : null,
         ];
     }

@@ -142,7 +142,7 @@ class Plugin extends \MapasCulturais\Plugin
 
     function sendStatusView(): SendStatusView
     {
-        return new SendStatusView($this->sealedOpportunity(), $this->sendEligibility());
+        return new SendStatusView($this->sealedOpportunity(), $this->sendEligibility(), $this->publicationRequirements());
     }
 
     function sendEligibility(): SendEligibility

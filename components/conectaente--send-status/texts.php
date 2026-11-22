@@ -9,4 +9,5 @@ return [
     'situacao_error' => i::__('Falha ao enviar ao CultBR em {data}'),
     'situacao_awaiting' => i::__('Aguardando o envio ao CultBR'),
     'situacao_ineligible' => i::__('Ainda não enviada ao CultBR'),
+    'situacao_suspended' => i::__('Envio ao CultBR suspenso: a ação escolhida não existe mais no PAR, refaça a seleção'),
 ];
