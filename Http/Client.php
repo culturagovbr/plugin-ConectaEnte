@@ -196,53 +196,9 @@ class Client
 
     private function readDetail(array $body, int $status, string $refusal): string
     {
-        $detail = $body['detail'] ?? null;
-
-        if (is_string($detail) && $detail !== '') {
-            return $detail;
-        }
-
-        if (is_array($detail)) {
-            $messages = array_filter(array_map(fn($error) => $this->fieldError($error), $detail));
-
-            if ($messages) {
-                return implode('; ', $messages);
-            }
-        }
-
-        return sprintf($refusal, $status);
+        return ApiErrors::fromBody($body)->summary(sprintf($refusal, $status));
     }
 
-    // o formato de `detail` é do CultBR: item fora dele não pode derrubar a leitura de nenhum dos fluxos
-    private function fieldError(mixed $error): ?string
-    {
-        $message = is_array($error) ? ($error['msg'] ?? null) : null;
-
-        if (!is_string($message) || $message === '') {
-            return null;
-        }
-
-        $field = $this->fieldName($error['loc'] ?? null);
-
-        return $field ? "{$field}: {$message}" : $message;
-    }
-
-    // só erro no corpo é campo do edital: `header` é a credencial e `query` é a rota, e nomeá-los confundiria
-    private function fieldName(mixed $loc): ?string
-    {
-        if (!is_array($loc) || ($loc[0] ?? null) !== 'body') {
-            return null;
-        }
-
-        $path = array_slice($loc, 1);
-
-        return $path ? implode('.', $path) : null;
-    }
-
-    /**
-     * O contrato não declara `servers`: os caminhos dele são absolutos a partir da origem,
-     * e `/health` fica fora de `/api/v1`. Por isso o host configurado é só a origem.
-     */
     private function url(string $path): string
     {
         return rtrim($this->host, '/') . $path;
