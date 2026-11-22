@@ -16,7 +16,7 @@ use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 use Tests\Traits\RequestFactory;
 
 /**
- * O envio do resultado com arquivo, em multipart.
+ * Os arquivos das questões de anexo do resultado, sobre a estrutura 541.
  */
 class ResultAttachmentsTest extends TestCase
 {
@@ -28,6 +28,74 @@ class ResultAttachmentsTest extends TestCase
     const EXECUTION_FORM = 13915;
 
     private ?ResultForm $form = null;
+
+    function testACsvIsAttachedToTheQuestionAsAPrivateFile()
+    {
+        $opportunity = $this->edital();
+
+        $this->assertNull($this->attachments()->attach($opportunity, $this->form(), self::BOLSA_SPREADSHEET, $this->upload('planilha.csv')));
+
+        $entries = Plugin::instance()->resultAnswers()->saved($this->reloaded($opportunity))['answers'][self::BOLSA_SPREADSHEET];
+        $file = $this->app->repo(OpportunityFile::class)->find($entries[0]['fileId']);
+        $this->assertSame('planilha.csv', $entries[0]['name']);
+        $this->assertSame(ResultAttachments::FILE_GROUP, $file->group);
+        $this->assertTrue($file->private, 'A planilha de Bolsa traz CPF de contemplados.');
+    }
+
+    function testAFormatOutsideTheQuestionIsRefused()
+    {
+        $this->assertNotNull($this->attachments()->attach($this->edital(), $this->form(), self::BOLSA_SPREADSHEET, $this->upload('planilha.pdf')));
+    }
+
+    function testAFileAboveTheLimitIsRefused()
+    {
+        $upload = $this->upload('planilha.csv');
+        $upload['size'] = 11 * 1024 * 1024;
+
+        $this->assertNotNull($this->attachments()->attach($this->edital(), $this->form(), self::BOLSA_SPREADSHEET, $upload));
+    }
+
+    function testASecondFileIsRefusedWhenTheQuestionTakesOne()
+    {
+        $opportunity = $this->edital();
+        $this->attachments()->attach($opportunity, $this->form(), self::BOLSA_SPREADSHEET, $this->upload('planilha.csv'));
+
+        $this->assertNotNull($this->attachments()->attach($this->reloaded($opportunity), $this->form(), self::BOLSA_SPREADSHEET, $this->upload('outra.csv')));
+    }
+
+    function testAQuestionThatIsNotAnAttachmentTakesNoFile()
+    {
+        $this->assertNotNull($this->attachments()->attach($this->edital(), $this->form(), self::EXECUTION_FORM, $this->upload('planilha.csv')));
+    }
+
+    function testDetachingRemovesTheEntryAndTheFile()
+    {
+        $opportunity = $this->edital();
+        $this->attachments()->attach($opportunity, $this->form(), self::BOLSA_SPREADSHEET, $this->upload('planilha.csv'));
+        $fileId = Plugin::instance()->resultAnswers()->saved($this->reloaded($opportunity))['answers'][self::BOLSA_SPREADSHEET][0]['fileId'];
+
+        $this->attachments()->detach($this->reloaded($opportunity), $this->form(), self::BOLSA_SPREADSHEET, $fileId);
+
+        $this->assertArrayNotHasKey(self::BOLSA_SPREADSHEET, Plugin::instance()->resultAnswers()->saved($this->reloaded($opportunity))['answers']);
+        $this->assertNull($this->app->repo(OpportunityFile::class)->find($fileId));
+    }
+
+    function testAVisibleRequiredAttachmentIsMissingAndTheDispensedOneIsNot()
+    {
+        $missing = (new ResultValidator($this->form()))->missing([self::EXECUTION_FORM => 'fe_bolsa'], []);
+
+        $this->assertContains(self::BOLSA_SPREADSHEET, $missing, 'O CultBR recusa o resultado de Bolsa sem a planilha.');
+        $this->assertNotContains(self::TEC_SPREADSHEET, $missing, 'A planilha da 13930 vem em linhas, e o contrato a dispensa.');
+    }
+
+    function testTheFormAutosaveCannotPointAnAttachmentAtAnyFile()
+    {
+        $opportunity = $this->edital();
+
+        Plugin::instance()->resultAnswers()->save($opportunity, $this->form(), [self::BOLSA_SPREADSHEET => [['fileId' => 1, 'name' => 'alheio.csv']]]);
+
+        $this->assertArrayNotHasKey(self::BOLSA_SPREADSHEET, Plugin::instance()->resultAnswers()->saved($this->reloaded($opportunity))['answers']);
+    }
 
     function testWithFilesTheResultGoesAsMultipart()
     {
@@ -54,6 +122,14 @@ class ResultAttachmentsTest extends TestCase
 
         $this->assertSame([], $transport->sentMultiparts);
         $this->assertSame(['id_tipo' => 2], $transport->sentBodies[0]);
+    }
+
+    function testTheRouteRefusesWhoDoesNotControlTheEdital()
+    {
+        $opportunity = $this->edital();
+        $this->login($this->userDirector->createUser());
+
+        $this->assertSame(403, $this->send($this->requestFactory->POST('conectaente', 'resultAttachmentDelete', [$opportunity->id], ['questionId' => 1, 'fileId' => 1], ajax: true)));
     }
 
     private function edital(): Opportunity

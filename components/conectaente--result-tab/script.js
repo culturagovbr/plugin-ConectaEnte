@@ -275,6 +275,53 @@
                 this.answers[question.id_questao_etapa] = this.suggestion(question);
             },
 
+            attachments(question) {
+                const entries = this.answers[question.id_questao_etapa];
+
+                return Array.isArray(entries) ? entries.filter((entry) => entry && entry.fileId) : [];
+            },
+
+            acceptsAnotherFile(question) {
+                return question.tipo_questao === 'múltiplos anexos' || question.config?.multiplos || !this.attachments(question).length;
+            },
+
+            async uploadAttachment(question, event) {
+                const file = event.target.files?.[0];
+
+                if (!file) {
+                    return;
+                }
+
+                const form = new FormData();
+                form.append('questionId', question.id_questao_etapa);
+                form.append('arquivo', file);
+
+                const response = await fetch(Utils.createUrl('conectaente', 'resultAttachment', [this.entity.id]), { method: 'POST', body: form, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const body = await response.json().catch(() => null);
+                event.target.value = '';
+
+                this.afterAttachmentChange(question, response.ok, body);
+            },
+
+            async removeAttachment(question, entry) {
+                const response = await this.api.POST(Utils.createUrl('conectaente', 'resultAttachmentDelete', [this.entity.id]), { questionId: question.id_questao_etapa, fileId: entry.fileId });
+                const body = await response.json().catch(() => null);
+
+                this.afterAttachmentChange(question, response.ok, body);
+            },
+
+            afterAttachmentChange(question, ok, body) {
+                if (!ok) {
+                    this.errors = { ...this.errors, [question.id_questao_etapa]: body?.data?.arquivo?.[0] || this.text('erro_arquivo') };
+                    return;
+                }
+
+                const { [question.id_questao_etapa]: removed, ...others } = this.errors;
+                this.errors = others;
+                this.result = body;
+                this.answers[question.id_questao_etapa] = body.answers?.[question.id_questao_etapa] ?? null;
+            },
+
             goTo(question) {
                 document.getElementById(`conectaente-result-question-${question.id_questao_etapa}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             },

@@ -14,4 +14,5 @@ return [
     'motivo_rejected' => i::__('o CultBR recusou a consulta. Confira o token do Ente Federado.'),
     'motivo_status' => '',
     'motivo_null' => '',
+    'erro_arquivo' => i::__('Não foi possível enviar o arquivo agora.'),
 ];

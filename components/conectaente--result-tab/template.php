@@ -145,9 +145,17 @@ $this->import('
 
                                     <template v-else-if="isAttachment(question)">
                                         <p class="conectaente-result-question__description">
-                                            <?php i::_e('Arquivo.') ?>
-                                            <span v-if="question.config?.anexoModelo?.nome"><?php i::_e('Modelo:') ?> {{ question.config.anexoModelo.nome }}</span>
+                                            <span v-if="question.config?.anexoModelo?.nome"><?php i::_e('Modelo:') ?> {{ question.config.anexoModelo.nome }}. </span>
+                                            <span v-if="question.config?.formatos?.length"><?php i::_e('Formatos:') ?> {{ question.config.formatos.join(', ') }}. </span>
+                                            <?php i::_e('O arquivo vai ao CultBR junto com o resultado.') ?>
                                         </p>
+                                        <ul v-if="attachments(question).length" class="conectaente-result-question__files">
+                                            <li v-for="entry in attachments(question)" :key="entry.fileId">
+                                                {{ entry.name }}
+                                                <button type="button" class="button button--text button--sm" @click="removeAttachment(question, entry)"><?php i::_e('Remover') ?></button>
+                                            </li>
+                                        </ul>
+                                        <input v-if="acceptsAnotherFile(question)" type="file" :accept="(question.config?.formatos || []).join(',')" @change="uploadAttachment(question, $event)">
                                     </template>
 
                                     <p v-if="errors[question.id_questao_etapa]" class="conectaente-result-question__error">{{ errors[question.id_questao_etapa] }}</p>

@@ -26,6 +26,7 @@ use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\ModelSeal;
 use ConectaEnte\Services\ResultAnswers;
+use ConectaEnte\Services\ResultAttachments;
 use ConectaEnte\Services\ResultRows;
 use ConectaEnte\Services\ResultService;
 use ConectaEnte\Services\ResultSpreadsheet;
@@ -34,6 +35,7 @@ use ConectaEnte\Services\SendEligibility;
 use ConectaEnte\Services\SendStatusView;
 use ConectaEnte\Services\SendHistory;
 use ConectaEnte\Services\SendLogger;
+use MapasCulturais\Definitions\FileGroup;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -143,6 +145,11 @@ class Plugin extends \MapasCulturais\Plugin
     function resultAnswers(): ResultAnswers
     {
         return new ResultAnswers();
+    }
+
+    function resultAttachments(): ResultAttachments
+    {
+        return new ResultAttachments($this->resultAnswers());
     }
 
     function resultRows(): ResultRows
@@ -547,6 +554,9 @@ class Plugin extends \MapasCulturais\Plugin
 
     function register(){
         $app = App::i();
+
+        // privado: a planilha de Bolsa e de Premiação traz CPF de contemplados
+        $app->registerFileGroup('opportunity', new FileGroup(ResultAttachments::FILE_GROUP, [], '', false, null, true));
 
         $app->registerController('conectaente', ConectaEnteController::class);
 

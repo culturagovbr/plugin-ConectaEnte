@@ -47,7 +47,9 @@ final class ResultValidator
         foreach ($this->form->questions() as $id => $question) {
             $required = !empty($question['requerida']) && !$this->form->isReadOnly($question) && !array_key_exists($id, $computed);
 
-            if ($required && !$this->isAttachment($question) && $this->isVisible($question, $known) && self::isEmpty($answers[$id] ?? null)) {
+            $dispensed = $this->isAttachment($question) && in_array($question['tag'] ?? null, ResultForm::DISPENSED_ATTACHMENT_TAGS, true);
+
+            if ($required && !$dispensed && $this->isVisible($question, $known) && self::isEmpty($answers[$id] ?? null)) {
                 $missing[] = $id;
             }
         }

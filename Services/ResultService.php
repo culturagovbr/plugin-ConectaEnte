@@ -107,6 +107,26 @@ final class ResultService
         return $this->plugin->resultAnswers()->save($opportunity, new ResultForm($state->structure), $answers);
     }
 
+    /** Anexa o arquivo enviado à questão de anexo, na estrutura que vale agora. */
+    public function attach(Opportunity $opportunity, int $questionId, array $upload): ?string
+    {
+        $state = $this->stateOf($opportunity);
+
+        return $state->structure
+            ? $this->plugin->resultAttachments()->attach($opportunity, new ResultForm($state->structure), $questionId, $upload)
+            : sprintf(i::__('O formulário de resultado não está disponível (%s).'), $state->state);
+    }
+
+    /** Tira o arquivo da questão de anexo. */
+    public function detach(Opportunity $opportunity, int $questionId, int $fileId): void
+    {
+        $state = $this->stateOf($opportunity);
+
+        if ($state->structure) {
+            $this->plugin->resultAttachments()->detach($opportunity, new ResultForm($state->structure), $questionId, $fileId);
+        }
+    }
+
     // o tipo de ação só vem no eco do envio do edital; para o acervo sem ele, o modelo de planilha o devolve
     private function ensureActionType(Opportunity $opportunity, FederativeEntity $federativeEntity): ?ApiRead
     {

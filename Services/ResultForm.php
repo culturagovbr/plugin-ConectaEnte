@@ -13,6 +13,8 @@ final class ResultForm
     const TRANSFERRED_PREFIX = 'valor_total_repassado';
     // a única tabela de categorias que vai como linha única quando o edital não tem faixas
     const SINGLE_ROW_CATEGORY_TAG = 'dados_por_categoria_resultado_1_1';
+    // as duas tags de anexo que o contrato dispensa: a planilha vem em `linhas`
+    const DISPENSED_ATTACHMENT_TAGS = ['planilha_de_resultados_conforme_padrao_de_dados', 'planilha_pdf_de_comissao_avaliadora'];
 
     /** @var array<int, array> por id_questao_etapa */
     private array $questions = [];

@@ -85,6 +85,11 @@ final class ResultAnswers
         $validator = new ResultValidator($form);
 
         foreach ($answers as $id => $value) {
+            // o anexo muda só pela rota de arquivo: daqui não se aponta para um arquivo qualquer
+            if (in_array($form->question((int) $id)['tipo_questao'] ?? null, ResultValidator::ATTACHMENT_TYPES, true)) {
+                continue;
+            }
+
             $error = $this->refusal($form, $computed, (int) $id) ?? $validator->error($form->question((int) $id), $value);
 
             if ($error) {

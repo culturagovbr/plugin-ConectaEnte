@@ -390,6 +390,28 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $error ? $this->errorJson(['value' => [$error]], 400) : $this->json(true);
     }
 
+    /**
+     * Recebe o arquivo de uma questão de anexo do resultado (multipart: `questionId` e `arquivo`).
+     */
+    function POST_resultAttachment()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $error = Plugin::instance()->resultService()->attach($opportunity, (int) ($this->data['questionId'] ?? 0), $_FILES['arquivo'] ?? []);
+
+        $error ? $this->errorJson(['arquivo' => [$error]], 400) : $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
+    }
+
+    /**
+     * Tira um arquivo de uma questão de anexo do resultado.
+     */
+    function POST_resultAttachmentDelete()
+    {
+        $opportunity = $this->controlledOpportunity();
+        Plugin::instance()->resultService()->detach($opportunity, (int) ($this->postData['questionId'] ?? 0), (int) ($this->postData['fileId'] ?? 0));
+
+        $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
+    }
+
     private function controlledOpportunity(): Opportunity
     {
         $this->requireAuthentication();
