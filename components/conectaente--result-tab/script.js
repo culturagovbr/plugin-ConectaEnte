@@ -1,6 +1,7 @@
 // escopo próprio: o componente roda ao lado dos do tema, que declaram nomes no global
 (() => {
     const AUTOSAVE_DELAY = 1500;
+    const SENDING_POLL_INTERVAL = 5000;
     const OPEN_STATES = ['pending', 'complete', 'sent', 'sending', 'uncertain'];
     const CHOICE_LIST_TYPES = ['múltipla escolha', 'checkbox'];
     const TABLE_TYPES = ['tabela', 'Tabela Dinâmica'];
@@ -41,6 +42,7 @@
                 saveFailed: false,
                 requestingSend: false,
                 sendRefusal: null,
+                pollTimer: null,
             };
         },
 
@@ -67,6 +69,11 @@
         },
 
         watch: {
+            'result.state'(state) {
+                clearInterval(this.pollTimer);
+                this.pollTimer = state === 'sending' ? setInterval(() => this.refresh(), SENDING_POLL_INTERVAL) : null;
+            },
+
             answers: {
                 deep: true,
                 handler() {
@@ -86,6 +93,7 @@
 
         unmounted() {
             clearTimeout(this.saveTimer);
+            clearInterval(this.pollTimer);
         },
 
         methods: {
@@ -141,6 +149,21 @@
                 }
             },
 
+            // só o estado: as respostas em edição ficam como estão
+            async refresh() {
+                const response = await this.api.GET(Utils.createUrl('conectaente', 'result', [this.entity.id]), {}, { cache: 'no-store' }).catch(() => null);
+
+                if (response?.ok) {
+                    this.result = { ...(await response.json()), answers: this.result.answers };
+                }
+            },
+
+            formatDate(value) {
+                const date = new Date(String(value).replace(' ', 'T'));
+
+                return isNaN(date) ? value : date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            },
+
             async send() {
                 this.requestingSend = true;
                 this.sendRefusal = null;
@@ -151,6 +174,11 @@
 
                     if (!response.ok) {
                         this.sendRefusal = body?.data?.message || this.text('erro_envio');
+
+                        if (body?.data?.missing) {
+                            this.result = { ...this.result, missing: body.data.missing };
+                        }
+
                         return;
                     }
 

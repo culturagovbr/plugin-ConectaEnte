@@ -61,7 +61,7 @@ class ResultSendTest extends TestCase
         $this->assertCount(1, $this->app->repo(Job::class)->findBy(['type' => SendResultJob::SLUG]));
         $state = $this->resultService()->stateOf($this->reloaded($opportunity));
         $this->assertSame(ResultState::SENDING, $state->state);
-        $this->assertFalse($state->canSend(), 'Em envio, o botão some.');
+        $this->assertFalse($state->hasSendButton(), 'Em envio, o botão some.');
     }
 
     function testAPendingFormIsRefusedWithTheMissingQuestions()
@@ -123,7 +123,7 @@ class ResultSendTest extends TestCase
         $state = $this->resultService()->stateOf($this->reloaded($opportunity));
 
         $this->assertSame(ResultState::SENT, $state->state);
-        $this->assertTrue($state->canSend());
+        $this->assertTrue($state->hasSendButton());
     }
 
     function testTheRouteRefusesWhoDoesNotControlTheEdital()

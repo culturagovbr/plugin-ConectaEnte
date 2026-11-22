@@ -31,6 +31,43 @@ aside .conectaente-result-tab__send:disabled {
     opacity: 0.5;
 }
 
+.conectaente-result-tab__last-send {
+    margin: 1rem 0;
+    padding: 0.75rem;
+    border-left: 3px solid var(--mc-gray-300);
+    background: var(--mc-gray-100);
+
+    h4,
+    p {
+        margin: 0 0 0.5rem;
+    }
+
+    small {
+        margin-left: 0.5rem;
+        color: var(--mc-gray-500);
+    }
+}
+
+.conectaente-result-tab__last-send--success {
+    border-left-color: var(--mc-success-500);
+}
+
+.conectaente-result-tab__last-send--rejected,
+.conectaente-result-tab__last-send--error {
+    border-left-color: var(--mc-danger-500);
+}
+
+.conectaente-result-tab__last-send--uncertain,
+.conectaente-result-tab__last-send--simulated {
+    border-left-color: var(--mc-warning-500);
+}
+
+.conectaente-result-tab__refusals {
+    margin: 0 0 0.5rem;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+}
+
 .conectaente-result-tab__saving {
     color: var(--mc-gray-500);
     font-size: 0.875rem;

@@ -53,10 +53,10 @@ final class ResultState implements JsonSerializable
         return $this->structure !== null && !$this->form['missing'] && empty($this->form['spreadsheetPending']);
     }
 
-    /** Se o botão de envio aparece. */
-    public function canSend(): bool
+    /** Se o botão de envio aparece: com pendência ele também aparece, e a recusa lista o que falta. */
+    public function hasSendButton(): bool
     {
-        return in_array($this->state, [self::COMPLETE, self::SENT], true);
+        return in_array($this->state, [self::PENDING, self::COMPLETE, self::SENT], true);
     }
 
     /** Se a aba de resultado aparece para esta oportunidade. */
@@ -70,7 +70,7 @@ final class ResultState implements JsonSerializable
         return [
             'state' => $this->state,
             'reason' => $this->reason,
-            'canSend' => $this->canSend(),
+            'sendButton' => $this->hasSendButton(),
             'form' => $this->structure ? [
                 'id' => $this->structure['id_formulario'] ?? null,
                 'versionId' => $this->structure['id_formulario_versao'] ?? null,

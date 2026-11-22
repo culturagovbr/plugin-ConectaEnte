@@ -178,7 +178,7 @@ $this->import('
                 <template #content>
                     <p v-if="result.state === 'sending'" class="conectaente-result-tab__status"><?php i::_e('Envio ao CultBR em andamento.') ?></p>
                     <p v-else-if="result.state === 'uncertain'" class="conectaente-result-tab__status"><?php i::_e('O último envio pode ter chegado ao CultBR. Confira lá antes de enviar de novo.') ?></p>
-                    <p v-else-if="result.canSend" class="conectaente-result-tab__status conectaente-result-tab__status--complete"><?php i::_e('Formulário completo.') ?></p>
+                    <p v-else-if="result.state === 'complete' || result.state === 'sent'" class="conectaente-result-tab__status conectaente-result-tab__status--complete"><?php i::_e('Formulário completo.') ?></p>
                     <template v-else>
                         <p class="conectaente-result-tab__status"><?php i::_e('Faltam estas questões obrigatórias:') ?></p>
                         <ul class="conectaente-result-tab__missing">
@@ -187,8 +187,21 @@ $this->import('
                     </template>
                     <p v-if="saving" class="conectaente-result-tab__saving"><?php i::_e('Salvando...') ?></p>
                     <p v-if="saveFailed" class="conectaente-result-question__error"><?php i::_e('Não foi possível salvar agora. A próxima alteração tenta de novo.') ?></p>
+                    <section v-if="result.lastSend" class="conectaente-result-tab__last-send" :class="'conectaente-result-tab__last-send--' + result.lastSend.status">
+                        <h4><?php i::_e('Último envio') ?></h4>
+                        <p>
+                            <strong>{{ text('situacao_' + result.lastSend.status) }}</strong>
+                            <small v-if="result.lastSend.at"> {{ formatDate(result.lastSend.at) }}</small>
+                        </p>
+                        <p>{{ result.lastSend.outcome?.message }}</p>
+                        <ul v-if="result.lastSend.outcome?.items?.length" class="conectaente-result-tab__refusals">
+                            <li v-for="(item, index) in result.lastSend.outcome.items" :key="index">{{ item }}</li>
+                        </ul>
+                        <p v-if="result.lastSend.outcome?.hiddenRows">{{ text('linhas_ocultas', { total: result.lastSend.outcome.hiddenRows }) }}</p>
+                        <p v-if="result.lastSend.resultId" class="conectaente-result-tab__current">{{ text('resultado_vigente', { id: result.lastSend.resultId, tipo: text('tipo_' + result.lastSend.type) }) }}</p>
+                    </section>
                     <p v-if="sendRefusal" class="conectaente-result-question__error">{{ sendRefusal }}</p>
-                    <button v-if="result.canSend" type="button" class="button button--primary conectaente-result-tab__send" :disabled="requestingSend || saving" @click="send()">
+                    <button v-if="result.sendButton" type="button" class="button button--primary conectaente-result-tab__send" :disabled="requestingSend || saving" @click="send()">
                         {{ result.state === 'sent' ? text('retificar') : text('enviar') }}
                     </button>
                 </template>
