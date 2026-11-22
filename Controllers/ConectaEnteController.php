@@ -326,6 +326,20 @@ class ConectaEnteController extends \MapasCulturais\Controller
         ));
     }
 
+    /**
+     * O estado do resultado do edital, para quem controla a oportunidade.
+     */
+    function GET_result()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $this->refuseOtherSubsite($opportunity);
+        $opportunity->checkPermission('@control');
+
+        $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
+    }
+
     // o histórico carrega o payload, com o documento do Ente dentro: informar o id de outra instalação não pode bastar
     private function refuseOtherSubsite(Opportunity $opportunity): void
     {

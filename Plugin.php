@@ -25,6 +25,7 @@ use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\ModelSeal;
+use ConectaEnte\Services\ResultService;
 use ConectaEnte\Services\SealedOpportunity;
 use ConectaEnte\Services\SendEligibility;
 use ConectaEnte\Services\SendStatusView;
@@ -134,6 +135,11 @@ class Plugin extends \MapasCulturais\Plugin
     function publicationRequirements(): PublicationRequirements
     {
         return new PublicationRequirements($this->publicationStamp(), $this->parInformationService());
+    }
+
+    function resultService(): ResultService
+    {
+        return new ResultService($this);
     }
 
     function modelSeal(): ModelSeal
