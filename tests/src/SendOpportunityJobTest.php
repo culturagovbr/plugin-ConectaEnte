@@ -65,6 +65,20 @@ class SendOpportunityJobTest extends TestCase
         $this->assertNull($reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
     }
 
+    function testATwoHundredWithoutTheParEditalIdIsRecordedAsErrorAndDoesNotRetry()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, '{}');
+
+        $this->executeSend($opportunity->id);
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $reloaded->getMetadata(CultBrMetadata::SEND_STATUS));
+        $this->assertSame('A Plataforma CultBR respondeu ao envio do edital sem o id do edital (id_par_edital).', $reloaded->getMetadata(CultBrMetadata::SEND_REASON));
+        $this->assertSame([], $this->enqueuedSendJobs(), 'O CultBR respondeu: retentar não traria o id de volta.');
+        $this->assertNull($reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
+    }
+
     function testClientErrorIsRejectedAndDoesNotRetry()
     {
         $opportunity = $this->liveSealedOpportunity();

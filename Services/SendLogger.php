@@ -5,6 +5,7 @@ namespace ConectaEnte\Services;
 use ConectaEnte\Entities\Log;
 use ConectaEnte\Entities\LogAttempt;
 use ConectaEnte\Http\HttpExchange;
+use ConectaEnte\Http\SendAcceptance;
 use DateTime;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
@@ -97,12 +98,12 @@ class SendLogger
         }
     }
 
-    // o mesmo corte que o cliente faz com a resposta: aceite é 200 exato, e faixa mais larga faria a tentativa discordar do envio
+    // a régua do cliente: faixa mais larga faria a tentativa discordar do envio
     private function outcomeOf(HttpExchange $exchange, string $sendOutcome): string
     {
         return match (true) {
             $exchange->status === null => $sendOutcome,
-            $exchange->status === 200 && $exchange->hasJsonBody() => SendOutcome::SUCCESS,
+            SendAcceptance::isAccepted(SendAcceptance::OPPORTUNITY, $exchange->status, $exchange->responseBody) => SendOutcome::SUCCESS,
             $exchange->status === 200 => SendOutcome::ERROR,
             $exchange->status >= 500 => SendOutcome::ERROR,
             default => SendOutcome::REJECTED,

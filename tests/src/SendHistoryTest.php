@@ -63,6 +63,21 @@ class SendHistoryTest extends TestCase
         );
     }
 
+    function testATwoHundredWithoutTheParEditalIdClosesAsErrorAndKeepsTheBody()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, '{}');
+
+        $this->executeSend($opportunity->id);
+
+        $log = $this->logOf($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $log->outcome);
+        $this->assertNull($log->parEditalId);
+        $storedAttempt = $this->attemptsOf($log)[0];
+        $this->assertSame(SendOutcome::ERROR, $storedAttempt->outcome, 'Envelope e tentativa não podem discordar sobre a mesma resposta.');
+        $this->assertSame('{}', $storedAttempt->responseBody);
+    }
+
     function testTheEnvelopeAndTheOpportunityAgreeOnTheOutcome()
     {
         $opportunity = $this->liveSealedOpportunity();

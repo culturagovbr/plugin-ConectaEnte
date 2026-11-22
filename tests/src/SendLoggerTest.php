@@ -207,8 +207,10 @@ class SendLoggerTest extends TestCase
     public static function twoHundredBodies(): array
     {
         return [
-            'objeto JSON' => ['{"id_par_edital": 1}', SendOutcome::SUCCESS],
-            'lista JSON vazia' => ['[]', SendOutcome::SUCCESS],
+            'objeto JSON com o id' => ['{"id_par_edital": 1}', SendOutcome::SUCCESS],
+            'objeto JSON vazio' => ['{}', SendOutcome::ERROR],
+            'lista JSON vazia' => ['[]', SendOutcome::ERROR],
+            'id em texto' => ['{"id_par_edital": "1"}', SendOutcome::ERROR],
             'html' => ['<html>Bad Gateway</html>', SendOutcome::ERROR],
             'sem corpo' => [null, SendOutcome::ERROR],
             'null' => ['null', SendOutcome::ERROR],
@@ -216,15 +218,15 @@ class SendLoggerTest extends TestCase
         ];
     }
 
-    // a mesma régua do cliente: um 200 sem JSON é falha, e a tentativa não pode dizer que deu certo
+    // a mesma régua do cliente: sem o id inteiro, a tentativa não pode dizer que deu certo
     #[DataProvider('twoHundredBodies')]
-    function testATwoHundredAttemptIsSuccessOnlyWithAJsonBody(?string $body, string $expected)
+    function testATwoHundredAttemptIsSuccessOnlyWithTheParEditalId(?string $body, string $expected)
     {
         $this->loginAsSaasSuperAdmin();
         $log = $this->logger()->startOrResume($this->createOpportunity());
         $exchange = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200, responseBody: $body);
 
-        $this->logger()->recordAttempts($log, [$exchange], SendOutcome::ERROR, attempt: 1, maxAttempts: 3);
+        $this->logger()->recordAttempts($log, [$exchange], SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
 
         $this->assertSame($expected, $this->attemptsOf($log)[0]->outcome);
     }

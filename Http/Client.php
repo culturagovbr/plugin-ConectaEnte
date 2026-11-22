@@ -107,15 +107,24 @@ class Client
         }
 
         if ($response->status === 200) {
-            $body = $response->decoded();
-
-            // sem o corpo não há id_par_edital, e o resultado do edital não teria para onde ir
-            return $body === null
-                ? SendResult::failed(i::__('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).'))
-                : SendResult::ok($body);
+            return $this->readAcceptance($response);
         }
 
         return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));
+    }
+
+    // o resultado do edital vai para o id_par_edital: aceitar sem ele deixaria a fase seguinte sem destino
+    private function readAcceptance(Response $response): SendResult
+    {
+        if ($response->decoded() === null) {
+            return SendResult::failed(i::__('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).'));
+        }
+
+        if (!SendAcceptance::isAccepted(SendAcceptance::OPPORTUNITY, $response->status, $response->body)) {
+            return SendResult::failed(i::__('A Plataforma CultBR respondeu ao envio do edital sem o id do edital (id_par_edital).'));
+        }
+
+        return SendResult::ok($response->decoded());
     }
 
     /** A rota do envio, para o histórico nomear o destino mesmo quando a requisição não chega a sair. */

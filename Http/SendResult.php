@@ -3,7 +3,7 @@
 namespace ConectaEnte\Http;
 
 /**
- * Desfecho de `POST /api/v1/oportunidades/`: aceito, recusado (4xx), falho (200 sem JSON)
+ * Desfecho de `POST /api/v1/oportunidades/`: aceito, recusado (4xx), falho (200 sem JSON ou sem id)
  * ou indisponível (5xx/falha de conexão) — este último é o único retentável.
  */
 final class SendResult
@@ -37,5 +37,11 @@ final class SendResult
     public static function unreachable(int $status = 0, ?string $transportError = null): self
     {
         return new self(accepted: false, unreachable: true, status: $status, transportError: $transportError);
+    }
+
+    /** O id do edital no CultBR, presente em todo envio aceito. */
+    public function parEditalId(): ?int
+    {
+        return $this->accepted ? $this->response['id_par_edital'] : null;
     }
 }
