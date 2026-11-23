@@ -8,7 +8,7 @@ Card "Grade de contemplados" da aba de resultado: uma linha por inscrição apro
 
 ### Comportamento
 
-Lê `GET conectaente/resultRows/{id}?page=&pageSize=`, paginado no servidor. Sem planilha (o modelo não tem colunas), o card não aparece.
+Lê o resumo em `GET conectaente/resultRows/{id}` (colunas, total e pendências) e entrega as linhas ao `entity-table` do core, que as busca em `GET /api/conectaente/resultRows?opportunity={id}&@limit=&@page=`, com a paginação no cabeçalho `API-Metadata`. Sem planilha (o modelo não tem colunas), o card não aparece.
 
 Cada célula traz o valor e a origem:
 
@@ -23,7 +23,7 @@ O valor preenchido aqui vale sobre os outros; texto vazio é a decisão de deixa
 
 Cada alteração vai a `POST conectaente/resultRows/{id}`; o servidor recusa só o que a edição quebra (CPF e CNPJ com dígito verificador, inclusive CNPJ alfanumérico, CEP, monetário, opção de lista, um valor por coluna), e a recusa aparece sob a célula. As pendências da linha (obrigatória vazia, valor inválido vindo da ficha, inscrição sem tipo de proponente) pintam a célula; `condicional` não entra, porque a condição é texto livre e quem a cobra é o 422 de linhas.
 
-É uma tabela própria, não o `entity-table` do core: a linha mistura três fontes montadas no servidor, e o `entity-table` lista entidades pela API de consulta.
+Cada célula é um slot do `entity-table`, com o editor do tipo da coluna; depois de gravar, a tabela relê a página e o resumo recalcula as pendências.
 
 ### Importando componente
 
