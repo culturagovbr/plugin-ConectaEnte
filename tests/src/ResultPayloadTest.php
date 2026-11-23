@@ -120,6 +120,24 @@ class ResultPayloadTest extends TestCase
         $this->assertSame('planilha-bolsa.csv', $built['files'][0]['name']);
     }
 
+    function testSeveralFilesOfAnAttachmentThatTakesManyAreAllNamed()
+    {
+        $opportunity = $this->answeredEdital();
+        $form = $this->form();
+
+        foreach (['documento-1.csv', 'documento-2.csv'] as $name) {
+            $path = sys_get_temp_dir() . '/' . uniqid('anexo-') . '.csv';
+            file_put_contents($path, "a;b\n1;2\n");
+            Plugin::instance()->resultAttachments()->attach($this->reloaded($opportunity), $form, 13929, ['name' => $name, 'type' => 'text/csv', 'tmp_name' => $path, 'error' => UPLOAD_ERR_OK, 'size' => filesize($path)]);
+        }
+
+        $built = $this->build($this->reloaded($opportunity));
+        $byQuestion = array_column(array_map(fn($response) => [$response['id_par_questao'], $response['resposta']['resposta']], $built['payload']['respostas']), 1, 0);
+
+        $this->assertSame(['documento-1.csv', 'documento-2.csv'], $byQuestion[13929], 'Os dois vão em arquivos; a resposta cita os dois.');
+        $this->assertCount(2, $built['files']);
+    }
+
     function testLinesWithAnAttachmentAreRefusedBeforeTheSend()
     {
         $opportunity = $this->answeredEdital([13915 => 'fe_bolsa'], ['possui_planilha' => true, 'campos' => [['ordem' => 1, 'coluna' => 'nome', 'nome' => 'Nome', 'tipo' => 'texto', 'obrigatoriedade' => 'opcional']]]);

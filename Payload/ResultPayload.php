@@ -132,7 +132,7 @@ final class ResultPayload
         $type = $question['tipo_questao'] ?? null;
 
         return match (true) {
-            in_array($type, ResultValidator::ATTACHMENT_TYPES, true) => $this->fileNames($type, $files),
+            in_array($type, ResultValidator::ATTACHMENT_TYPES, true) => $this->fileNames($question, $files),
             $type === 'radio' => $this->choiceLabel($question, $value),
             in_array($type, ['múltipla escolha', 'checkbox'], true) => is_array($value) ? array_values(array_filter(array_map(fn($choice) => $this->choiceLabel($question, $choice), $value))) : null,
             $type === 'data' && is_string($value) => substr($value, 0, 10),
@@ -141,11 +141,13 @@ final class ResultPayload
         };
     }
 
-    private function fileNames(string $type, array $files): mixed
+    private function fileNames(array $question, array $files): mixed
     {
         $names = array_map(fn($file) => $file['name'], $files);
+        // um arquivo vai pelo nome, a forma provada em homologação; a lista só quando a questão aceita vários e há mais de um
+        $single = ($question['tipo_questao'] ?? null) === 'anexo' && (empty($question['config']['multiplos']) || count($names) <= 1);
 
-        return $type === 'anexo' ? ($names[0] ?? null) : $names;
+        return $single ? ($names[0] ?? null) : $names;
     }
 
     // a escolha viaja pelo rótulo, e o complemento vai junto dele, numa string só
