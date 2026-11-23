@@ -179,7 +179,14 @@ class Client
             ? $this->transport->postMultipart($url, $this->multipartFields($payload, $files), $this->multipartFiles($files), ['token' => $token])
             : $this->transport->post($url, $payload, ['token' => $token]);
 
-        $this->exchanges[] = $this->exchangeOf('POST', $url, $recordedPayload ?? $payload, $response);
+        $recorded = $recordedPayload ?? $payload;
+
+        // o multipart leva os arquivos fora do JSON: no histórico ficam o nome e a descrição de cada um
+        if ($files) {
+            $recorded['arquivos'] = array_map(fn($file) => ['nome' => $file['name'], 'descricao' => $file['description'] ?? $file['name']], $files);
+        }
+
+        $this->exchanges[] = $this->exchangeOf('POST', $url, $recorded, $response);
 
         if (!$response->reachedServer() || $response->status >= 500) {
             return ResultSendResult::unreachable($response->status, $response->transportError);

@@ -114,6 +114,18 @@ class ResultAttachmentsTest extends TestCase
         $this->assertSame('planilha.csv', $respostas[0]['resposta']['resposta']);
     }
 
+    function testTheHistoryNamesTheFilesOfAMultipartSend()
+    {
+        $transport = FakeTransport::replying(201, ['id_par_edital_resultado' => 1]);
+        $client = new Client('https://ente.example', $transport);
+
+        $client->sendResult('um-token', 53781, ['id_tipo' => 2, 'respostas' => []], null, [
+            ['path' => $this->tempFile('planilha.csv'), 'name' => 'planilha.csv', 'mime' => 'text/csv', 'description' => 'Planilha de resultados — Bolsa'],
+        ]);
+
+        $this->assertSame([['nome' => 'planilha.csv', 'descricao' => 'Planilha de resultados — Bolsa']], $client->exchanges()[0]->requestPayload['arquivos']);
+    }
+
     function testWithoutFilesTheResultGoesAsJson()
     {
         $transport = FakeTransport::replying(201, ['id_par_edital_resultado' => 1]);
