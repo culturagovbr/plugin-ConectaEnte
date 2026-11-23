@@ -187,12 +187,52 @@ class ResultRowsTest extends TestCase
         $this->assertFalse((new ResultCell)->canUser('remove'));
     }
 
+    function testTheApiRouteAnswersInTheFormatOfTheCoreApi()
+    {
+        $opportunity = $this->edital();
+        $this->awarded($opportunity, 3);
+
+        $status = $this->send($this->apiRequest(['opportunity' => $opportunity->id, '@limit' => 2, '@page' => 2]));
+
+        $metadata = json_decode($this->app->response->getHeaderLine('API-Metadata'), true);
+        $rows = json_decode((string) $this->app->response->getBody(), true);
+        $this->assertSame(200, $status);
+        $this->assertSame(['count' => 3, 'page' => 2, 'limit' => 2, 'numPages' => 2], array_intersect_key($metadata, array_flip(['count', 'page', 'limit', 'numPages'])), 'É o cabeçalho que o mc-entities lê para paginar.');
+        $this->assertCount(1, $rows);
+        $this->assertArrayHasKey('cells', $rows[0]);
+    }
+
+    function testWithoutSpreadsheetTheApiRouteHasNoRows()
+    {
+        $opportunity = $this->edital();
+        $this->awarded($opportunity, 2);
+        Plugin::instance()->transport = \Tests\ConectaEnte\Doubles\FakeTransport::replying(200, ['possui_planilha' => false, 'campos' => []]);
+        $this->app->mscache->deleteAll();
+
+        $this->send($this->apiRequest(['opportunity' => $opportunity->id]));
+
+        $this->assertSame(0, json_decode($this->app->response->getHeaderLine('API-Metadata'), true)['count']);
+    }
+
+    function testTheApiRouteRefusesWhoDoesNotControlTheEdital()
+    {
+        $opportunity = $this->edital();
+        $this->login($this->userDirector->createUser());
+
+        $this->assertSame(403, $this->send($this->apiRequest(['opportunity' => $opportunity->id])));
+    }
+
     function testTheRouteRefusesWhoDoesNotControlTheEdital()
     {
         $opportunity = $this->edital();
         $this->login($this->userDirector->createUser());
 
         $this->assertSame(403, $this->send($this->requestFactory->GET('conectaente', 'resultRows', [$opportunity->id], ajax: true)));
+    }
+
+    private function apiRequest(array $query): \Psr\Http\Message\ServerRequestInterface
+    {
+        return new \Laminas\Diactoros\ServerRequest(method: 'GET', uri: '/api/conectaente/resultRows/?' . http_build_query($query), queryParams: $query, headers: ['X-Requested-With' => 'XMLHttpRequest']);
     }
 
     private function edital(array $ranges = []): Opportunity

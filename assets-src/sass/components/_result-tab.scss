@@ -202,8 +202,11 @@ aside .conectaente-result-tab__send:disabled {
     margin-bottom: 0.5rem;
 }
 
-.conectaente-result-rows__scroll {
-    overflow-x: auto;
+.conectaente-result-rows__cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.25rem;
 
     input,
     select {
@@ -211,20 +214,8 @@ aside .conectaente-result-tab__send:disabled {
     }
 }
 
-.conectaente-result-rows__row--pending td:first-child {
-    border-left: 3px solid var(--mc-warning-500);
-}
-
 .conectaente-result-rows__cell--pending {
     background: color-mix(in srgb, var(--mc-warning-500) 12%, transparent);
-}
-
-.conectaente-result-rows__pages {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1rem;
 }
 
 .conectaente-result-question__file {

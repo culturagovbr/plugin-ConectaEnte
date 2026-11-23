@@ -380,6 +380,34 @@ class ConectaEnteController extends \MapasCulturais\Controller
         ));
     }
 
+    // sem isso o roteador recusa /api/conectaente/*; a única ação de API é a grade
+    public static function usesAPI(): bool
+    {
+        return true;
+    }
+
+    /**
+     * As linhas da grade no formato da API do core, para o `entity-table`: lista no corpo, paginação no `API-Metadata`.
+     */
+    function API_resultRows()
+    {
+        $opportunity = $this->controlledOpportunity((int) ($this->data['opportunity'] ?? 0));
+        $limit = min(max(1, (int) ($this->data['@limit'] ?? ResultRows::DEFAULT_PAGE_SIZE)), ResultRows::BATCH_SIZE);
+        $page = max(1, (int) ($this->data['@page'] ?? 1));
+        $total = Plugin::instance()->resultRows()->awardedTotal($opportunity);
+
+        App::i()->response = App::i()->response->withHeader('API-Metadata', json_encode([
+            'count' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'numPages' => (int) ceil($total / $limit),
+            'keyword' => '',
+            'order' => '',
+        ]));
+
+        $this->json(Plugin::instance()->resultRows()->rows($opportunity, $page, $limit));
+    }
+
     /**
      * Grava a célula do gestor; null devolve a célula à ficha.
      */
@@ -424,11 +452,11 @@ class ConectaEnteController extends \MapasCulturais\Controller
         $request['queued'] ? $this->json(['queued' => true, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]) : $this->errorJson($request, 400);
     }
 
-    private function controlledOpportunity(): Opportunity
+    private function controlledOpportunity(?int $id = null): Opportunity
     {
         $this->requireAuthentication();
 
-        $opportunity = $this->requestedOpportunity();
+        $opportunity = $this->requestedOpportunity($id);
         $this->refuseOtherSubsite($opportunity);
         $opportunity->checkPermission('@control');
 
@@ -527,9 +555,9 @@ class ConectaEnteController extends \MapasCulturais\Controller
         return $federativeEntity;
     }
 
-    private function requestedOpportunity(): Opportunity
+    private function requestedOpportunity(?int $id = null): Opportunity
     {
-        $opportunity = App::i()->repo(Opportunity::class)->find($this->urlData['id'] ?? 0);
+        $opportunity = App::i()->repo(Opportunity::class)->find($id ?? $this->urlData['id'] ?? 0);
 
         if (!$opportunity) {
             App::i()->pass();

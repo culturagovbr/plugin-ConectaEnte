@@ -42,6 +42,18 @@ final class ResultRows
         ];
     }
 
+    /** Uma página de linhas, sem o resumo da grade. */
+    public function rows(Opportunity $opportunity, int $page, int $pageSize): array
+    {
+        return $this->build($opportunity, $this->awarded($opportunity, $pageSize, (max(1, $page) - 1) * $pageSize), $this->context($opportunity));
+    }
+
+    /** Quantas linhas a grade tem: as aprovadas na fase final, ou nenhuma sem planilha. */
+    public function awardedTotal(Opportunity $opportunity): int
+    {
+        return $this->context($opportunity)['hasSpreadsheet'] ? $this->awardedCount($opportunity) : 0;
+    }
+
     /** Quantas linhas ainda têm pendência, calculado em lotes. */
     public function pendingRowCount(Opportunity $opportunity, ?array $context = null): int
     {

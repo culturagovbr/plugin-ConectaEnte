@@ -1,6 +1,7 @@
 // escopo próprio: o componente roda ao lado dos do tema, que declaram nomes no global
 (() => {
     const PAGE_SIZE = 50;
+    const REGISTRATION_SLUG = 'conectaente_inscricao';
 
     app.component('conectaente--result-rows', {
         template: $TEMPLATES['conectaente--result-rows'],
@@ -16,13 +17,12 @@
             const api = new API('conectaente');
             const text = Utils.getTexts('conectaente--result-rows');
 
-            return { api, text };
+            return { api, text, pageSize: PAGE_SIZE, registrationSlug: REGISTRATION_SLUG };
         },
 
         data() {
             return {
-                grid: null,
-                page: 1,
+                summary: null,
                 errors: {},
                 loading: true,
                 loadFailed: false,
@@ -30,30 +30,39 @@
         },
 
         computed: {
-            pages() {
-                return this.grid ? Math.max(1, Math.ceil(this.grid.total / this.grid.pageSize)) : 1;
+            columns() {
+                return this.summary?.columns || [];
+            },
+
+            headers() {
+                return [
+                    { text: this.text('inscricao'), value: 'number', slug: REGISTRATION_SLUG },
+                    ...this.columns.map((column) => ({ text: column.nome, value: column.coluna, slug: column.coluna })),
+                ];
+            },
+
+            query() {
+                return { opportunity: this.entity.id };
             },
         },
 
         mounted() {
-            this.load();
+            this.loadSummary();
         },
 
         methods: {
-            async load() {
-                this.loading = true;
-
+            // colunas, total e pendências; as linhas vêm pelo entity-table
+            async loadSummary() {
                 try {
                     const url = new URL(Utils.createUrl('conectaente', 'resultRows', [this.entity.id]), window.location.origin);
-                    url.searchParams.set('page', this.page);
-                    url.searchParams.set('pageSize', PAGE_SIZE);
+                    url.searchParams.set('pageSize', 1);
                     const response = await this.api.GET(url, {}, { cache: 'no-store' });
 
                     if (!response.ok) {
                         throw new Error(response.status);
                     }
 
-                    this.grid = await response.json();
+                    this.summary = await response.json();
                     this.loadFailed = false;
                 } catch (error) {
                     this.loadFailed = true;
@@ -62,7 +71,13 @@
                 }
             },
 
-            async saveCell(row, column, value) {
+            rowOf(row) {
+                row.__objectId = `conectaente-result-row:${row.registrationId}`;
+
+                return row;
+            },
+
+            async saveCell(row, column, value, refresh) {
                 const key = `${row.registrationId}:${column.coluna}`;
                 const response = await this.api.POST(Utils.createUrl('conectaente', 'resultRows', [this.entity.id]), {
                     registrationId: row.registrationId,
@@ -72,7 +87,8 @@
 
                 if (response.ok) {
                     delete this.errors[key];
-                    await this.load();
+                    refresh();
+                    this.loadSummary();
                     return;
                 }
 
@@ -86,11 +102,6 @@
 
             isPending(row, column) {
                 return row.pending.includes(column.coluna);
-            },
-
-            goTo(page) {
-                this.page = Math.min(Math.max(1, page), this.pages);
-                this.load();
             },
 
             sourceLabel(cell) {
