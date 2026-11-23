@@ -120,6 +120,19 @@ class ResultPayloadTest extends TestCase
         $this->assertSame('planilha-bolsa.csv', $built['files'][0]['name']);
     }
 
+    function testLinesWithAnAttachmentAreRefusedBeforeTheSend()
+    {
+        $opportunity = $this->answeredEdital([13915 => 'fe_bolsa'], ['possui_planilha' => true, 'campos' => [['ordem' => 1, 'coluna' => 'nome', 'nome' => 'Nome', 'tipo' => 'texto', 'obrigatoriedade' => 'opcional']]]);
+        $path = sys_get_temp_dir() . '/' . uniqid('anexo-') . '.csv';
+        file_put_contents($path, "a;b\n1;2\n");
+        Plugin::instance()->resultAttachments()->attach($this->reloaded($opportunity), $this->form(), 13931, ['name' => 'planilha-bolsa.csv', 'type' => 'text/csv', 'tmp_name' => $path, 'error' => UPLOAD_ERR_OK, 'size' => filesize($path)]);
+
+        $built = $this->build($this->reloaded($opportunity));
+
+        $this->assertNull($built['payload'], 'O multipart não leva linhas: o resultado sairia sem os contemplados.');
+        $this->assertStringContainsString('junto com anexos', $built['error']);
+    }
+
     private function answeredEdital(array $answers = [], array $model = ['possui_planilha' => false, 'campos' => []]): Opportunity
     {
         $opportunity = $this->reloaded($this->sealedOpportunity(Opportunity::STATUS_ENABLED));

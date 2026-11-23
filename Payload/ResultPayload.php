@@ -41,6 +41,11 @@ final class ResultPayload
 
         $lines = $linesByRegistration === null ? null : array_values($linesByRegistration);
 
+        // o contrato só aceita linhas no corpo JSON, e o envio com arquivo é multipart
+        if ($lines && $files) {
+            return ['payload' => null, 'files' => [], 'hash' => null, 'linesHash' => null, 'totalLines' => 0, 'lineRegistrationIds' => [], 'error' => i::__('O CultBR ainda não recebe a planilha de contemplados junto com anexos. Nada foi enviado.')];
+        }
+
         $content = ['respostas' => $this->responses($form, $known, $files)];
 
         if ($lines) {
