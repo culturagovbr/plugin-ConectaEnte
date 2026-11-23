@@ -133,6 +133,25 @@ class ResultSendTest extends TestCase
         $this->assertSame(ResultState::SENT, $this->resultService()->stateOf($opportunity)->state, 'O 20073 do 53781 não foi enviado por aqui.');
     }
 
+    function testAPendingFormStillKnowsTheEditalHasAPublishedResult()
+    {
+        $structure = json_decode((string) file_get_contents(Plugin::instance()->fixturesPath() . '/estrutura.json'), true);
+        $opportunity = $this->readyEdital(structure: $structure, publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20073])]);
+
+        $state = $this->resultService()->stateOf($opportunity);
+
+        $this->assertSame(ResultState::PENDING, $state->state);
+        $this->assertTrue($state->form['published'], 'Com pendência, o botão ainda diz Retificar.');
+    }
+
+    function testTheDispensedAttachmentsAreListedForTheTab()
+    {
+        $structure = json_decode((string) file_get_contents(Plugin::instance()->fixturesPath() . '/estrutura.json'), true);
+        $opportunity = $this->readyEdital(structure: $structure);
+
+        $this->assertContains(13930, $this->resultService()->stateOf($opportunity)->form['dispensed'], 'A planilha de TEC vem em linhas e não leva a marca de obrigatória.');
+    }
+
     function testWithoutAPublishedResultTheButtonIsTheFirstSend()
     {
         $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(404, self::NOT_FOUND)]);

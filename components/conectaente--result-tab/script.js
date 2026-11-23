@@ -208,6 +208,10 @@
                 return ATTACHMENT_TYPES.includes(question.tipo_questao);
             },
 
+            isDispensed(question) {
+                return (this.result?.dispensed || []).includes(question.id_questao_etapa);
+            },
+
             isTable(question) {
                 return TABLE_TYPES.includes(question.tipo_questao);
             },

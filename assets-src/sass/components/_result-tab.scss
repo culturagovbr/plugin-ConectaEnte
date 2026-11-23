@@ -227,6 +227,21 @@ aside .conectaente-result-tab__send:disabled {
     margin-top: 1rem;
 }
 
+.conectaente-result-question__file {
+    position: relative;
+    align-self: flex-start;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+// o input nativo fica por baixo do botão: o texto dele vem do navegador, e não em português
+.conectaente-result-question__file-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
 .conectaente-result-question__files {
     margin: 0;
     padding-left: 1.25rem;

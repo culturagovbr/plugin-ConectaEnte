@@ -53,7 +53,7 @@ $this->import('
                                 <div v-if="isVisible(question)" :id="'conectaente-result-question-' + question.id_questao_etapa" class="conectaente-result-question" :class="{ 'conectaente-result-question--missing': isMissing(question), 'conectaente-result-question--error': errors[question.id_questao_etapa] }">
                                     <label class="conectaente-result-question__label">
                                         {{ questionLabel(question) }}
-                                        <span v-if="question.requerida && isEditable(question)" class="conectaente-result-question__required">*<?php i::_e('obrigatório') ?></span>
+                                        <span v-if="question.requerida && isEditable(question) && !isDispensed(question)" class="conectaente-result-question__required">*<?php i::_e('obrigatório') ?></span>
                                         <span v-if="isComputed(question)" class="conectaente-result-question__computed"><?php i::_e('calculado pelo Mapas') ?></span>
                                         <span v-else-if="!isEditable(question)" class="conectaente-result-question__computed"><?php i::_e('somente leitura') ?></span>
                                     </label>
@@ -155,7 +155,10 @@ $this->import('
                                                 <button type="button" class="button button--text button--sm" @click="removeAttachment(question, entry)"><?php i::_e('Remover') ?></button>
                                             </li>
                                         </ul>
-                                        <input v-if="acceptsAnotherFile(question)" type="file" :accept="(question.config?.formatos || []).join(',')" @change="uploadAttachment(question, $event)">
+                                        <label v-if="acceptsAnotherFile(question)" class="button button--sm button--primary-outline conectaente-result-question__file">
+                                            <?php i::_e('Escolher arquivo') ?>
+                                            <input type="file" class="conectaente-result-question__file-input" :accept="(question.config?.formatos || []).join(',')" @change="uploadAttachment(question, $event)">
+                                        </label>
                                     </template>
 
                                     <p v-if="errors[question.id_questao_etapa]" class="conectaente-result-question__error">{{ errors[question.id_questao_etapa] }}</p>
@@ -202,7 +205,7 @@ $this->import('
                     </section>
                     <p v-if="sendRefusal" class="conectaente-result-question__error">{{ sendRefusal }}</p>
                     <button v-if="result.sendButton" type="button" class="button button--primary conectaente-result-tab__send" :disabled="requestingSend || saving" @click="send()">
-                        {{ result.state === 'sent' ? text('retificar') : text('enviar') }}
+                        {{ result.published ? text('retificar') : text('enviar') }}
                     </button>
                 </template>
             </mc-card>

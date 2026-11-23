@@ -47,6 +47,18 @@ final class ResultForm
     }
 
     /** Calculada pelo Mapas e só leitura: inscritos, contemplados e as tabelas de categorias. */
+    /** Anexo que a estrutura marca como obrigatório e o contrato dispensa, porque o conteúdo vai em linhas. */
+    public function isDispensed(array $question): bool
+    {
+        return in_array($question['tag'] ?? null, self::DISPENSED_ATTACHMENT_TAGS, true);
+    }
+
+    /** @return int[] */
+    public function dispensedIds(): array
+    {
+        return array_keys(array_filter($this->questions, fn($question) => $this->isDispensed($question)));
+    }
+
     public function isAutomatic(array $question): bool
     {
         $tag = (string) ($question['tag'] ?? '');

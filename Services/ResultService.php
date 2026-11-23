@@ -89,8 +89,12 @@ final class ResultService
     {
         $form = new ResultForm($structure);
         $answers = $this->plugin->resultAnswers();
+        $sendState = $this->sendState($opportunity);
+        $published = $sendState === null && $this->hasPublishedResult($opportunity);
 
         return ResultState::withForm($structure, [
+            'published' => $published,
+            'dispensed' => $form->dispensedIds(),
             'lastSend' => $this->lastSend($opportunity, $form),
             'answers' => (object) $answers->saved($opportunity)['answers'],
             'computed' => (object) $answers->computed($opportunity, $form),
@@ -98,7 +102,7 @@ final class ResultService
             'missing' => $answers->missing($opportunity, $form),
             'stale' => $answers->isStale($opportunity, $form),
             'spreadsheetPending' => $this->plugin->resultRows()->pendingRowCount($opportunity),
-        ], $sendState = $this->sendState($opportunity), $sendState === null && $this->hasPublishedResult($opportunity));
+        ], $sendState, $published);
     }
 
     // o publicado enxerga resultado criado por fora; sem leitura conclusiva, vale o que foi aceito por aqui
