@@ -13,13 +13,15 @@ final class ResultForm
     const TRANSFERRED_PREFIX = 'valor_total_repassado';
     // a única tabela de categorias que vai como linha única quando o edital não tem faixas
     const SINGLE_ROW_CATEGORY_TAG = 'dados_por_categoria_resultado_1_1';
-    // as duas tags de anexo que o contrato dispensa: a planilha vem em `linhas`
-    const DISPENSED_ATTACHMENT_TAGS = ['planilha_de_resultados_conforme_padrao_de_dados', 'planilha_pdf_de_comissao_avaliadora'];
+    const SPREADSHEET_TAG = 'planilha_de_resultados_conforme_padrao_de_dados';
+    const SPREADSHEET_UPLOAD_PREFIX = 'upload_planilha_csv';
+    // as duas tags de anexo que o contrato dispensa
+    const DISPENSED_ATTACHMENT_TAGS = [self::SPREADSHEET_TAG, 'planilha_pdf_de_comissao_avaliadora'];
 
     /** @var array<int, array> por id_questao_etapa */
     private array $questions = [];
 
-    public function __construct(public readonly array $structure)
+    public function __construct(public readonly array $structure, public readonly bool $hasSpreadsheet = false)
     {
         foreach ($structure['secoes'] ?? [] as $section) {
             foreach ($section['etapas'] ?? [] as $step) {
@@ -46,19 +48,47 @@ final class ResultForm
         return $this->questions[$id] ?? null;
     }
 
-    /** Calculada pelo Mapas e só leitura: inscritos, contemplados e as tabelas de categorias. */
-    /** Anexo que a estrutura marca como obrigatório e o contrato dispensa, porque o conteúdo vai em linhas. */
+    /** A questão de anexo que o CultBR preenche com as linhas da planilha. */
+    public function isFilledByLines(array $question): bool
+    {
+        $tag = (string) ($question['tag'] ?? '');
+
+        return $this->hasSpreadsheet && ($tag === self::SPREADSHEET_TAG || str_starts_with($tag, self::SPREADSHEET_UPLOAD_PREFIX));
+    }
+
+    /** Anexo que a estrutura marca como obrigatório e a API não cobra. */
     public function isDispensed(array $question): bool
     {
-        return in_array($question['tag'] ?? null, self::DISPENSED_ATTACHMENT_TAGS, true);
+        return $this->isFilledByLines($question) || in_array($question['tag'] ?? null, self::DISPENSED_ATTACHMENT_TAGS, true);
+    }
+
+    /** Anexo não cobrado que não cabe no envio: as linhas vão em JSON, e o arquivo só vai em multipart. */
+    public function isAttachmentUnavailable(array $question): bool
+    {
+        return $this->hasSpreadsheet
+            && in_array($question['tipo_questao'] ?? null, ResultValidator::ATTACHMENT_TYPES, true)
+            && (empty($question['requerida']) || $this->isDispensed($question));
     }
 
     /** @return int[] */
     public function dispensedIds(): array
     {
-        return array_keys(array_filter($this->questions, fn($question) => $this->isDispensed($question)));
+        return $this->idsWhere($this->isDispensed(...));
     }
 
+    /** @return int[] */
+    public function filledByLinesIds(): array
+    {
+        return $this->idsWhere($this->isFilledByLines(...));
+    }
+
+    /** @return int[] */
+    public function unavailableAttachmentIds(): array
+    {
+        return $this->idsWhere($this->isAttachmentUnavailable(...));
+    }
+
+    /** Calculada pelo Mapas e só leitura: inscritos, contemplados e as tabelas de categorias. */
     public function isAutomatic(array $question): bool
     {
         $tag = (string) ($question['tag'] ?? '');
@@ -87,6 +117,11 @@ final class ResultForm
     public function hasAnyTag(array $question, array $prefixes): bool
     {
         return $this->startsWithAny((string) ($question['tag'] ?? ''), $prefixes);
+    }
+
+    private function idsWhere(callable $matches): array
+    {
+        return array_keys(array_filter($this->questions, $matches));
     }
 
     private function startsWithAny(string $tag, array $prefixes): bool

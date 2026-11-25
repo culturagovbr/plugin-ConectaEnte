@@ -85,9 +85,15 @@ final class ResultService
         };
     }
 
+    /** A estrutura lida como formulário, sabendo se o edital leva planilha. */
+    public function formOf(Opportunity $opportunity, array $structure): ResultForm
+    {
+        return new ResultForm($structure, $this->plugin->resultSpreadsheet()->isRequired($opportunity));
+    }
+
     private function formState(Opportunity $opportunity, array $structure): ResultState
     {
-        $form = new ResultForm($structure);
+        $form = $this->formOf($opportunity, $structure);
         $answers = $this->plugin->resultAnswers();
         $sendState = $this->sendState($opportunity);
         $published = $sendState === null && $this->hasPublishedResult($opportunity);
@@ -95,6 +101,8 @@ final class ResultService
         return ResultState::withForm($structure, [
             'published' => $published,
             'dispensed' => $form->dispensedIds(),
+            'filledByLines' => $form->filledByLinesIds(),
+            'unavailableAttachments' => $form->unavailableAttachmentIds(),
             'lastSend' => $this->lastSend($opportunity, $form),
             'answers' => (object) $answers->saved($opportunity)['answers'],
             'computed' => (object) $answers->computed($opportunity, $form),
@@ -167,7 +175,7 @@ final class ResultService
         $deferred = microtime(true) - $startedAt >= self::REQUEST_TIME_LIMIT_SECONDS;
 
         if (!$deferred) {
-            $built = $this->plugin->resultPayload()->build($opportunity, new ResultForm($state->structure), ResultPayload::TYPE_FINAL);
+            $built = $this->plugin->resultPayload()->build($opportunity, $this->formOf($opportunity, $state->structure), ResultPayload::TYPE_FINAL);
 
             if ($built['error']) {
                 return $refusal($built['error']);
@@ -229,7 +237,7 @@ final class ResultService
             return ['_' => sprintf(i::__('O formulário de resultado não está disponível (%s).'), $state->state)];
         }
 
-        return $this->plugin->resultAnswers()->save($opportunity, new ResultForm($state->structure), $answers);
+        return $this->plugin->resultAnswers()->save($opportunity, $this->formOf($opportunity, $state->structure), $answers);
     }
 
     /** Anexa o arquivo enviado à questão de anexo, na estrutura que vale agora. */
@@ -238,7 +246,7 @@ final class ResultService
         $state = $this->stateOf($opportunity);
 
         return $state->structure
-            ? $this->plugin->resultAttachments()->attach($opportunity, new ResultForm($state->structure), $questionId, $upload)
+            ? $this->plugin->resultAttachments()->attach($opportunity, $this->formOf($opportunity, $state->structure), $questionId, $upload)
             : sprintf(i::__('O formulário de resultado não está disponível (%s).'), $state->state);
     }
 
@@ -248,7 +256,7 @@ final class ResultService
         $state = $this->stateOf($opportunity);
 
         if ($state->structure) {
-            $this->plugin->resultAttachments()->detach($opportunity, new ResultForm($state->structure), $questionId, $fileId);
+            $this->plugin->resultAttachments()->detach($opportunity, $this->formOf($opportunity, $state->structure), $questionId, $fileId);
         }
     }
 

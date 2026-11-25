@@ -212,6 +212,14 @@
                 return (this.result?.dispensed || []).includes(question.id_questao_etapa);
             },
 
+            isFilledByLines(question) {
+                return (this.result?.filledByLines || []).includes(question.id_questao_etapa);
+            },
+
+            isAttachmentUnavailable(question) {
+                return (this.result?.unavailableAttachments || []).includes(question.id_questao_etapa);
+            },
+
             isTable(question) {
                 return TABLE_TYPES.includes(question.tipo_questao);
             },

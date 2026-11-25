@@ -144,7 +144,9 @@ $this->import('
                                     </template>
 
                                     <template v-else-if="isAttachment(question)">
-                                        <p class="conectaente-result-question__description">
+                                        <p v-if="isFilledByLines(question)" class="conectaente-result-question__description"><?php i::_e('O CultBR preenche esta questão com a grade de contemplados.') ?></p>
+                                        <p v-else-if="isAttachmentUnavailable(question)" class="conectaente-result-question__description"><?php i::_e('Este edital envia a planilha de contemplados, e o CultBR não recebe arquivos junto com ela.') ?></p>
+                                        <p v-else class="conectaente-result-question__description">
                                             <span v-if="question.config?.anexoModelo?.nome"><?php i::_e('Modelo:') ?> {{ question.config.anexoModelo.nome }}. </span>
                                             <span v-if="question.config?.formatos?.length"><?php i::_e('Formatos:') ?> {{ question.config.formatos.join(', ') }}. </span>
                                             <?php i::_e('O arquivo vai ao CultBR junto com o resultado.') ?>
@@ -155,7 +157,7 @@ $this->import('
                                                 <button type="button" class="button button--text button--sm" @click="removeAttachment(question, entry)"><?php i::_e('Remover') ?></button>
                                             </li>
                                         </ul>
-                                        <label v-if="acceptsAnotherFile(question)" class="button button--sm button--primary-outline conectaente-result-question__file">
+                                        <label v-if="!isAttachmentUnavailable(question) && acceptsAnotherFile(question)" class="button button--sm button--primary-outline conectaente-result-question__file">
                                             <?php i::_e('Escolher arquivo') ?>
                                             <input type="file" class="conectaente-result-question__file-input" :accept="(question.config?.formatos || []).join(',')" @change="uploadAttachment(question, $event)">
                                         </label>

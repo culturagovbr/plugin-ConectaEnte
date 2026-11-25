@@ -107,7 +107,7 @@ final class ResultSender
         }
 
         $type = $published->exists() ? ResultPayload::TYPE_CORRECTED : ResultPayload::TYPE_FINAL;
-        $built = $this->plugin->resultPayload()->build($opportunity, new ResultForm($state->structure), $type);
+        $built = $this->plugin->resultPayload()->build($opportunity, $this->plugin->resultService()->formOf($opportunity, $state->structure), $type);
 
         if ($built['error'] || $this->isAlreadySent($opportunity, $built['hash'])) {
             $this->closeLocally($opportunity, $log, $built['error'] ?? i::__('Nada mudou desde o último resultado enviado.'));

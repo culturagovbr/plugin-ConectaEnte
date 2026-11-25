@@ -19,7 +19,7 @@ Com o formulário aberto:
 | `texto`, `textarea`, `número`, `moeda`, `data`, `booleano` | o campo do tipo, com os limites declarados |
 | `radio`, `múltipla escolha`, `checkbox` | as opções da lista; a opção com complemento abre o campo de texto, e a exclusiva desmarca as outras |
 | `tabela`, `Tabela Dinâmica` | editor de linhas pelas colunas declaradas |
-| `anexo`, `múltiplos anexos` | envio de arquivo pelo formato e pelo limite declarados; o arquivo fica privado na oportunidade |
+| `anexo`, `múltiplos anexos` | envio de arquivo pelo formato e pelo limite declarados; o arquivo fica privado na oportunidade. Com planilha no edital, a questão da planilha diz que vem da grade, e os anexos não cobrados ficam indisponíveis, com o motivo |
 | tipo desconhecido | erro visível, nunca um campo de texto genérico |
 
 As regras de visibilidade (`eq` e `includes`) são avaliadas no navegador a cada resposta, com a mesma lógica do validador do servidor.

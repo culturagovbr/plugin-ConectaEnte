@@ -25,7 +25,7 @@ final class ResultAttachments
     {
         $question = $form->question($questionId);
         $current = $this->entries($opportunity, $questionId);
-        $error = $this->uploadError($question, $upload, $current);
+        $error = $this->uploadError($form, $question, $upload, $current);
 
         if ($error) {
             return $error;
@@ -76,7 +76,7 @@ final class ResultAttachments
         return $files;
     }
 
-    private function uploadError(?array $question, array $upload, array $current): ?string
+    private function uploadError(ResultForm $form, ?array $question, array $upload, array $current): ?string
     {
         $config = $question['config'] ?? [];
         $formats = array_map('strtolower', (array) ($config['formatos'] ?? []));
@@ -85,6 +85,7 @@ final class ResultAttachments
 
         return match (true) {
             !$question || !in_array($question['tipo_questao'] ?? null, ResultValidator::ATTACHMENT_TYPES, true) => i::__('Esta questão não recebe arquivo.'),
+            $form->isAttachmentUnavailable($question) => i::__('Este edital envia a planilha de contemplados, e o CultBR não recebe arquivos junto com ela.'),
             ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_file((string) ($upload['tmp_name'] ?? '')) => i::__('O arquivo não chegou ao servidor.'),
             $formats && !in_array($extension, $formats, true) => sprintf(i::__('Envie um arquivo %s.'), implode(', ', $formats)),
             (int) ($upload['size'] ?? 0) > $maxBytes => sprintf(i::__('O arquivo passa de %s MB.'), $config['tamanhoMaxMb'] ?? self::DEFAULT_MAX_MB),

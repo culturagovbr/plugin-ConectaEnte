@@ -208,6 +208,35 @@ class ResultSendTest extends TestCase
         $this->assertContains(13930, $this->resultService()->stateOf($opportunity)->form['dispensed'], 'A planilha de TEC vem em linhas e não leva a marca de obrigatória.');
     }
 
+    function testWithTheSpreadsheetTheEditalCompletesWithoutItsFile()
+    {
+        $opportunity = $this->editalWithSpreadsheetQuestion(hasSpreadsheet: true);
+
+        $state = $this->resultService()->stateOf($opportunity);
+
+        $this->assertSame(ResultState::COMPLETE, $state->state, 'Sem a dispensa, cobrar o arquivo e recusá-lo não deixa saída.');
+        $this->assertSame([14170], $state->form['filledByLines']);
+        $this->assertSame([14170], $state->form['unavailableAttachments']);
+    }
+
+    function testWithoutTheSpreadsheetTheEditalStillDemandsItsFile()
+    {
+        $state = $this->resultService()->stateOf($this->editalWithSpreadsheetQuestion(hasSpreadsheet: false));
+
+        $this->assertSame(ResultState::PENDING, $state->state);
+        $this->assertSame([14170], $state->form['missing']);
+    }
+
+    function testTheSpreadsheetQuestionTakesNoFileWhenTheLinesFillIt()
+    {
+        $opportunity = $this->editalWithSpreadsheetQuestion(hasSpreadsheet: true);
+        $path = tempnam(sys_get_temp_dir(), 'anexo');
+
+        $error = $this->resultService()->attach($opportunity, 14170, ['name' => 'planilha.csv', 'type' => 'text/csv', 'tmp_name' => $path, 'error' => UPLOAD_ERR_OK, 'size' => 1]);
+
+        $this->assertStringContainsString('planilha de contemplados', (string) $error);
+    }
+
     function testWithoutAPublishedResultTheButtonIsTheFirstSend()
     {
         $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(404, self::NOT_FOUND)]);
@@ -492,6 +521,19 @@ class ResultSendTest extends TestCase
         $this->transport = $this->routes($publishedReplies ?: [RoutedTransport::json(404, self::NOT_FOUND)], structure: $structure);
 
         return $this->reloaded($opportunity);
+    }
+
+    private function editalWithSpreadsheetQuestion(bool $hasSpreadsheet): Opportunity
+    {
+        $question = ['id_questao_etapa' => 14170, 'tipo_questao' => 'anexo', 'tag' => 'upload_planilha_csv_1_5', 'requerida' => true, 'config' => ['formatos' => ['.csv']]];
+        $opportunity = $this->readyEdital(structure: ['secoes' => [['etapas' => [['questoes' => [$question]]]]]] + self::STRUCTURE);
+        Plugin::instance()->transport = new RoutedTransport([
+            'GET /formularios/estrutura' => [RoutedTransport::json(200, ['secoes' => [['etapas' => [['questoes' => [$question]]]]]] + self::STRUCTURE)],
+            'GET /resultado/modelo-planilha' => [RoutedTransport::json(200, ['possui_planilha' => $hasSpreadsheet, 'campos' => []])],
+            'GET /resultado/publicado' => [RoutedTransport::json(404, self::NOT_FOUND)],
+        ]);
+
+        return $opportunity;
     }
 
     private function routes(array $publishedReplies, ?Response $postReply = null, ?array $structure = null): RoutedTransport

@@ -148,7 +148,7 @@ class ResultPayloadTest extends TestCase
         $built = $this->build($this->reloaded($opportunity));
 
         $this->assertNull($built['payload'], 'O multipart não leva linhas: o resultado sairia sem os contemplados.');
-        $this->assertStringContainsString('junto com anexos', $built['error']);
+        $this->assertStringContainsString('junto com a planilha', $built['error']);
     }
 
     private function answeredEdital(array $answers = [], array $model = ['possui_planilha' => false, 'campos' => []]): Opportunity

@@ -52,6 +52,12 @@ final class ResultSpreadsheet
         return $read;
     }
 
+    /** Se o edital leva planilha de contemplados no resultado. */
+    public function isRequired(Opportunity $opportunity): bool
+    {
+        return !empty($this->model($opportunity)->body['possui_planilha']);
+    }
+
     /**
      * O que a tela do de/para precisa: modelo, campos da ficha, o que foi salvo e a sugestão.
      */
