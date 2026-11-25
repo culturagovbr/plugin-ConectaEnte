@@ -14,7 +14,8 @@ Com o formulário aberto:
 
 | Questão | Na tela |
 |---|---|
-| calculada pelo Mapas (inscritos, contemplados, categorias) ou `somente_leitura` | só leitura, com a marca "calculado pelo Mapas" |
+| calculada pelo Mapas (inscritos, contemplados, categorias) ou `somente_leitura` | só leitura, com a marca "calculado pelo Mapas" ou "somente leitura" |
+| espelho do edital (título e detalhamento do objeto) | o valor que o Mapas tem, que não vai no envio |
 | valor repassado | campo editável, com a sugestão do Mapas e o botão "Usar sugestão" |
 | `texto`, `textarea`, `número`, `moeda`, `data`, `booleano` | o campo do tipo, com os limites declarados |
 | `radio`, `múltipla escolha`, `checkbox` | as opções da lista; a opção com complemento abre o campo de texto, e a exclusiva desmarca as outras |

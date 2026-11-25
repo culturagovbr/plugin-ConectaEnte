@@ -10,6 +10,8 @@ final class ResultForm
     const ENROLLED_PREFIX = 'total_inscritos';
     const AWARDED_PREFIXES = ['total_contemplados', 'total_vagas_contempladas'];
     const CATEGORY_PREFIXES = ['dados_por_categoria', 'tabela_categorias'];
+    const MIRRORED_TITLE = '_espelho_numero_titulo';
+    const MIRRORED_DETAIL = '_espelho_detalhamento_objeto';
     const TRANSFERRED_PREFIX = 'valor_total_repassado';
     // a única tabela de categorias que vai como linha única quando o edital não tem faixas
     const SINGLE_ROW_CATEGORY_TAG = 'dados_por_categoria_resultado_1_1';
@@ -117,6 +119,19 @@ final class ResultForm
     public function hasAnyTag(array $question, array $prefixes): bool
     {
         return $this->startsWithAny((string) ($question['tag'] ?? ''), $prefixes);
+    }
+
+    /** O espelho do edital que a questão mostra, ou null se o Mapas não tem esse dado. */
+    public function mirrorOf(array $question): ?string
+    {
+        $tag = (string) ($question['tag'] ?? '');
+
+        return match (true) {
+            !$this->isReadOnly($question) => null,
+            str_contains($tag, self::MIRRORED_TITLE) => self::MIRRORED_TITLE,
+            str_contains($tag, self::MIRRORED_DETAIL) => self::MIRRORED_DETAIL,
+            default => null,
+        };
     }
 
     private function idsWhere(callable $matches): array

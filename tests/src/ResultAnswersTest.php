@@ -60,6 +60,18 @@ class ResultAnswersTest extends TestCase
         $this->assertSame(2, $computed[self::AWARDED]);
     }
 
+    function testTheMirrorsShowTheEditalAndStayOutOfTheAnswers()
+    {
+        $opportunity = $this->readyOpportunity();
+
+        $mirrored = $this->answers()->mirrored($opportunity, $this->form());
+
+        $this->assertSame($opportunity->name, $mirrored[13916]);
+        $this->assertSame(\ConectaEnte\Payload\OpportunityPayload::objectDetail($opportunity), $mirrored[13917]);
+        $this->assertArrayNotHasKey(13916, $this->answers()->computed($opportunity, $this->form()), 'Calculada iria no envio; o espelho é só da tela.');
+        $this->assertArrayNotHasKey(self::EXECUTION_FORM, $mirrored);
+    }
+
     function testTheTransferredValueIsASuggestionByTheValueOfEachRange()
     {
         $opportunity = $this->readyOpportunity(ranges: [['label' => 'Faixa A', 'limit' => 2, 'value' => 10000], ['label' => 'Faixa B', 'limit' => 2, 'value' => 20000]]);

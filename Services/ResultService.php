@@ -107,6 +107,7 @@ final class ResultService
             'answers' => (object) $answers->saved($opportunity)['answers'],
             'computed' => (object) $answers->computed($opportunity, $form),
             'suggested' => (object) $answers->suggested($opportunity, $form),
+            'mirrored' => (object) $answers->mirrored($opportunity, $form),
             'missing' => $answers->missing($opportunity, $form),
             'stale' => $answers->isStale($opportunity, $form),
             'spreadsheetPending' => $this->plugin->resultRows()->pendingRowCount($opportunity),

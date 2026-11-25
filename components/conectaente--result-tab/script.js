@@ -257,7 +257,7 @@
             },
 
             displayValue(question) {
-                const value = this.known[question.id_questao_etapa];
+                const value = this.result?.mirrored?.[question.id_questao_etapa] ?? this.known[question.id_questao_etapa];
 
                 return value === undefined || value === null ? '—' : value;
             },

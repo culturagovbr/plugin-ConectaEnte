@@ -3,6 +3,7 @@
 namespace ConectaEnte\Services;
 
 use ConectaEnte\Metadata\CultBrMetadata;
+use ConectaEnte\Payload\OpportunityPayload;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Registration;
@@ -56,6 +57,22 @@ final class ResultAnswers
         }
 
         return $values;
+    }
+
+    /** @return array<int, string> o que as questões espelho mostram do edital; não vai no envio */
+    public function mirrored(Opportunity $opportunity, ResultForm $form): array
+    {
+        $values = [];
+
+        foreach ($form->questions() as $id => $question) {
+            $values[$id] = match ($form->mirrorOf($question)) {
+                ResultForm::MIRRORED_TITLE => $opportunity->name ?: null,
+                ResultForm::MIRRORED_DETAIL => OpportunityPayload::objectDetail($opportunity),
+                default => null,
+            };
+        }
+
+        return array_filter($values);
     }
 
     /** @return array{versionId: ?int, answers: array<int, mixed>} */
