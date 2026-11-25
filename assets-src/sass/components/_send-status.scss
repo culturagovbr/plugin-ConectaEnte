@@ -20,6 +20,10 @@
     font-size: var(--mc-font-size-xxs);
     line-height: 1.5;
     white-space: nowrap;
+
+    @media (max-width: 50rem) {
+        white-space: normal;
+    }
 }
 
 @mixin outcome-badge($token) {

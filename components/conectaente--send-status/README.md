@@ -14,10 +14,10 @@ O indicador é um badge discreto, logo abaixo do título, e distingue sete situa
 
 | Quando | O que diz |
 |---|---|
-| a ação escolhida saiu do PAR em cache | "Envio ao CultBR suspenso", mesmo com desfecho gravado |
-| houve envio | "Enviado", "Falha ao enviar", "O CultBR recusou" ou "Envio simulado", com a data |
-| selada, pronta, sem envio ainda | "Aguardando o envio ao CultBR" |
-| selada e barrada pelo gate | "Ainda não enviada ao CultBR" |
+| a ação escolhida saiu do PAR em cache | "Envio do edital ao CultBR suspenso", mesmo com desfecho gravado |
+| houve envio | "Edital enviado", "Falha ao enviar o edital", "Edital recusado" ou "Envio do edital simulado", com a data |
+| selada, pronta, sem envio ainda | "Edital aguardando o envio ao CultBR" |
+| selada e barrada pelo gate | "Edital ainda não enviado ao CultBR" |
 | sem selo de Ente Federado | nada |
 
 **Simulado não se parece com enviado** — em modo dev nada sai para o CultBR, e o badge diz isso. E **não enviada não se parece com falhou**: era a confusão que o CultEditais colapsa numa frase só.
@@ -30,7 +30,7 @@ As três situações sem envio vêm decididas do servidor, em `$MAPAS.config.con
 
 A cor de cada desfecho sai do token do tema (`--mc-success-500`, `--mc-primary-500`, `--mc-warning-700`, `--mc-danger-700`), e o fundo é o mesmo token clareado por `color-mix` — assim o badge acompanha a paleta de qualquer instalação em vez de fixar uma cor nossa.
 
-A situação é a do último carregamento da página. O envio roda na fila, depois do salvamento: o que foi disparado agora aparece no próximo carregamento.
+Todo texto nomeia o edital: a situação do resultado fica na aba "Resultado CultBR".
 
 ### Onde é injetado
 
