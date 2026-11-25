@@ -17,15 +17,15 @@ Com o formulário aberto:
 | calculada pelo Mapas (inscritos, contemplados, categorias) ou `somente_leitura` | só leitura, com a marca "calculado pelo Mapas" ou "somente leitura" |
 | espelho do edital (título e detalhamento do objeto) | o valor que o Mapas tem, que não vai no envio |
 | valor repassado | campo editável, com a sugestão do Mapas e o botão "Usar sugestão" |
-| `texto`, `textarea`, `número`, `moeda`, `data`, `booleano` | o campo do tipo, com os limites declarados |
-| `radio`, `múltipla escolha`, `checkbox` | as opções da lista; a opção com complemento abre o campo de texto, e a exclusiva desmarca as outras |
-| `tabela`, `Tabela Dinâmica` | editor de linhas pelas colunas declaradas |
+| `texto`, `textarea`, `número`, `moeda`, `data`, `booleano` | o campo do tipo no padrão do `entity-field` (moeda em `mc-currency-input`, data em `<conectaente--result-date>`, CEP com máscara), com os limites declarados |
+| `radio`, `múltipla escolha`, `checkbox` | as opções da lista; a opção com complemento abre o campo de texto, cujo erro só aparece depois de a pessoa sair dele; a exclusiva desmarca as outras |
+| `tabela`, `Tabela Dinâmica` | uma caixa por linha, com um campo por coluna declarada |
 | `anexo`, `múltiplos anexos` | envio de arquivo pelo formato e pelo limite declarados; o arquivo fica privado na oportunidade. Com planilha no edital, a questão da planilha diz que vem da grade, e os anexos não cobrados ficam indisponíveis, com o motivo |
 | tipo desconhecido | erro visível, nunca um campo de texto genérico |
 
 As regras de visibilidade (`eq` e `includes`) são avaliadas no navegador a cada resposta, com a mesma lógica do validador do servidor.
 
-**Gravação:** o formulário inteiro vai a `POST conectaente/resultAnswers/{id}` 1,5 s depois da última alteração, uma requisição por vez. O servidor aplica as respostas válidas e devolve o erro das recusadas, que aparece sob a questão. A lateral mostra as obrigatórias que faltam, com um link para cada uma.
+**Gravação:** o formulário inteiro vai a `POST conectaente/resultAnswers/{id}` 1,5 s depois da última alteração, uma requisição por vez. O servidor aplica as respostas válidas e devolve o erro das recusadas, que aparece sob a questão, no aspecto de erro do core. A lateral mostra as obrigatórias que faltam, com um link para cada uma.
 
 **Escolhas** se gravam pelo `id` da opção; a opção com complemento, como `{id, complemento}`.
 

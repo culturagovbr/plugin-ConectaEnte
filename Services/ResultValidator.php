@@ -216,7 +216,7 @@ final class ResultValidator
         $limit = (int) ($item['campoComplementar']['limiteCaracteres'] ?? 0);
 
         return match (true) {
-            !is_string($complement) || trim($complement) === '' => sprintf(i::__('Preencha "%s".'), $item['campoComplementar']['nome'] ?? $item['label']),
+            !is_string($complement) || trim($complement) === '' => i::__('Preenchimento obrigatório.'),
             $limit > 0 && mb_strlen($complement) > $limit => sprintf(i::__('Use no máximo %d caracteres.'), $limit),
             default => null,
         };
