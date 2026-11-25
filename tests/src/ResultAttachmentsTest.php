@@ -144,6 +144,13 @@ class ResultAttachmentsTest extends TestCase
         $this->assertSame(403, $this->send($this->requestFactory->POST('conectaente', 'resultAttachmentDelete', [$opportunity->id], ['questionId' => 1, 'fileId' => 1], ajax: true)));
     }
 
+    function testAFileAboveTheServerLimitIsNamedAsTooBig()
+    {
+        $error = $this->attachments()->attach($this->edital(), $this->form(), self::BOLSA_SPREADSHEET, ['name' => 'planilha.csv', 'tmp_name' => '', 'error' => UPLOAD_ERR_INI_SIZE, 'size' => 0]);
+
+        $this->assertStringContainsString('tamanho', (string) $error);
+    }
+
     private function edital(): Opportunity
     {
         $opportunity = $this->reloaded($this->sealedOpportunity(Opportunity::STATUS_ENABLED));

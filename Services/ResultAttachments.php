@@ -86,6 +86,7 @@ final class ResultAttachments
         return match (true) {
             !$question || !in_array($question['tipo_questao'] ?? null, ResultValidator::ATTACHMENT_TYPES, true) => i::__('Esta questão não recebe arquivo.'),
             $form->isAttachmentUnavailable($question) => i::__('Este edital envia a planilha de contemplados, e o CultBR não recebe arquivos junto com ela.'),
+            in_array($upload['error'] ?? null, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true) => i::__('O arquivo passa do tamanho que o servidor aceita.'),
             ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_file((string) ($upload['tmp_name'] ?? '')) => i::__('O arquivo não chegou ao servidor.'),
             $formats && !in_array($extension, $formats, true) => sprintf(i::__('Envie um arquivo %s.'), implode(', ', $formats)),
             (int) ($upload['size'] ?? 0) > $maxBytes => sprintf(i::__('O arquivo passa de %s MB.'), $config['tamanhoMaxMb'] ?? self::DEFAULT_MAX_MB),

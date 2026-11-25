@@ -425,6 +425,12 @@ class ConectaEnteController extends \MapasCulturais\Controller
     function POST_resultAttachment()
     {
         $opportunity = $this->controlledOpportunity();
+
+        // acima do post_max_size o PHP descarta o corpo inteiro, e a questão chega vazia
+        if (!$_POST && !$_FILES && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+            $this->errorJson(['arquivo' => [i::__('O arquivo passa do tamanho que o servidor aceita.')]], 413);
+        }
+
         $error = Plugin::instance()->resultService()->attach($opportunity, (int) ($this->data['questionId'] ?? 0), $_FILES['arquivo'] ?? []);
 
         $error ? $this->errorJson(['arquivo' => [$error]], 400) : $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
