@@ -19,7 +19,7 @@ Lê `GET conectaente/resultMapping/{id}`. Sem planilha (`hasSpreadsheet: false`)
 - **o documento do responsável**, por tipo de proponente, com CPF e CNPJ separados; o CNPJ só para MEI e Pessoa Jurídica;
 - **a equivalência**: para cada coluna de lista ligada a um campo, os valores da ficha que não estão nas opções do CultBR, cada um com um seletor das opções. A coluna do tipo de agente, sem campo ligado, pede a equivalência dos tipos de proponente do edital.
 
-Cada escolha vai a `POST conectaente/resultMapping/{id}`, uma gravação por vez, na ordem; o servidor recusa campo de outro edital, tipo que não serve à coluna e campo de valor múltiplo como documento, e a recusa aparece sob o seletor.
+Cada escolha vai a `POST conectaente/resultMapping/{id}`, uma gravação por vez, na ordem; o servidor recusa campo de outro edital e tipo que não serve à coluna ou ao documento, e a recusa aparece sob o seletor.
 
 ### Importando componente
 

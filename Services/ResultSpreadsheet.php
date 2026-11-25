@@ -119,7 +119,7 @@ final class ResultSpreadsheet
                 }
 
                 $fieldId = $kinds[$kind];
-                $error = $this->documentError($type, $fields[(int) $fieldId] ?? null, $fieldId);
+                $error = $this->documentError($type, $kind, $fields[(int) $fieldId] ?? null, $fieldId);
 
                 if ($error) {
                     $errors["documents.{$type}.{$kind}"] = $error;
@@ -280,13 +280,13 @@ final class ResultSpreadsheet
         };
     }
 
-    private function documentError(string $type, ?array $field, mixed $fieldId): ?string
+    private function documentError(string $type, string $kind, ?array $field, mixed $fieldId): ?string
     {
         return match (true) {
             !in_array($type, $this->proponentTypes(), true) => i::__('Tipo de proponente desconhecido.'),
             $fieldId === null => null,
             $field === null => i::__('Este campo não é da ficha deste edital.'),
-            in_array($field['fieldType'], self::MULTI_VALUE_FIELD_TYPES, true) => i::__('Campo de valor múltiplo não guarda um documento.'),
+            !$this->fits(['tipo' => $kind], $field) => i::__('O tipo deste campo não serve a este documento.'),
             default => null,
         };
     }

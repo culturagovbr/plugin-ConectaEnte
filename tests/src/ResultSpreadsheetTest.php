@@ -105,6 +105,17 @@ class ResultSpreadsheetTest extends TestCase
         $this->assertArrayHasKey('documents.MEI.cnpj', $errors);
     }
 
+    function testTheDocumentOfTheProponentTypeOnlyTakesAFieldOfItsKind()
+    {
+        $opportunity = $this->editalWith($this->modelWithSpreadsheet());
+        $select = $this->field($opportunity, 'select', 'Raça/etnia');
+        $cpf = $this->field($opportunity, 'cpf', 'CPF');
+
+        $errors = $this->spreadsheet()->save($this->reloaded($opportunity), ['documents' => ['MEI' => ['cpf' => $select->id, 'cnpj' => $cpf->id]]]);
+
+        $this->assertSame(['documents.MEI.cpf', 'documents.MEI.cnpj'], array_keys($errors));
+    }
+
     function testMeiKeepsCpfAndCnpjApart()
     {
         $opportunity = $this->editalWith($this->modelWithSpreadsheet());
