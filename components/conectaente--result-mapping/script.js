@@ -5,7 +5,7 @@
     app.component('conectaente--result-mapping', {
         template: $TEMPLATES['conectaente--result-mapping'],
 
-        emits: ['saved'],
+        emits: ['saved', 'saving'],
 
         props: {
             entity: {
@@ -61,8 +61,18 @@
             },
         },
 
+        watch: {
+            saving(isSaving) {
+                this.$emit('saving', isSaving);
+            },
+        },
+
         mounted() {
             this.load();
+        },
+
+        beforeUnmount() {
+            this.$emit('saving', false);
         },
 
         methods: {

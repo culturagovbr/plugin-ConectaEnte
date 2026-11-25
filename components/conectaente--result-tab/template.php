@@ -191,8 +191,8 @@ $this->import('
                     </template>
                 </mc-card>
 
-                <conectaente--result-mapping :entity="entity" @saved="mappingSaved()"></conectaente--result-mapping>
-                <conectaente--result-rows :entity="entity" :mapping-version="mappingVersion" :refusals="result.lastSend?.outcome?.refusedCells || {}" @saved="refresh()"></conectaente--result-rows>
+                <conectaente--result-mapping :entity="entity" @saved="mappingSaved()" @saving="mappingSaving = $event"></conectaente--result-mapping>
+                <conectaente--result-rows :entity="entity" :mapping-version="mappingVersion" :refusals="result.lastSend?.outcome?.refusedCells || {}" @saved="refresh()" @saving="rowsSaving = $event"></conectaente--result-rows>
             </template>
         </main>
 
@@ -226,11 +226,11 @@ $this->import('
                         <p v-if="result.lastSend.resultId" class="conectaente-result-tab__current">{{ text('resultado_vigente', { id: result.lastSend.resultId, tipo: text('tipo_' + result.lastSend.type) }) }}</p>
                     </section>
 
-                    <small v-if="saving" class="field__description"><?php i::_e('Salvando...') ?></small>
+                    <small v-if="isSaving" class="field__description"><?php i::_e('Salvando...') ?></small>
                     <mc-alert v-if="saveFailed" type="danger" small><?php i::_e('Não foi possível salvar agora. A próxima alteração tenta de novo.') ?></mc-alert>
                     <mc-alert v-if="sendRefusal" type="danger" small>{{ sendRefusal }}</mc-alert>
 
-                    <button v-if="result.sendButton || isSending" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="isSending || saving" :aria-busy="isSending" @click="send()">
+                    <button v-if="result.sendButton || isSending" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="isSending || isSaving" :aria-busy="isSending" @click="send()">
                         {{ sendLabel }}
                     </button>
                 </template>

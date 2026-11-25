@@ -59,6 +59,8 @@
                 saveTimer: null,
                 saveQueue: Promise.resolve(),
                 saveFailed: false,
+                mappingSaving: false,
+                rowsSaving: false,
                 requestingSend: false,
                 sendRefusal: null,
                 pollTimer: null,
@@ -99,6 +101,10 @@
 
             isSending() {
                 return this.requestingSend || this.result?.state === 'sending';
+            },
+
+            isSaving() {
+                return this.saving || this.mappingSaving || this.rowsSaving;
             },
 
             sendLabel() {

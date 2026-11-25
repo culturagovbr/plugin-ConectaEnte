@@ -7,7 +7,7 @@
     app.component('conectaente--result-rows', {
         template: $TEMPLATES['conectaente--result-rows'],
 
-        emits: ['saved'],
+        emits: ['saved', 'saving'],
 
         props: {
             entity: {
@@ -41,6 +41,7 @@
                 errors: {},
                 loading: true,
                 loadFailed: false,
+                cellsSaving: 0,
             };
         },
 
@@ -65,10 +66,19 @@
             mappingVersion() {
                 this.loadSummary();
             },
+
+            cellsSaving(total) {
+                this.$emit('saving', total > 0);
+            },
         },
 
         mounted() {
             this.loadSummary();
+        },
+
+        // trocar de aba desmonta a grade
+        beforeUnmount() {
+            this.$emit('saving', false);
         },
 
         methods: {
@@ -101,6 +111,8 @@
             async saveCell(row, column, value, refresh) {
                 const key = `${row.registrationId}:${column.coluna}`;
 
+                this.cellsSaving++;
+
                 try {
                     const response = await this.api.POST(Utils.createUrl('conectaente', 'resultRows', [this.entity.id]), {
                         registrationId: row.registrationId,
@@ -120,6 +132,8 @@
                     this.errors[key] = body?.data?.value?.[0] || this.text('erro_salvar');
                 } catch (error) {
                     this.messages.error(this.text('erro_salvar'));
+                } finally {
+                    this.cellsSaving--;
                 }
             },
 

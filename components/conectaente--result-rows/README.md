@@ -11,6 +11,7 @@ Card "Grade de contemplados" da aba de resultado: uma linha por inscrição apro
 ### Eventos
 
 - *saved* : depois de cada célula gravada.
+- *saving* : se há célula sendo gravada, para a aba segurar o envio.
 
 ### Comportamento
 

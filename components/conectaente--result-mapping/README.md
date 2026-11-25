@@ -9,6 +9,7 @@ Card "Planilha de contemplados" dentro da aba de resultado: o modelo de planilha
 ### Eventos
 
 - *saved* : depois de cada gravação, para a grade refazer as células.
+- *saving* : se há gravação em curso, para a aba segurar o envio.
 
 ### Comportamento
 
