@@ -14,7 +14,7 @@ Card "Planilha de contemplados" dentro da aba de resultado: o modelo de planilha
 
 Lê `GET conectaente/resultMapping/{id}`. Sem planilha (`hasSpreadsheet: false`), mostra o motivo que o CultBR devolve, e o resultado sai sem linhas. Com planilha:
 
-- **uma linha por coluna** do modelo, com um `<select>` nativo com **todos os campos da ficha, agrupados por etapa** (`<optgroup>`), e a fase junto quando há mais de uma. O `mc-select` com grupos não serve: ele os desfaz ao fechar. O tipo que não serve à coluna é recusado no servidor, com o motivo sob o seletor;
+- **uma linha por coluna** do modelo, com um `<select>` nativo com **todos os campos da ficha, agrupados por etapa** (`<optgroup>`), e a fase junto quando há mais de uma. O `mc-select` com grupos não serve: ele os desfaz ao fechar. O campo de agente ou espaço vale pelo dado que traz. O tipo que não serve à coluna é recusado no servidor, com o motivo sob o seletor;
 - **a sugestão** pelo nome aparece ao lado, marcada como sugestão, e só vale depois de "Confirmar as sugestões", em bloco;
 - **o documento do responsável**, por tipo de proponente, com CPF e CNPJ separados; o CNPJ só para MEI e Pessoa Jurídica;
 - **a equivalência**: para cada coluna de lista ligada a um campo, os valores da ficha que não estão nas opções do CultBR, cada um com um seletor das opções. A coluna do tipo de agente, sem campo ligado, pede a equivalência dos tipos de proponente do edital.

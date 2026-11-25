@@ -116,6 +116,33 @@ class ResultSpreadsheetTest extends TestCase
         $this->assertSame(['documents.MEI.cpf', 'documents.MEI.cnpj'], array_keys($errors));
     }
 
+    function testTheAgentFieldServesTheColumnOfTheDataItBrings()
+    {
+        $opportunity = $this->editalWith($this->modelWithSpreadsheet());
+        $cpf = $this->agentField($opportunity, 'agent-owner-field', 'cpf');
+        $race = $this->agentField($opportunity, 'agent-owner-field', 'raca');
+        $cnpj = $this->agentField($opportunity, 'agent-collective-field', 'cnpj');
+        $disability = $this->agentField($opportunity, 'agent-owner-field', 'pessoaDeficiente');
+        $location = $this->agentField($opportunity, 'agent-owner-field', '@location');
+
+        $errors = $this->spreadsheet()->save($this->reloaded($opportunity), [
+            'columns' => ['cpf' => $cpf->id, 'cnpj' => $cnpj->id, 'raca_etnia' => $race->id, 'pessoa_com_deficiencia' => $disability->id, 'segmento_cultural' => $location->id, 'nome_contemplado' => $disability->id],
+            'documents' => ['MEI' => ['cpf' => $cpf->id, 'cnpj' => $race->id]],
+        ]);
+
+        $this->assertSame(['columns.pessoa_com_deficiencia', 'columns.segmento_cultural', 'columns.nome_contemplado', 'documents.MEI.cnpj'], array_keys($errors), 'Lista de vários valores e endereço não cabem na célula.');
+    }
+
+    function testTheNameOfTheAgentIsText()
+    {
+        $opportunity = $this->editalWith($this->modelWithSpreadsheet());
+        $name = $this->agentField($opportunity, 'agent-owner-field', 'name');
+        $fullName = $this->agentField($opportunity, 'agent-owner-field', 'nomeCompleto');
+
+        $this->assertSame([], $this->spreadsheet()->save($this->reloaded($opportunity), ['columns' => ['nome_contemplado' => $name->id]]));
+        $this->assertSame([], $this->spreadsheet()->save($this->reloaded($opportunity), ['columns' => ['segmento_cultural' => $fullName->id]]));
+    }
+
     function testMeiKeepsCpfAndCnpjApart()
     {
         $opportunity = $this->editalWith($this->modelWithSpreadsheet());
@@ -207,6 +234,15 @@ class ResultSpreadsheetTest extends TestCase
             ->setTitle($title)
             ->save()
             ->getInstance();
+    }
+
+    private function agentField(Opportunity $opportunity, string $type, string $property): RegistrationFieldConfiguration
+    {
+        $field = $this->field($opportunity, $type, $property);
+        $field->config = ['entityField' => $property];
+        $field->save(true);
+
+        return $field;
     }
 
     private function modelWithSpreadsheet(): array

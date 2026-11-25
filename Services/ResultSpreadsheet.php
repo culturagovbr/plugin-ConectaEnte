@@ -6,8 +6,11 @@ use ConectaEnte\Http\ApiRead;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use MapasCulturais\App;
+use MapasCulturais\Entities\Agent;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\RegistrationFieldConfiguration;
 use MapasCulturais\Entities\RegistrationMeta;
+use MapasCulturais\Entities\Space;
 use MapasCulturais\i;
 
 /**
@@ -18,7 +21,9 @@ final class ResultSpreadsheet
     const MODEL_CACHE_SECONDS = 300;
     const DOCUMENT_KINDS = ['cpf', 'cnpj'];
     // tipos de campo que guardam mais de um valor: nenhum deles cabe numa célula
-    const MULTI_VALUE_FIELD_TYPES = ['checkboxes', 'file', 'persons', 'links', 'section'];
+    const MULTI_VALUE_FIELD_TYPES = ['checkboxes', 'multiselect', 'checklist', 'file', 'persons', 'links', 'section', self::COMPOSITE];
+    const COMPOSITE = 'composite';
+    const ENTITY_FIELDS = ['agent-owner-field' => [Agent::class, 1], 'agent-collective-field' => [Agent::class, 2], 'space-field' => [Space::class, null]];
     const FIELD_TYPES_BY_COLUMN = [
         'cpf' => ['cpf', 'text'],
         'cnpj' => ['cnpj', 'text'],
@@ -184,7 +189,7 @@ final class ResultSpreadsheet
                 $fields[] = [
                     'id' => (int) $field->id,
                     'title' => (string) $field->title,
-                    'fieldType' => (string) $field->fieldType,
+                    'fieldType' => $this->typeOf($field),
                     'phase' => (string) $phase->name,
                     'phaseId' => (int) $phase->id,
                     'step' => (string) ($field->step?->name ?? ''),
@@ -199,6 +204,25 @@ final class ResultSpreadsheet
     public function proponentTypes(): array
     {
         return array_values(array_map('strval', App::i()->config['registration.proponentTypes'] ?? []));
+    }
+
+    // o campo de agente ou espaço vale pelo dado que traz
+    private function typeOf(RegistrationFieldConfiguration $field): string
+    {
+        if (!isset(self::ENTITY_FIELDS[$field->fieldType])) {
+            return (string) $field->fieldType;
+        }
+
+        [$class, $entityType] = self::ENTITY_FIELDS[$field->fieldType];
+        $property = (string) (((array) $field->config)['entityField'] ?? '');
+
+        if ($property === '' || str_starts_with($property, '@')) {
+            return self::COMPOSITE;
+        }
+
+        $type = App::i()->getRegisteredMetadata($class, $entityType)[$property]?->type ?? 'text';
+
+        return in_array($type, ['', 'string'], true) ? 'text' : $type;
     }
 
     /** Se o campo pode alimentar a coluna, pelo tipo declarado de cada um. */
