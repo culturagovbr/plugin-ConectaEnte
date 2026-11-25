@@ -28,5 +28,6 @@ return [
     'resultado_vigente' => i::__('Resultado vigente no CultBR: {tipo}, id {id}.'),
     'tipo_2' => i::__('final'),
     'tipo_3' => i::__('retificado'),
+    'resposta_nao_gravada' => i::__('Há resposta na tela que não foi gravada. Confira e envie de novo.'),
     'erro_envio' => i::__('Não foi possível pedir o envio agora. Tente de novo em alguns minutos.'),
 ];

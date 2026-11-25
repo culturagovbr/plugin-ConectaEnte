@@ -258,6 +258,13 @@
                 this.sendRefusal = null;
 
                 try {
+                    await this.save();
+
+                    if (this.unsavedIds.length) {
+                        this.sendRefusal = this.text('resposta_nao_gravada');
+                        return;
+                    }
+
                     const response = await this.api.POST(Utils.createUrl('conectaente', 'resultSend', [this.entity.id]), { revision: this.result.revision });
                     const body = await response.json().catch(() => null);
 
