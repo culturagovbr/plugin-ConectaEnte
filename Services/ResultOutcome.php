@@ -77,8 +77,16 @@ final class ResultOutcome
             $question = isset($field['questionId']) ? $this->form?->question((int) $field['questionId']) : null;
             $name = $question ? ($question['config']['textoPergunta'] ?? $question['nome'] ?? $field['field']) : $field['field'];
 
-            return "{$name}: {$field['message']}";
+            return $this->labelled($name, (string) $field['message']);
         }, $fields);
+    }
+
+    // a pergunta que já termina em pontuação não leva dois-pontos
+    private function labelled(string $name, string $message): string
+    {
+        $separator = preg_match('/[?!.:]$/u', trim($name)) ? ' ' : ': ';
+
+        return trim($name) . $separator . $message;
     }
 
     private function rowItems(array $rows): array

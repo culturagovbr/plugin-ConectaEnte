@@ -91,6 +91,13 @@ class ResultOutcomeTest extends TestCase
         $this->assertSame('Nada mudou desde o último resultado enviado.', (new ResultOutcome())->describe(['status' => ResultSender::STATUS_ERROR, 'reason' => 'Nada mudou desde o último resultado enviado.'])['message']);
     }
 
+    function testAQuestionThatEndsInPunctuationTakesNoColon()
+    {
+        $errors = ['fields' => [['questionId' => 13924, 'field' => 'questao:13924', 'message' => 'A data é anterior à do edital.']]];
+
+        $this->assertStringContainsString('? A data é anterior', (new ResultOutcome($this->form()))->describe($this->rejected(422, $errors))['items'][0]);
+    }
+
     private function describe(int $status, array $body): array
     {
         $errors = ApiErrors::fromBody($body);
