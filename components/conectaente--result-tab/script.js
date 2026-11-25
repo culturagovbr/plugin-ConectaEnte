@@ -7,6 +7,7 @@
     const TABLE_TYPES = ['tabela', 'Tabela Dinâmica'];
     const ATTACHMENT_TYPES = ['anexo', 'múltiplos anexos'];
     const DEFAULT_MAX_FILE_SIZE = 10;
+    const REASONS_WITH_TEXT = ['unreachable', 'rejected'];
     const CELL_MASKS = { cpf: '###.###.###-##', cnpj: '##.###.###/####-##', cep: '#####-###' };
     const SUPPORTED_TYPES = ['texto', 'textarea', 'número', 'moeda', 'data', 'booleano', 'radio', ...CHOICE_LIST_TYPES, ...TABLE_TYPES, ...ATTACHMENT_TYPES];
 
@@ -543,7 +544,9 @@
             stateMessage() {
                 const state = this.result?.state;
 
-                return this.text(`estado_${state}`, { motivo: this.text(`motivo_${this.result?.reason}`) });
+                const reason = this.result?.reason;
+
+                return this.text(`estado_${state}`, { motivo: REASONS_WITH_TEXT.includes(reason) ? this.text(`motivo_${reason}`) : '' });
             },
         },
     });

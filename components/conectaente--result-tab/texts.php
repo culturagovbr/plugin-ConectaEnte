@@ -12,8 +12,6 @@ return [
     'estado_noTab' => i::__('Este edital não tem resultado a enviar ao CultBR.'),
     'motivo_unreachable' => i::__('o CultBR não respondeu. Tente de novo em alguns minutos.'),
     'motivo_rejected' => i::__('o CultBR recusou a consulta. Confira o token do Ente Federado.'),
-    'motivo_status' => '',
-    'motivo_null' => '',
     'erro_arquivo' => i::__('Não foi possível enviar o arquivo agora.'),
     'arquivo_grande' => i::__('O arquivo passa de {tamanho} MB.'),
     'remover_arquivo' => i::__('Remover o arquivo {nome}'),
