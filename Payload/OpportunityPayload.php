@@ -56,7 +56,7 @@ final class OpportunityPayload
             'forma_de_execucao' => $this->executionType($opportunity),
             'status' => $this->status($opportunity),
             'data_publicacao_edital' => $this->date($this->publicationStamp->publicationDate($opportunity)),
-            'detalhamento_objeto' => $this->objectDetail($opportunity),
+            'detalhamento_objeto' => self::objectDetail($opportunity),
             'numero_previsto_vagas' => $opportunity->vacancies === null ? null : (int) $opportunity->vacancies,
             'valor_total_edital' => $this->decimal($opportunity->totalResource),
             'data_inicial_prazo_inscricao' => $this->date($opportunity->registrationFrom),
@@ -118,7 +118,8 @@ final class OpportunityPayload
         return $value instanceof DateTimeInterface ? $value->format(DateTimeInterface::ATOM) : null;
     }
 
-    private function objectDetail(Opportunity $opportunity): ?string
+    /** O detalhamento do objeto como o CultBR o recebe no edital. */
+    public static function objectDetail(Opportunity $opportunity): ?string
     {
         $detail = trim((string) ($opportunity->longDescription ?: $opportunity->shortDescription));
 

@@ -1,0 +1,172 @@
+{
+    "id_par_edital": 53781,
+    "acao": {
+        "id_par_plano_acao_meta_acao": 45908,
+        "id_par_tipo_acao": 1,
+        "codigo": "1.1",
+        "nome": "1.1 Fomento Cultural"
+    },
+    "forma_execucao": "fe_tec",
+    "possui_planilha": true,
+    "motivo": null,
+    "modelo": "fomento_cultural_tec",
+    "nome_modelo": "Ação 1.1 - Fomento cultural, modalidade TEC",
+    "campos": [
+        {
+            "ordem": 1,
+            "coluna": "tipo_agente",
+            "nome": "Tipo de agente responsável",
+            "tipo": "lista",
+            "obrigatoriedade": "obrigatorio",
+            "condicao": null,
+            "opcoes": [
+                "Pessoa física",
+                "Microempreendedor individual - MEI",
+                "Pessoa Jurídica com fins lucrativos (empresas)",
+                "Pessoa Jurídica sem fins lucrativos (OSCs)",
+                "Grupo ou coletivo sem constituição jurídica"
+            ],
+            "observacao": null
+        },
+        {
+            "ordem": 2,
+            "coluna": "cnpj",
+            "nome": "CNPJ",
+            "tipo": "cnpj",
+            "obrigatoriedade": "condicional",
+            "condicao": "Em caso de pessoa jurídica ou MEI",
+            "opcoes": null,
+            "observacao": null
+        },
+        {
+            "ordem": 3,
+            "coluna": "cpf",
+            "nome": "CPF",
+            "tipo": "cpf",
+            "obrigatoriedade": "obrigatorio",
+            "condicao": null,
+            "opcoes": null,
+            "observacao": "Do contemplado ou do representante do coletivo ou da pessoa jurídica"
+        },
+        {
+            "ordem": 4,
+            "coluna": "nome_contemplado",
+            "nome": "Nome do contemplado ou razão social",
+            "tipo": "texto",
+            "obrigatoriedade": "opcional",
+            "condicao": null,
+            "opcoes": null,
+            "observacao": null
+        },
+        {
+            "ordem": 5,
+            "coluna": "cota",
+            "nome": "Ampla concorrência ou cota",
+            "tipo": "lista",
+            "obrigatoriedade": "obrigatorio",
+            "condicao": null,
+            "opcoes": [
+                "Proposta selecionada em ampla concorrência",
+                "Reserva de vagas para pessoas negras",
+                "Reserva de vagas para pessoas indígenas",
+                "Reserva de vagas para pessoas com deficiência",
+                "Reserva de vagas para outros grupos"
+            ],
+            "observacao": null
+        },
+        {
+            "ordem": 6,
+            "coluna": "raca_etnia",
+            "nome": "Raça/etnia",
+            "tipo": "lista",
+            "obrigatoriedade": "obrigatorio",
+            "condicao": null,
+            "opcoes": [
+                "Branca",
+                "Preta",
+                "Parda",
+                "Amarela",
+                "Indígena"
+            ],
+            "observacao": null
+        },
+        {
+            "ordem": 7,
+            "coluna": "pessoa_com_deficiencia",
+            "nome": "Pessoa com deficiência",
+            "tipo": "lista",
+            "obrigatoriedade": "obrigatorio",
+            "condicao": null,
+            "opcoes": [
+                "Não",
+                "Sim, auditiva",
+                "Sim, física ou motora",
+                "Sim, intelectual",
+                "Sim, visual",
+                "Sim, transtorno do espectro autista",
+                "Sim, múltipla",
+                "Sim, outra"
+            ],
+            "observacao": null
+        },
+        {
+            "ordem": 8,
+            "coluna": "valor_proposta",
+            "nome": "Valor da proposta",
+            "tipo": "monetario",
+            "obrigatoriedade": "obrigatorio",
+            "condicao": null,
+            "opcoes": null,
+            "observacao": null
+        },
+        {
+            "ordem": 9,
+            "coluna": "segmento_cultural",
+            "nome": "Segmento cultural",
+            "tipo": "lista",
+            "obrigatoriedade": "obrigatorio",
+            "condicao": null,
+            "opcoes": [
+                "Acervos",
+                "Arquivos",
+                "Artes Visuais",
+                "Artesanato",
+                "Audiovisual",
+                "Capoeira",
+                "Circo",
+                "Cultura de Matriz Africana",
+                "Cultura dos Povos Originários",
+                "Culturas tradicionais e populares",
+                "Dança",
+                "Design",
+                "Edição e produção editorial",
+                "Festas e Celebrações",
+                "Hip Hop",
+                "Jogos eletrônicos",
+                "Literatura",
+                "Mediação e formação de leitores",
+                "Moda",
+                "Museu",
+                "Música",
+                "Patrimônio Arqueológico",
+                "Patrimônio Cultural Material",
+                "Patrimônio Cultural Imaterial",
+                "Patrimônio Natural",
+                "Performance",
+                "Teatro",
+                "Outros"
+            ],
+            "observacao": null
+        },
+        {
+            "ordem": 10,
+            "coluna": "entrega_prevista",
+            "nome": "Entrega prevista (principal)",
+            "tipo": "a_definir",
+            "obrigatoriedade": "nao_informado",
+            "condicao": null,
+            "opcoes": null,
+            "observacao": null
+        }
+    ]
+}

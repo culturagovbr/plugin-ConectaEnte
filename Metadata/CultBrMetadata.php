@@ -47,9 +47,46 @@ final class CultBrMetadata
     const PAR_EDITAL_ID = 'conectaente_parEditalId';
     const SEND_REASON = 'conectaente_sendReason';
     const SEND_AT = 'conectaente_sendAt';
+    const PAR_ACTION_TYPE_ID = 'conectaente_parTipoAcaoId';
+    // o CNPJ, e não o id local: Ente Federado excluído e recadastrado continua sendo o mesmo
+    const PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT = 'conectaente_parEditalFederativeEntityDocument';
+    const RESULT_FORM = 'conectaente_resultForm';
+    const RESULT_MAPPING = 'conectaente_resultMapping';
+    const RESULT_ID = 'conectaente_resultId';
+    const RESULT_TYPE = 'conectaente_resultType';
+    // o hash vale para o id do edital em que foi enviado: com outro id, o conteúdo igual não é reenvio
+    const RESULT_SENT_HASH = 'conectaente_resultSentHash';
+    const RESULT_SEND_STATUS = 'conectaente_resultSendStatus';
+    const RESULT_SEND_AT = 'conectaente_resultSendAt';
+    const RESULT_SEND_REASON = 'conectaente_resultSendReason';
+    const RESULT_SEND_ERRORS = 'conectaente_resultSendErrors';
+
+    /** O que o último envio de resultado deixou: some quando o edital muda de id no CultBR. */
+    const RESULT_STATE_KEYS = [
+        self::RESULT_ID,
+        self::RESULT_TYPE,
+        self::RESULT_SENT_HASH,
+        self::RESULT_SEND_STATUS,
+        self::RESULT_SEND_AT,
+        self::RESULT_SEND_REASON,
+        self::RESULT_SEND_ERRORS,
+    ];
+
+    /** Só o plugin as escreve: a API do core as tira do corpo antes de salvar a oportunidade. */
+    const RESULT_KEYS = [self::RESULT_FORM, self::RESULT_MAPPING, ...self::RESULT_STATE_KEYS];
 
     /** O que aconteceu com esta oportunidade e quem ela é no CultBR: não se copia para uma duplicata. */
-    const SEND_STATE_KEYS = [self::SEND_STATUS, self::SEND_REASON, self::SEND_AT, self::PAR_EDITAL_ID];
+    const SEND_STATE_KEYS = [
+        self::SEND_STATUS,
+        self::SEND_REASON,
+        self::SEND_AT,
+        self::PAR_EDITAL_ID,
+        self::PAR_ACTION_TYPE_ID,
+        self::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT,
+        self::RESULT_FORM,
+        self::RESULT_MAPPING,
+        ...self::RESULT_STATE_KEYS,
+    ];
 
     /**
      * Registra na oportunidade os campos que o CultBR exige; quem os torna obrigatórios é a regra de publicação.
@@ -97,6 +134,18 @@ final class CultBrMetadata
         self::registerText($plugin, self::SEND_REASON, i::__('Motivo da situação do envio ao CultBR'));
         self::registerText($plugin, self::SEND_AT, i::__('Data da última tentativa de envio ao CultBR'));
         self::registerText($plugin, self::PAR_EDITAL_ID, i::__('Id do edital no CultBR'));
+        self::registerText($plugin, self::PAR_ACTION_TYPE_ID, i::__('Tipo de ação do edital no PAR'));
+        self::registerText($plugin, self::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT, i::__('CNPJ do Ente Federado que enviou o edital'));
+        // as respostas trazem o CPF da comissão avaliadora
+        $plugin->registerOpportunityMetadata(self::RESULT_FORM, ['label' => i::__('Respostas do resultado do edital'), 'type' => 'json', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_MAPPING, ['label' => i::__('De/para da planilha de contemplados'), 'type' => 'json', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_ID, ['label' => i::__('Id do resultado no CultBR'), 'type' => 'string', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_TYPE, ['label' => i::__('Tipo do último resultado enviado'), 'type' => 'string', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_SENT_HASH, ['label' => i::__('Conteúdo do último resultado enviado'), 'type' => 'json', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_SEND_STATUS, ['label' => i::__('Situação do envio do resultado'), 'type' => 'string', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_SEND_AT, ['label' => i::__('Data do último envio do resultado'), 'type' => 'string', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_SEND_REASON, ['label' => i::__('Motivo da situação do envio do resultado'), 'type' => 'string', 'private' => true]);
+        $plugin->registerOpportunityMetadata(self::RESULT_SEND_ERRORS, ['label' => i::__('Recusas do último envio do resultado'), 'type' => 'json', 'private' => true]);
     }
 
     private static function serializeDateTime(mixed $value): ?string

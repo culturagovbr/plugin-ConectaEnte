@@ -10,11 +10,17 @@ use ConectaEnte\Http\Response;
  */
 interface TransportInterface
 {
-    public function get(string $url, array $headers = []): Response;
+    public function get(string $url, array $headers = [], bool $queued = false): Response;
 
     /** Atualiza o recurso da url. */
     public function put(string $url, array $body, array $headers = []): Response;
 
     /** Cria na coleção da url, ou atualiza quando o corpo traz um id que o CultBR já conhece. */
     public function post(string $url, array $body, array $headers = []): Response;
+
+    /**
+     * @param list<array{0: string, 1: string}> $fields
+     * @param list<array{name: string, path: string, filename: string, mime: string}> $files
+     */
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response;
 }

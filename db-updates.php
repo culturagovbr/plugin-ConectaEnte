@@ -132,4 +132,48 @@ return [
         __try("CREATE UNIQUE INDEX IF NOT EXISTS unq_conectaente_par_edital_id
             ON opportunity_meta (value) WHERE key = 'conectaente_parEditalId'");
     },
+
+    'conectaente: recupera do histórico o tipo de ação e o Ente Federado de cada edital enviado' => function () {
+        \ConectaEnte\Migrations\RecoverParEditalOrigin::run();
+    },
+
+    // as linhas existentes são todas envio de edital: o default as marca assim
+    'conectaente: o histórico de envio separa o edital do resultado' => function () {
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS action VARCHAR(20) NOT NULL DEFAULT 'opportunity'");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS seen_result_id INT NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS seen_result_read BOOLEAN NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64) NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS result_type SMALLINT NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS publication_date VARCHAR(40) NULL");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS posted BOOLEAN NOT NULL DEFAULT FALSE");
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS started_at TIMESTAMP(0) NULL");
+        __try("CREATE INDEX IF NOT EXISTS idx_conectaente_log_opportunity_action ON conectaente_log (opportunity_id, action, create_timestamp DESC)");
+    },
+
+    // CPF e CNPJ de terceiros, em volume: fora dos metadados, que as revisões do core copiam
+    'conectaente: cria a tabela das células da grade de contemplados' => function () {
+        if (!__table_exists('conectaente_result_row')) {
+            __try("CREATE SEQUENCE conectaente_result_row_id_seq INCREMENT BY 1 MINVALUE 1 START 1");
+
+            __try("CREATE TABLE conectaente_result_row (
+                id INT NOT NULL DEFAULT nextval('conectaente_result_row_id_seq'),
+                opportunity_id INT NOT NULL,
+                registration_id INT NOT NULL,
+                column_key VARCHAR(100) NOT NULL,
+                value TEXT NULL,
+                update_timestamp TIMESTAMP(0) NOT NULL,
+                PRIMARY KEY(id)
+            )");
+
+            __try("CREATE UNIQUE INDEX unq_conectaente_result_row_cell ON conectaente_result_row (registration_id, column_key)");
+            __try("CREATE INDEX idx_conectaente_result_row_opportunity ON conectaente_result_row (opportunity_id)");
+            __try("ALTER TABLE conectaente_result_row
+                ADD CONSTRAINT fk_conectaente_result_row_registration
+                FOREIGN KEY (registration_id) REFERENCES registration(id) ON DELETE CASCADE");
+        }
+    },
+
+    'conectaente: o envio de resultado registra a conciliação do envio sem resposta' => function () {
+        __try("ALTER TABLE conectaente_log ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMP(0) NULL");
+    },
 ];

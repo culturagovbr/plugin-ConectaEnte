@@ -12,6 +12,7 @@ use ConectaEnte\Services\SendOutcome;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use Monolog\Handler\TestHandler;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
@@ -162,31 +163,31 @@ class SendLoggerTest extends TestCase
     {
         $this->loginAsSaasSuperAdmin();
         $log = $this->logger()->startOrResume($this->createOpportunity());
-        $recusada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/53781', method: 'PUT', status: 404);
-        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', method: 'POST', status: 200);
+        $refused = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/53781', method: 'PUT', status: 404);
+        $accepted = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', method: 'POST', status: 200);
 
-        $this->logger()->recordAttempts($log, [$recusada, $aceita], SendOutcome::SUCCESS, attempt: 2, maxAttempts: 3);
+        $this->logger()->recordAttempts($log, [$refused, $accepted], SendOutcome::SUCCESS, attempt: 2, maxAttempts: 3);
 
-        $armazenadas = $this->attemptsOf($log);
-        $this->assertCount(2, $armazenadas, 'Uma linha por troca: sobrescrever faria a requisição recusada sumir do histórico.');
-        $this->assertSame(['PUT', 'POST'], array_map(fn ($tentativa) => $tentativa->httpMethod, $armazenadas));
-        $this->assertSame([404, 200], array_map(fn ($tentativa) => $tentativa->httpStatus, $armazenadas));
-        $this->assertSame([2, 2], array_map(fn ($tentativa) => $tentativa->attempt, $armazenadas), 'As duas trocas são da mesma tentativa do job.');
+        $storedAttempts = $this->attemptsOf($log);
+        $this->assertCount(2, $storedAttempts, 'Uma linha por troca: sobrescrever faria a requisição recusada sumir do histórico.');
+        $this->assertSame(['PUT', 'POST'], array_map(fn ($storedAttempt) => $storedAttempt->httpMethod, $storedAttempts));
+        $this->assertSame([404, 200], array_map(fn ($storedAttempt) => $storedAttempt->httpStatus, $storedAttempts));
+        $this->assertSame([2, 2], array_map(fn ($storedAttempt) => $storedAttempt->attempt, $storedAttempts), 'As duas trocas são da mesma tentativa do job.');
     }
 
     function testEachAttemptTakesTheOutcomeOfItsOwnStatus()
     {
         $this->loginAsSaasSuperAdmin();
         $log = $this->logger()->startOrResume($this->createOpportunity());
-        $recusada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 400);
-        $quebrada = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 500);
-        $aceita = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200);
+        $refused = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 400);
+        $broken = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 500);
+        $accepted = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200, responseBody: '{"id_par_edital": 1}');
 
-        $this->logger()->recordAttempts($log, [$recusada, $quebrada, $aceita], SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
+        $this->logger()->recordAttempts($log, [$refused, $broken, $accepted], SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
 
         $this->assertSame(
             [SendOutcome::REJECTED, SendOutcome::ERROR, SendOutcome::SUCCESS],
-            array_map(fn ($tentativa) => $tentativa->outcome, $this->attemptsOf($log)),
+            array_map(fn ($storedAttempt) => $storedAttempt->outcome, $this->attemptsOf($log)),
             'Herdar o desfecho do envio apagaria a recusa: é ela que a consulta por SQL precisa encontrar.'
         );
     }
@@ -196,20 +197,58 @@ class SendLoggerTest extends TestCase
     {
         $this->loginAsSaasSuperAdmin();
         $log = $this->logger()->startOrResume($this->createOpportunity());
-        $criado = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 201);
+        $created = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 201);
 
-        $this->logger()->recordAttempts($log, [$criado], SendOutcome::REJECTED, attempt: 1, maxAttempts: 3);
+        $this->logger()->recordAttempts($log, [$created], SendOutcome::REJECTED, attempt: 1, maxAttempts: 3);
 
         $this->assertSame(SendOutcome::REJECTED, $this->attemptsOf($log)[0]->outcome, 'Envelope e tentativa não podem discordar sobre a mesma resposta.');
+    }
+
+    public static function twoHundredBodies(): array
+    {
+        return [
+            'objeto JSON com o id' => ['{"id_par_edital": 1}', SendOutcome::SUCCESS],
+            'objeto JSON vazio' => ['{}', SendOutcome::ERROR],
+            'lista JSON vazia' => ['[]', SendOutcome::ERROR],
+            'id em texto' => ['{"id_par_edital": "1"}', SendOutcome::ERROR],
+            'html' => ['<html>Bad Gateway</html>', SendOutcome::ERROR],
+            'sem corpo' => [null, SendOutcome::ERROR],
+            'null' => ['null', SendOutcome::ERROR],
+            'texto JSON' => ['"ok"', SendOutcome::ERROR],
+        ];
+    }
+
+    // a mesma régua do cliente: sem o id inteiro, a tentativa não pode dizer que deu certo
+    #[DataProvider('twoHundredBodies')]
+    function testATwoHundredAttemptIsSuccessOnlyWithTheParEditalId(?string $body, string $expected)
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $exchange = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200, responseBody: $body);
+
+        $this->logger()->recordAttempts($log, [$exchange], SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame($expected, $this->attemptsOf($log)[0]->outcome);
+    }
+
+    function testAnAcceptedAttemptFollowsASendThatClosedAsError()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->startOrResume($this->createOpportunity());
+        $exchange = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/', status: 200, responseBody: '{"id_par_edital": 1}');
+
+        $this->logger()->recordAttempts($log, [$exchange], SendOutcome::ERROR, attempt: 1, maxAttempts: 3);
+
+        $this->assertSame(SendOutcome::ERROR, $this->attemptsOf($log)[0]->outcome, 'O id recusado depois da resposta fecha o envio em erro, e a tentativa não pode dizer sucesso.');
     }
 
     function testAnAttemptWithoutResponseKeepsTheOutcomeOfTheSend()
     {
         $this->loginAsSaasSuperAdmin();
         $log = $this->logger()->startOrResume($this->createOpportunity());
-        $semRequisicao = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/');
+        $withoutRequest = new HttpExchange(endpoint: 'https://cultbr.example/api/v1/oportunidades/');
 
-        $this->logger()->recordAttempts($log, [$semRequisicao], SendOutcome::SIMULATED, attempt: 1, maxAttempts: 3);
+        $this->logger()->recordAttempts($log, [$withoutRequest], SendOutcome::SIMULATED, attempt: 1, maxAttempts: 3);
 
         $this->assertSame(
             SendOutcome::SIMULATED,
@@ -289,17 +328,17 @@ class SendLoggerTest extends TestCase
     {
         $this->loginAsSaasSuperAdmin();
         $log = $this->logger()->startOrResume($this->createOpportunity());
-        $campos = array_fill_keys(array_map(fn ($i) => "campo{$i}", range(1, 40)), str_repeat('x', 2000));
+        $fields = array_fill_keys(array_map(fn ($i) => "campo{$i}", range(1, 40)), str_repeat('x', 2000));
 
         $this->logger()->recordAttempt($log, new HttpExchange(
             endpoint: 'https://cultbr.example/api/v1/oportunidades/',
             status: 200,
-            requestPayload: $campos,
+            requestPayload: $fields,
         ), SendOutcome::SUCCESS, attempt: 1, maxAttempts: 3);
 
-        $armazenado = $this->attemptsOf($log)[0]->requestPayload;
-        $this->assertNotNull(json_decode($armazenado), 'Cortar o JSON por bytes grava texto que ninguém decodifica de volta.');
-        $this->assertTrue(json_decode($armazenado, true)['truncated']);
+        $storedValue = $this->attemptsOf($log)[0]->requestPayload;
+        $this->assertNotNull(json_decode($storedValue), 'Cortar o JSON por bytes grava texto que ninguém decodifica de volta.');
+        $this->assertTrue(json_decode($storedValue, true)['truncated']);
     }
 
     function testTheRequestIdIsCappedToTheColumnWidth()
@@ -488,15 +527,15 @@ class SendLoggerTest extends TestCase
         $this->loginAsSaasSuperAdmin();
         $opportunity = $this->createOpportunity();
         $log = $this->logger()->startOrResume($opportunity);
-        $this->app->log->setHandlers([$capturado = new TestHandler()]);
+        $this->app->log->setHandlers([$captured = new TestHandler()]);
         $this->app->em->close();
 
-        $aberto = $this->logger()->startOrResume($opportunity);
-        $fechado = $this->logger()->finish($log, SendOutcome::SUCCESS);
+        $opened = $this->logger()->startOrResume($opportunity);
+        $finished = $this->logger()->finish($log, SendOutcome::SUCCESS);
 
-        $this->assertNull($aberto, 'Abrir o envelope com o Doctrine fechado não pode derrubar o envio.');
-        $this->assertFalse($fechado, 'Fechar o envelope com o Doctrine fechado também não.');
-        $this->assertTrue($capturado->hasErrorThatContains("histórico do edital {$opportunity->id}"));
+        $this->assertNull($opened, 'Abrir o envelope com o Doctrine fechado não pode derrubar o envio.');
+        $this->assertFalse($finished, 'Fechar o envelope com o Doctrine fechado também não.');
+        $this->assertTrue($captured->hasErrorThatContains("histórico do edital {$opportunity->id}"));
     }
 
     private function logger(): SendLogger

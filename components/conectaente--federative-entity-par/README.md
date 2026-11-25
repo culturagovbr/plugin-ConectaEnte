@@ -16,7 +16,7 @@ Escolher um nível limpa os de baixo, porque a cadeia precisa ser coerente: troc
 
 Cada nível fica desabilitado até o de cima ter escolha. Quando o nível escolhido não tem filhos, o campo de baixo dá lugar ao aviso ("Não há metas cadastradas para o exercício selecionado.") em vez de um select vazio.
 
-Em `readonly`, o rótulo é o ano do exercício ou o nome do nó; **nó sem nome aparece pelo id**, para a tela nunca mostrar campo vazio onde há escolha feita. Nos selects vale o mesmo: `#id` no lugar do nome ausente.
+Exercícios do mesmo ano levam o id do PAR no rótulo. Em `readonly`, o rótulo é o ano do exercício ou o nome do nó; **nó sem nome aparece pelo id**, para a tela nunca mostrar campo vazio onde há escolha feita. Nos selects vale o mesmo: `#id` no lugar do nome ausente.
 
 O erro do servidor tem prioridade sobre o do componente, e o `validate()` (via `ref`) marca os campos e devolve se os quatro níveis formam cadeia completa — quem chama decide o que fazer com o `false`.
 

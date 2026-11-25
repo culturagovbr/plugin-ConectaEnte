@@ -3,6 +3,7 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Http\Client;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 
@@ -54,13 +55,33 @@ class ParInformationClientTest extends TestCase
         $this->assertNotNull($result->message);
     }
 
-    function testMissingPathIsReportedAsNotFound()
+    function testANotFoundInTheCultBrFormatIsAFederativeEntityWithoutPar()
     {
         $result = $this->get(404, ['detail' => 'Not Found']);
 
-        $this->assertTrue($result->notFound, 'O contrato reduzido de produção pode não expor este caminho.');
+        $this->assertTrue($result->notFound, 'O 404 com o corpo do CultBR é o caso que a tela chama de "sem PAR".');
         $this->assertFalse($result->unreachable);
         $this->assertNull($result->tree);
+    }
+
+    public static function notFoundBodiesOutsideTheCultBrFormat(): array
+    {
+        return [
+            'html de proxy' => ['<html>404 Not Found</html>'],
+            'vazio' => [''],
+            'objeto sem detail' => ['{"erro": "nao achou"}'],
+            'detail em lista' => ['{"detail": [{"msg": "x"}]}'],
+            'lista' => ['["Not Found"]'],
+        ];
+    }
+
+    #[DataProvider('notFoundBodiesOutsideTheCultBrFormat')]
+    function testANotFoundOutsideTheCultBrFormatIsUnreachable(string $body)
+    {
+        $result = $this->get(404, $body);
+
+        $this->assertFalse($result->notFound, 'Um 404 de proxy não pode dizer que o Ente Federado não tem PAR.');
+        $this->assertTrue($result->unreachable);
     }
 
     function testRejectedTokenCarriesTheReason()

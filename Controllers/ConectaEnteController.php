@@ -12,6 +12,7 @@ use ConectaEnte\Http\TokenValidation;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\PublicationRequirements;
+use ConectaEnte\Services\ResultRows;
 use ConectaEnte\Services\SendHistory;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
@@ -254,6 +255,22 @@ class ConectaEnteController extends \MapasCulturais\Controller
     }
 
     /**
+     * A situação do envio do edital, para o selo do cabeçalho acompanhar o que saiu depois de carregar a página.
+     */
+    function GET_sendStatus()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $opportunity->checkPermission('modify');
+
+        $this->json(Plugin::instance()->sendStatusView()->of($opportunity) + [
+            'status' => $opportunity->getMetadata(CultBrMetadata::SEND_STATUS),
+            'at' => $opportunity->getMetadata(CultBrMetadata::SEND_AT),
+        ]);
+    }
+
+    /**
      * A árvore do PAR do ente ligado à oportunidade pelo selo, para a cascata da aba.
      */
     function GET_parInformation()
@@ -323,7 +340,149 @@ class ConectaEnteController extends \MapasCulturais\Controller
             $opportunity,
             (int) ($this->data['page'] ?? 1),
             (int) ($this->data['pageSize'] ?? SendHistory::DEFAULT_PAGE_SIZE),
+            $this->data['action'] ?? null,
         ));
+    }
+
+    /**
+     * O estado do resultado do edital, para quem controla a oportunidade.
+     */
+    function GET_result()
+    {
+        $this->json(Plugin::instance()->resultService()->stateOf($this->controlledOpportunity()));
+    }
+
+    /**
+     * Grava as respostas recebidas do formulário de resultado: aplica as válidas e devolve o erro das recusadas.
+     */
+    function POST_resultAnswers()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $errors = Plugin::instance()->resultService()->saveAnswers($opportunity, (array) ($this->postData['answers'] ?? []));
+
+        $this->json(['errors' => (object) $errors, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]);
+    }
+
+    /**
+     * O modelo de planilha do edital e o de/para dos campos da ficha, para quem controla a oportunidade.
+     */
+    function GET_resultMapping()
+    {
+        $this->json(Plugin::instance()->resultSpreadsheet()->mappingView($this->controlledOpportunity()));
+    }
+
+    /**
+     * Grava o de/para; devolve o erro de cada escolha recusada e a tela atualizada.
+     */
+    function POST_resultMapping()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $errors = Plugin::instance()->resultService()->saveMapping($opportunity, (array) $this->postData);
+
+        $this->json(['errors' => (object) $errors, 'mapping' => Plugin::instance()->resultSpreadsheet()->mappingView($opportunity)]);
+    }
+
+    /**
+     * Uma página da grade de contemplados, com as pendências de cada linha.
+     */
+    function GET_resultRows()
+    {
+        $opportunity = $this->controlledOpportunity();
+
+        $this->json(Plugin::instance()->resultRows()->page(
+            $opportunity,
+            (int) ($this->data['page'] ?? 1),
+            min((int) ($this->data['pageSize'] ?? ResultRows::DEFAULT_PAGE_SIZE), ResultRows::BATCH_SIZE),
+        ));
+    }
+
+    // sem isso o roteador recusa /api/conectaente/*; a única ação de API é a grade
+    public static function usesAPI(): bool
+    {
+        return true;
+    }
+
+    /**
+     * As linhas da grade no formato da API do core, para o `entity-table`: lista no corpo, paginação no `API-Metadata`.
+     */
+    function API_resultRows()
+    {
+        $opportunity = $this->controlledOpportunity((int) ($this->data['opportunity'] ?? 0));
+        $limit = min(max(1, (int) ($this->data['@limit'] ?? ResultRows::DEFAULT_PAGE_SIZE)), ResultRows::BATCH_SIZE);
+        $page = max(1, (int) ($this->data['@page'] ?? 1));
+        $total = Plugin::instance()->resultRows()->awardedTotal($opportunity);
+
+        App::i()->response = App::i()->response->withHeader('API-Metadata', json_encode([
+            'count' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'numPages' => (int) ceil($total / $limit),
+            'keyword' => '',
+            'order' => '',
+        ]));
+
+        $this->json(Plugin::instance()->resultRows()->rows($opportunity, $page, $limit));
+    }
+
+    /**
+     * Grava a célula do gestor; null devolve a célula à ficha.
+     */
+    function POST_resultRows()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $error = Plugin::instance()->resultService()->saveCell($opportunity, (int) ($this->postData['registrationId'] ?? 0), (string) ($this->postData['column'] ?? ''), $this->postData['value'] ?? null);
+
+        $error ? $this->errorJson(['value' => [$error]], 400) : $this->json(true);
+    }
+
+    /**
+     * Recebe o arquivo de uma questão de anexo do resultado (multipart: `questionId` e `arquivo`).
+     */
+    function POST_resultAttachment()
+    {
+        $opportunity = $this->controlledOpportunity();
+
+        // acima do post_max_size o PHP descarta o corpo inteiro, e a questão chega vazia
+        if (!$_POST && !$_FILES && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+            $this->errorJson(['arquivo' => [i::__('O arquivo passa do tamanho que o servidor aceita.')]], 413);
+        }
+
+        $error = Plugin::instance()->resultService()->attach($opportunity, (int) ($this->data['questionId'] ?? 0), $_FILES['arquivo'] ?? []);
+
+        $error ? $this->errorJson(['arquivo' => [$error]], 400) : $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
+    }
+
+    /**
+     * Tira um arquivo de uma questão de anexo do resultado.
+     */
+    function POST_resultAttachmentDelete()
+    {
+        $opportunity = $this->controlledOpportunity();
+        Plugin::instance()->resultService()->detach($opportunity, (int) ($this->postData['questionId'] ?? 0), (int) ($this->postData['fileId'] ?? 0));
+
+        $this->json(Plugin::instance()->resultService()->stateOf($opportunity));
+    }
+
+    /**
+     * Confere e enfileira o envio do resultado ao CultBR; a recusa volta com o motivo e as pendências.
+     */
+    function POST_resultSend()
+    {
+        $opportunity = $this->controlledOpportunity();
+        $request = Plugin::instance()->resultService()->requestSend($opportunity, isset($this->postData['revision']) ? (string) $this->postData['revision'] : null);
+
+        $request['queued'] ? $this->json(['queued' => true, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]) : $this->errorJson($request, 400);
+    }
+
+    private function controlledOpportunity(?int $id = null): Opportunity
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity($id);
+        $this->refuseOtherSubsite($opportunity);
+        $opportunity->checkPermission('@control');
+
+        return $opportunity;
     }
 
     // o histórico carrega o payload, com o documento do Ente dentro: informar o id de outra instalação não pode bastar
@@ -418,9 +577,9 @@ class ConectaEnteController extends \MapasCulturais\Controller
         return $federativeEntity;
     }
 
-    private function requestedOpportunity(): Opportunity
+    private function requestedOpportunity(?int $id = null): Opportunity
     {
-        $opportunity = App::i()->repo(Opportunity::class)->find($this->urlData['id'] ?? 0);
+        $opportunity = App::i()->repo(Opportunity::class)->find($id ?? $this->urlData['id'] ?? 0);
 
         if (!$opportunity) {
             App::i()->pass();

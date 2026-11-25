@@ -1,6 +1,6 @@
 # Componente `<conectaente--opportunity-tab>`
 
-Abas "CultBR" e "Histórico de envio" da página de edição de oportunidade. Só aparecem na oportunidade selada por um Ente Federado. A primeira reúne os campos do edital que o CultBR recebe e a lista dos campos pendentes; a segunda hospeda o `<conectaente--send-history>`.
+Abas "CultBR" e "Histórico de envio" da página de edição de oportunidade. Só aparecem na oportunidade selada por um Ente Federado. A primeira reúne os campos do edital que o CultBR recebe e a lista dos campos pendentes; a segunda hospeda o `<conectaente--send-history>` e é a última: o slot entre as duas recebe a aba do resultado.
 
 Os `mc-tab` ficam dentro do componente porque o `v-if` depende de estado dele — as duas abas compartilham a mesma conta de selo. A part `conectaente/opportunity-tab`, incluída no hook `template(opportunity.edit.tabs):end`, só instancia o componente.
 

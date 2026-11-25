@@ -3,7 +3,7 @@
 namespace ConectaEnte\Http;
 
 /**
- * Desfecho de `POST /api/v1/oportunidades/`: aceito, recusado sem retentativa (4xx),
+ * Desfecho de `POST /api/v1/oportunidades/`: aceito, recusado (4xx), falho (200 sem JSON ou sem id)
  * ou indisponível (5xx/falha de conexão) — este último é o único retentável.
  */
 final class SendResult
@@ -15,6 +15,7 @@ final class SendResult
         public readonly ?string $message = null,
         public readonly int $status = 0,
         public readonly ?string $transportError = null,
+        public readonly bool $failed = false,
     ) {
     }
 
@@ -28,8 +29,32 @@ final class SendResult
         return new self(accepted: false, unreachable: false, message: $message);
     }
 
+    public static function failed(string $message): self
+    {
+        return new self(accepted: false, unreachable: false, message: $message, failed: true);
+    }
+
     public static function unreachable(int $status = 0, ?string $transportError = null): self
     {
         return new self(accepted: false, unreachable: true, status: $status, transportError: $transportError);
+    }
+
+    /** O id do edital no CultBR, presente em todo envio aceito. */
+    public function parEditalId(): ?int
+    {
+        return $this->accepted ? $this->response['id_par_edital'] : null;
+    }
+
+    public function parActionTypeId(): ?int
+    {
+        return self::actionTypeOf($this->accepted ? $this->response : null);
+    }
+
+    /** O `acao.id_par_tipo_acao` do eco, só quando vem inteiro positivo. */
+    public static function actionTypeOf(?array $response): ?int
+    {
+        $id = $response['acao']['id_par_tipo_acao'] ?? null;
+
+        return is_int($id) && $id > 0 ? $id : null;
     }
 }

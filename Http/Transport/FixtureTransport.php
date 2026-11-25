@@ -14,7 +14,7 @@ class FixtureTransport implements TransportInterface
     {
     }
 
-    public function get(string $url, array $headers = []): Response
+    public function get(string $url, array $headers = [], bool $queued = false): Response
     {
         $route = $this->routeOf($url);
         $file = "{$this->directory}/{$route}.json";
@@ -40,6 +40,11 @@ class FixtureTransport implements TransportInterface
     public function post(string $url, array $body, array $headers = []): Response
     {
         return $this->refuseWriting('post', $url);
+    }
+
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response
+    {
+        return $this->refuseWriting('postMultipart', $url);
     }
 
     private function refuseWriting(string $verb, string $url): Response

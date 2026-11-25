@@ -18,6 +18,9 @@ class FakeTransport implements TransportInterface
      * @var string[] */
     public array $sentVerbs = [];
 
+    /** @var bool[] um por leitura */
+    public array $queuedReads = [];
+
     public function __construct(private Response $response)
     {
     }
@@ -32,8 +35,9 @@ class FakeTransport implements TransportInterface
         return new self(Response::failed('Could not resolve host'));
     }
 
-    public function get(string $url, array $headers = []): Response
+    public function get(string $url, array $headers = [], bool $queued = false): Response
     {
+        $this->queuedReads[] = $queued;
         $this->sentVerbs[] = 'GET';
         $this->requestedUrls[] = $url;
         $this->sentHeaders[] = $headers;
@@ -49,6 +53,16 @@ class FakeTransport implements TransportInterface
     public function post(string $url, array $body, array $headers = []): Response
     {
         return $this->recorded('POST', $url, $body, $headers);
+    }
+
+    /** @var list<array{fields: array, files: array}> */
+    public array $sentMultiparts = [];
+
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response
+    {
+        $this->sentMultiparts[] = ['fields' => $fields, 'files' => $files];
+
+        return $this->recorded('POST', $url, [], $headers);
     }
 
     private function recorded(string $verb, string $url, array $body, array $headers): Response

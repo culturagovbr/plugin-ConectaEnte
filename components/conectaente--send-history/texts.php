@@ -5,6 +5,8 @@ use MapasCulturais\i;
 return [
     'erro_carregar' => i::__('Não foi possível carregar o histórico de envio agora.'),
     'vazio' => i::__('Este edital ainda não foi enviado ao CultBR.'),
+    'acao_opportunity' => i::__('Edital'),
+    'acao_result' => i::__('Resultado'),
     'carregar_mais' => i::__('Carregar mais'),
     'copiar' => i::__('Copiar'),
     'copiado' => i::__('Conteúdo copiado.'),

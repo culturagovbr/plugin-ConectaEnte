@@ -14,6 +14,7 @@ use MapasCulturais\App;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use Monolog\Handler\TestHandler;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
@@ -42,6 +43,40 @@ class SendOpportunityJobTest extends TestCase
         $sendAt = (string) $reloaded->getMetadata(CultBrMetadata::SEND_AT);
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $sendAt, 'O formato é o que o histórico vai ler.');
         $this->assertEqualsWithDelta(time(), strtotime($sendAt), 5, 'A data é a do envio que acabou de acontecer, não uma data fixa nem a de publicação.');
+    }
+
+    public static function twoHundredBodiesWithoutJson(): array
+    {
+        return ['html' => ['<html>Bad Gateway</html>'], 'vazio' => ['']];
+    }
+
+    #[DataProvider('twoHundredBodiesWithoutJson')]
+    function testATwoHundredWithoutJsonIsRecordedAsErrorAndDoesNotRetry(string $body)
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, $body);
+
+        $this->executeSend($opportunity->id);
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $reloaded->getMetadata(CultBrMetadata::SEND_STATUS), 'É o error que a aba mostra como falha.');
+        $this->assertSame('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).', $reloaded->getMetadata(CultBrMetadata::SEND_REASON));
+        $this->assertSame([], $this->enqueuedSendJobs(), 'O CultBR respondeu: retentar não é o caminho.');
+        $this->assertNull($reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
+    }
+
+    function testATwoHundredWithoutTheParEditalIdIsRecordedAsErrorAndDoesNotRetry()
+    {
+        $opportunity = $this->liveSealedOpportunity();
+        Plugin::instance()->transport = FakeTransport::replying(200, '{}');
+
+        $this->executeSend($opportunity->id);
+
+        $reloaded = $this->reloaded($opportunity);
+        $this->assertSame(SendOutcome::ERROR, $reloaded->getMetadata(CultBrMetadata::SEND_STATUS));
+        $this->assertSame('A Plataforma CultBR respondeu ao envio do edital sem o id do edital (id_par_edital).', $reloaded->getMetadata(CultBrMetadata::SEND_REASON));
+        $this->assertSame([], $this->enqueuedSendJobs(), 'O CultBR respondeu: retentar não traria o id de volta.');
+        $this->assertNull($reloaded->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
     }
 
     function testClientErrorIsRejectedAndDoesNotRetry()
@@ -454,7 +489,12 @@ class SendOpportunityJobTest extends TestCase
 
         $this->assertNull($this->reloaded($outra)->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'Gravar o id de outra oportunidade é pior do que não gravar.');
         $this->assertSame('53781', $this->reloaded($dona)->getMetadata(CultBrMetadata::PAR_EDITAL_ID), 'E a dona do id não pode perdê-lo nesse caminho.');
-        $this->assertSame(SendOutcome::SUCCESS, $this->reloaded($outra)->getMetadata(CultBrMetadata::SEND_STATUS), 'O envio foi aceito: recusar o id não derruba o desfecho.');
+        $this->assertSame(SendOutcome::ERROR, $this->reloaded($outra)->getMetadata(CultBrMetadata::SEND_STATUS), 'Sem o id gravado, o resultado do edital não teria para onde ir.');
+        $this->assertSame(
+            "O CultBR devolveu o edital 53781, que já pertence à oportunidade {$dona->id}. O id não foi gravado.",
+            $this->reloaded($outra)->getMetadata(CultBrMetadata::SEND_REASON),
+        );
+        $this->assertSame([], $this->enqueuedSendJobs(), 'Retentar devolveria o mesmo id.');
     }
 
     private function liveSealedOpportunity(): Opportunity

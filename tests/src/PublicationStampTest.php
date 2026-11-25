@@ -249,6 +249,8 @@ class PublicationStampTest extends TestCase
         $source->setMetadata(CultBrMetadata::SEND_AT, '2026-10-13 12:17:03');
         $source->setMetadata(CultBrMetadata::SEND_REASON, 'motivo anterior');
         $source->setMetadata(CultBrMetadata::PAR_EDITAL_ID, '53781');
+        $source->setMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID, '1');
+        $source->setMetadata(CultBrMetadata::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT, '00394601000126');
         $source->saveMetadata();
 
         $copy = $this->reloaded($this->duplicate($source));

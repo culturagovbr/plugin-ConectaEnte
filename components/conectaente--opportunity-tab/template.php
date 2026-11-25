@@ -122,7 +122,7 @@ if ($showsSendHistory) {
             <mc-card>
                 <template #title>
                     <h3><?php i::_e('Campos pendentes') ?></h3>
-                    <p v-if="hasPendingFields && isPublished"><?php i::_e('Publicado, o edital selado por um Ente Federado só pode ser salvo com estes campos preenchidos, porque são eles que o CultBR recebe. A lista considera o que já foi salvo.') ?></p>
+                    <p v-if="hasPendingFields && isPublished"><?php i::_e('Enquanto faltarem estes campos, o edital publicado não é enviado ao CultBR. A lista considera o que já foi salvo.') ?></p>
                     <p v-else-if="hasPendingFields"><?php i::_e('O edital selado por um Ente Federado só é publicado com estes campos preenchidos, porque são eles que o CultBR recebe. A lista considera o que já foi salvo.') ?></p>
                 </template>
                 <template #content>
@@ -132,6 +132,9 @@ if ($showsSendHistory) {
         </aside>
     </mc-container>
 </mc-tab>
+
+<?php // entre as duas: o histórico cobre o envio do edital e o do resultado ?>
+<slot></slot>
 
 <?php if ($showsSendHistory): ?>
 <mc-tab v-if="isSealed" label="<?php i::esc_attr_e('Histórico de envio') ?>" slug="cultbr-historico" cache>

@@ -10,7 +10,7 @@ use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 
 /**
- * A conferência do payload montado: o contrato exige as 30 chaves presentes e nenhuma nula.
+ * A conferência do payload montado: as 30 chaves presentes e nenhuma nula, cinco delas por exigência do plugin.
  */
 class PayloadValidationTest extends TestCase
 {
@@ -40,7 +40,7 @@ class PayloadValidationTest extends TestCase
 
         $errors = $this->errorsFor($opportunity, $payload);
 
-        $this->assertArrayHasKey($key, $errors, "A chave {$key} é obrigatória no contrato e não pode sair nula em silêncio.");
+        $this->assertArrayHasKey($key, $errors, "A chave {$key} é exigida no envio e não pode sair nula em silêncio.");
         $this->assertStringNotContainsString('conectaente_', $errors[$key], 'O motivo nomeia o campo pelo rótulo de tela, não pela chave de metadado.');
     }
 
@@ -51,7 +51,7 @@ class PayloadValidationTest extends TestCase
         $payload = Plugin::instance()->opportunityPayload()->build($opportunity);
         unset($payload[$key]);
 
-        $this->assertArrayHasKey($key, $this->errorsFor($opportunity, $payload), "Chave ausente é tão grave quanto nula: o contrato exige as 30.");
+        $this->assertArrayHasKey($key, $this->errorsFor($opportunity, $payload), "Chave ausente é tão grave quanto nula: o envio exige as 30.");
     }
 
     // decisao travada: array e objeto vazios sao resposta, nao ausencia — o contrato os aceita
@@ -101,6 +101,48 @@ class PayloadValidationTest extends TestCase
         $this->assertStringContainsString('Total de vagas', $errors['numero_previsto_vagas']);
     }
 
+    public static function pluginRequiredKeys(): array
+    {
+        return array_combine(PayloadValidation::PLUGIN_REQUIRED, array_map(fn($key) => [$key], PayloadValidation::PLUGIN_REQUIRED));
+    }
+
+    #[DataProvider('pluginRequiredKeys')]
+    function testAKeyTheContractMadeOptionalIsChargedToThePlugin(string $key)
+    {
+        $opportunity = $this->reloaded($this->sealedOpportunity(Opportunity::STATUS_ENABLED));
+        $payload = Plugin::instance()->opportunityPayload()->build($opportunity);
+        $payload[$key] = null;
+
+        $reason = $this->errorsFor($opportunity, $payload)[$key];
+
+        $this->assertStringContainsString('o plugin o exige', $reason, 'O contrato aceita nulo aqui: quem cobra é o plugin.');
+        $this->assertStringNotContainsString('o CultBR o exige', $reason);
+    }
+
+    function testAKeyTheContractRequiresIsChargedToTheCultBr()
+    {
+        $opportunity = $this->reloaded($this->sealedOpportunity(Opportunity::STATUS_ENABLED));
+        $payload = Plugin::instance()->opportunityPayload()->build($opportunity);
+        $payload['numero_previsto_vagas'] = null;
+
+        $reason = $this->errorsFor($opportunity, $payload)['numero_previsto_vagas'];
+
+        $this->assertStringContainsString('o CultBR o exige', $reason);
+        $this->assertStringNotContainsString('plugin', $reason);
+    }
+
+    function testThePluginRequiredKeysAreTheOnesTheContractMadeOptional()
+    {
+        $this->assertSame([
+            'segmento_artistico_cultural_especificar',
+            'etapa_fazer_cultural_especificar',
+            'pauta_especifica_especificar',
+            'links_da_pagina_pnab',
+            'tipos_formas_inscricao',
+        ], PayloadValidation::PLUGIN_REQUIRED, 'Os cinco que o ParEditalInMapas deixou fora de required.');
+        $this->assertSame([], array_diff(PayloadValidation::PLUGIN_REQUIRED, array_keys(PayloadValidation::SOURCES)), 'Chave fora das conferidas nunca receberia o motivo.');
+    }
+
     function testTheInternalKeysSayTheyAreNotAFieldToFill()
     {
         $opportunity = $this->reloaded($this->sealedOpportunity(Opportunity::STATUS_ENABLED));
@@ -121,7 +163,7 @@ class PayloadValidationTest extends TestCase
 
         $this->assertSame([], array_diff($built, $covered), 'Chave montada e não conferida sairia nula sem ninguém notar.');
         $this->assertSame([], array_diff($covered, $built), 'Chave conferida e não montada seria reportada para sempre.');
-        $this->assertCount(30, $covered, 'O ParEditalInMapas declara 30 propriedades, todas obrigatórias.');
+        $this->assertCount(30, $covered, 'O ParEditalInMapas declara 30 propriedades.');
     }
 
     // o SOURCES repete o que o build() expressa: se uma origem mudar la e nao aqui, o motivo

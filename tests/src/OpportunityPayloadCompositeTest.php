@@ -18,7 +18,7 @@ use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
 
 /**
- * Os multiselects e os quatro blocos do payload, e a conformidade das chaves que o contrato exige.
+ * Os multiselects e os quatro blocos do payload, e a conformidade das chaves que o contrato declara.
  */
 class OpportunityPayloadCompositeTest extends TestCase
 {

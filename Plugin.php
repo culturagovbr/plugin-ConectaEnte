@@ -11,11 +11,13 @@ use ConectaEnte\Http\Transport\FixtureTransport;
 use ConectaEnte\Http\Transport\TransportInterface;
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Payload\OpportunityPayload;
+use ConectaEnte\Payload\ResultPayload;
 use ConectaEnte\Payload\PayloadValidation;
 use ConectaEnte\Entities\FederativeEntitySeal;
 use ConectaEnte\Jobs\ParInformationFetchJob;
 use ConectaEnte\Jobs\ParInformationSyncJob;
 use ConectaEnte\Jobs\SendOpportunityJob;
+use ConectaEnte\Jobs\SendResultJob;
 use ConectaEnte\Services\FieldLabels;
 use ConectaEnte\Services\FundingSourceName;
 use ConectaEnte\Services\OpportunitySender;
@@ -24,11 +26,20 @@ use ConectaEnte\Services\PublicationContext;
 use ConectaEnte\Services\PublicationRequirements;
 use ConectaEnte\Services\PublicationStamp;
 use ConectaEnte\Services\CoreFieldsDescription;
+use ConectaEnte\Services\ModelSeal;
+use ConectaEnte\Services\ResultAnswers;
+use ConectaEnte\Services\ResultAttachments;
+use ConectaEnte\Services\ResultCommittee;
+use ConectaEnte\Services\ResultRows;
+use ConectaEnte\Services\ResultSender;
+use ConectaEnte\Services\ResultService;
+use ConectaEnte\Services\ResultSpreadsheet;
 use ConectaEnte\Services\SealedOpportunity;
 use ConectaEnte\Services\SendEligibility;
 use ConectaEnte\Services\SendStatusView;
 use ConectaEnte\Services\SendHistory;
 use ConectaEnte\Services\SendLogger;
+use MapasCulturais\Definitions\FileGroup;
 use MapasCulturais\Entities\Job;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Seal;
@@ -135,6 +146,51 @@ class Plugin extends \MapasCulturais\Plugin
         return new PublicationRequirements($this->publicationStamp(), $this->parInformationService());
     }
 
+    function resultAnswers(): ResultAnswers
+    {
+        return new ResultAnswers($this->resultCommittee());
+    }
+
+    function resultCommittee(): ResultCommittee
+    {
+        return new ResultCommittee();
+    }
+
+    function resultSender(): ResultSender
+    {
+        return new ResultSender($this);
+    }
+
+    function resultPayload(): ResultPayload
+    {
+        return new ResultPayload($this);
+    }
+
+    function resultAttachments(): ResultAttachments
+    {
+        return new ResultAttachments($this->resultAnswers());
+    }
+
+    function resultRows(): ResultRows
+    {
+        return new ResultRows($this->resultSpreadsheet());
+    }
+
+    function resultSpreadsheet(): ResultSpreadsheet
+    {
+        return new ResultSpreadsheet($this);
+    }
+
+    function resultService(): ResultService
+    {
+        return new ResultService($this);
+    }
+
+    function modelSeal(): ModelSeal
+    {
+        return new ModelSeal();
+    }
+
     function fieldLabels(): FieldLabels
     {
         return new FieldLabels();
@@ -142,7 +198,7 @@ class Plugin extends \MapasCulturais\Plugin
 
     function sendStatusView(): SendStatusView
     {
-        return new SendStatusView($this->sealedOpportunity(), $this->sendEligibility());
+        return new SendStatusView($this->sealedOpportunity(), $this->sendEligibility(), $this->publicationRequirements());
     }
 
     function sendEligibility(): SendEligibility
@@ -216,7 +272,17 @@ class Plugin extends \MapasCulturais\Plugin
      */
     function scheduleParSync(): void
     {
-        App::i()->enqueueJob(ParInformationSyncJob::SLUG, [], "+{$this->_config['parSyncIntervalMinutes']} minutes", '', 1);
+        $app = App::i();
+        $start = "+{$this->_config['parSyncIntervalMinutes']} minutes";
+        $jobType = $app->getRegisteredJobType(ParInformationSyncJob::SLUG);
+        $scheduled = $app->repo(Job::class)->findOneBy(['id' => $jobType->generateId([], $start, '', 1)]);
+
+        // o core loga antes de deduplicar, e isto roda a cada requisição; o preso em PROCESSING segue para o core recolher
+        if ($scheduled?->status === Job::STATUS_WAITING) {
+            return;
+        }
+
+        $app->enqueueJob(ParInformationSyncJob::SLUG, [], $start, '', 1);
     }
 
     /** Enfileira a busca da árvore deste ente para agora, se ele estiver ativo. */
@@ -295,6 +361,7 @@ class Plugin extends \MapasCulturais\Plugin
         $app->registerJobType(new ParInformationSyncJob(ParInformationSyncJob::SLUG));
         $app->registerJobType(new ParInformationFetchJob(ParInformationFetchJob::SLUG));
         $app->registerJobType(new SendOpportunityJob(SendOpportunityJob::SLUG));
+        $app->registerJobType(new SendResultJob(SendResultJob::SLUG));
 
         try {
             $this->scheduleParSync();
@@ -325,6 +392,14 @@ class Plugin extends \MapasCulturais\Plugin
         });
 
         $app->hook('entity(OpportunitySealRelation).save:before', function () use ($app) {
+            $plugin = Plugin::instance();
+
+            // a geração do modelo copia o selo, e o modelo o solta ao terminar de salvar
+            if ($plugin->modelSeal()->isModel($this->owner) && $plugin->modelSeal()->isFederativeSeal($this->seal)
+                && !$plugin->publicationStamp()->isDuplicatingInto($this->owner)) {
+                throw new BadRequest(i::__('Modelo de oportunidade não recebe o selo de Ente Federado.'));
+            }
+
             $federativeEntity = $app->repo(FederativeEntitySeal::class)->findConflictingEntity($this->owner, $this->seal);
 
             if ($federativeEntity) {
@@ -375,9 +450,26 @@ class Plugin extends \MapasCulturais\Plugin
             }
         });
 
+        // private só filtra a leitura: sem isto, quem edita a oportunidade escreveria as respostas por fora do validador
+        $dropResultKeys = function (&$data) {
+            $data = array_diff_key((array) $data, array_flip(CultBrMetadata::RESULT_KEYS));
+        };
+        $app->hook('PATCH(opportunity.single):data', $dropResultKeys);
+        $app->hook('PUT(opportunity.single):data', $dropResultKeys);
+
         // a cópia é salva antes e depois de receber os metadados: a marca dura a requisição inteira
         $app->hook('ALL(opportunity.duplicate):before', function () {
             Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
+        });
+        // modelo e oportunidade gerada dele são cópias, com a mesma marca
+        $app->hook('ALL(opportunity.generatemodel):before', function () {
+            Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
+        });
+        $app->hook('ALL(opportunity.generateopportunity):before', function () {
+            Plugin::instance()->publicationStamp()->duplicationStarted($this->requestedEntity);
+        });
+        $app->hook('entity(Opportunity).save:after', function () {
+            Plugin::instance()->modelSeal()->release($this);
         });
         $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationStamp()->duplicationFinished());
 
@@ -398,6 +490,10 @@ class Plugin extends \MapasCulturais\Plugin
             }
         });
         $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationContext()->leave());
+
+        $app->hook('ApiQuery(Opportunity).findResult', function (&$result) {
+            $result = ResultAttachments::withoutAttachments((array) $result);
+        });
 
         $app->hook('template(opportunity.edit.tabs):end', function () {
             $this->part('conectaente/opportunity-tab');
@@ -481,6 +577,9 @@ class Plugin extends \MapasCulturais\Plugin
 
     function register(){
         $app = App::i();
+
+        // privado: a planilha de Bolsa e de Premiação traz CPF de contemplados
+        $app->registerFileGroup('opportunity', new FileGroup(ResultAttachments::FILE_GROUP, [], '', false, null, true));
 
         $app->registerController('conectaente', ConectaEnteController::class);
 

@@ -18,15 +18,17 @@ class SendHistory
     /**
      * Envios da oportunidade, mais recentes primeiro, com as tentativas aninhadas.
      */
-    public function of(Opportunity $opportunity, int $page = 1, int $pageSize = self::DEFAULT_PAGE_SIZE): array
+    public function of(Opportunity $opportunity, int $page = 1, int $pageSize = self::DEFAULT_PAGE_SIZE, ?string $action = null): array
     {
         $app = App::i();
         $size = min(self::MAX_PAGE_SIZE, max(1, $pageSize));
         $page = max(1, $page);
 
         // o carimbo tem precisão de segundo: sem o id no desempate, dois envios do mesmo segundo trocam de lugar entre as páginas
+        $criteria = ['opportunityId' => $opportunity->id] + (in_array($action, [Log::ACTION_OPPORTUNITY, Log::ACTION_RESULT], true) ? ['action' => $action] : []);
+
         $logs = $app->repo(Log::class)->findBy(
-            ['opportunityId' => $opportunity->id],
+            $criteria,
             ['createTimestamp' => 'DESC', 'id' => 'DESC'],
             $size,
             ($page - 1) * $size,
@@ -35,7 +37,7 @@ class SendHistory
         $attempts = $this->attemptsGroupedByLog($logs);
 
         return [
-            'total' => $app->repo(Log::class)->count(['opportunityId' => $opportunity->id]),
+            'total' => $app->repo(Log::class)->count($criteria),
             'page' => $page,
             'pageSize' => $size,
             'sends' => array_map(fn (Log $log) => $this->describe($log, $attempts[$log->id] ?? []), $logs),
@@ -68,6 +70,7 @@ class SendHistory
     {
         return [
             'uuid' => $log->uuid,
+            'action' => $log->action,
             'outcome' => $log->outcome,
             'parEditalId' => $log->parEditalId,
             // só o id de quem disparou: nome e e-mail não têm o que fazer no histórico de integração

@@ -4,12 +4,14 @@ namespace ConectaEnte\Http;
 
 use ConectaEnte\Dto\ParInformation;
 use ConectaEnte\Http\Transport\CurlTransport;
+use ConectaEnte\Http\Transport\JsonBody;
 use ConectaEnte\Http\Transport\TransportInterface;
 use MapasCulturais\i;
 
 class Client
 {
     const TYPE_SYSTEM = 'SISTEMA';
+    const RESULT_FORM_MODULE = 'RESULTADO_EDITAL';
 
     private TransportInterface $transport;
 
@@ -79,8 +81,13 @@ class Client
             return ParInformationResult::ok(ParInformation::fromApiListResponse($body, $this->enteDocument($body, $document)));
         }
 
-        if ($response->status === 404) {
+        // o contrato não declara 404 aqui: só o corpo do CultBR distingue "sem PAR" de um 404 de proxy
+        if ($response->status === 404 && $this->isCultBrNotFound($response)) {
             return ParInformationResult::notFound();
+        }
+
+        if ($response->status === 404) {
+            return ParInformationResult::unreachable();
         }
 
         if ($response->status >= 500) {
@@ -107,16 +114,122 @@ class Client
         }
 
         if ($response->status === 200) {
-            return SendResult::ok($response->decoded() ?? []);
+            return $this->readAcceptance($response);
         }
 
         return SendResult::rejected($this->readDetail($response->json(), $response->status, i::__('A Plataforma CultBR recusou o envio do edital (HTTP %d).')));
+    }
+
+    // o resultado do edital vai para o id_par_edital: aceitar sem ele deixaria a fase seguinte sem destino
+    private function readAcceptance(Response $response): SendResult
+    {
+        if ($response->decoded() === null) {
+            return SendResult::failed(i::__('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).'));
+        }
+
+        if (!SendAcceptance::isAccepted(SendAcceptance::OPPORTUNITY, $response->status, $response->body)) {
+            return SendResult::failed(i::__('A Plataforma CultBR respondeu ao envio do edital sem o id do edital (id_par_edital).'));
+        }
+
+        return SendResult::ok($response->decoded());
     }
 
     /** A rota do envio, para o histórico nomear o destino mesmo quando a requisição não chega a sair. */
     public function sendOpportunityUrl(): string
     {
         return $this->url('/api/v1/oportunidades/');
+    }
+
+    /** Se o edital tem planilha de resultado e quais são as colunas dela. */
+    public function getResultSpreadsheetModel(string $token, int $parEditalId): ApiRead
+    {
+        return $this->read($token, "/api/v1/oportunidades/{$parEditalId}/resultado/modelo-planilha", i::__('A Plataforma CultBR recusou a consulta ao modelo de planilha (HTTP %d).'));
+    }
+
+    /** As questões do formulário de resultado do tipo de ação. */
+    public function getResultFormStructure(string $token, int $actionTypeId): ApiRead
+    {
+        // com barra final a API responde 307
+        $path = '/api/v1/par/formularios/estrutura?' . http_build_query(['modulo' => self::RESULT_FORM_MODULE, 'id_tipo_acao' => $actionTypeId]);
+
+        return $this->read($token, $path, i::__('A Plataforma CultBR recusou a consulta ao formulário de resultado (HTTP %d).'));
+    }
+
+    /** O resultado publicado mais recente do edital; só o 404 com a frase do CultBR quer dizer que não há. */
+    public function getPublishedResult(string $token, int $parEditalId, bool $queued = false): PublishedResult
+    {
+        $response = $this->transport->get($this->url("/api/v1/oportunidades/{$parEditalId}/resultado/publicado"), ['token' => $token], $queued);
+        $body = $response->decoded();
+
+        return match (true) {
+            !$response->reachedServer() => PublishedResult::unknown(i::__('A Plataforma CultBR não respondeu à consulta do resultado publicado.')),
+            $response->status === 200 && is_int($body['id_par_edital_resultado'] ?? null) => PublishedResult::published($body['id_par_edital_resultado'], $body),
+            $response->status === 404 && ($body['detail'] ?? null) === PublishedResult::NOT_FOUND_DETAIL => PublishedResult::none(),
+            default => PublishedResult::unknown(sprintf(i::__('A consulta do resultado publicado não teve resposta conclusiva (HTTP %d).'), $response->status)),
+        };
+    }
+
+    /**
+     * Publica o resultado do edital; o histórico pode guardar um corpo diferente do enviado.
+     */
+    public function sendResult(string $token, int $parEditalId, array $payload, ?array $recordedPayload = null, array $files = []): ResultSendResult
+    {
+        $url = $this->sendResultUrl($parEditalId);
+        $response = $files
+            ? $this->transport->postMultipart($url, $this->multipartFields($payload, $files), $this->multipartFiles($files), ['token' => $token])
+            : $this->transport->post($url, $payload, ['token' => $token]);
+
+        $recorded = $recordedPayload ?? $payload;
+
+        // o multipart leva os arquivos fora do JSON: no histórico ficam o nome e a descrição de cada um
+        if ($files) {
+            $recorded['arquivos'] = array_map(fn($file) => ['nome' => $file['name'], 'descricao' => $file['description'] ?? $file['name']], $files);
+        }
+
+        $this->exchanges[] = $this->exchangeOf('POST', $url, $recorded, $response);
+
+        if (!$response->reachedServer() || $response->status >= 500) {
+            return ResultSendResult::unreachable($response->status, $response->transportError);
+        }
+
+        if (SendAcceptance::isAccepted(SendAcceptance::RESULT, $response->status, $response->body)) {
+            return ResultSendResult::accepted($response->decoded());
+        }
+
+        $errors = ApiErrors::fromBody($response->json());
+
+        return ResultSendResult::rejected($response->status, $errors, $errors->summary(sprintf(i::__('A Plataforma CultBR recusou o resultado do edital (HTTP %d).'), $response->status)));
+    }
+
+    // no multipart as respostas vão como texto JSON em `respostas_json`, e cada arquivo tem a descrição na mesma ordem
+    private function multipartFields(array $payload, array $files): array
+    {
+        $fields = [];
+
+        foreach (['id_tipo', 'id_status', 'data_publicacao'] as $key) {
+            if (isset($payload[$key])) {
+                $fields[] = [$key, (string) $payload[$key]];
+            }
+        }
+
+        $fields[] = ['respostas_json', JsonBody::encode($payload['respostas'] ?? [])];
+
+        foreach ($files as $file) {
+            $fields[] = ['descricoes', (string) ($file['description'] ?? $file['name'])];
+        }
+
+        return $fields;
+    }
+
+    private function multipartFiles(array $files): array
+    {
+        return array_map(fn($file) => ['name' => 'arquivos', 'path' => $file['path'], 'filename' => $file['name'], 'mime' => $file['mime'] ?: 'application/octet-stream'], $files);
+    }
+
+    /** A rota do envio do resultado, para o histórico nomear o destino. */
+    public function sendResultUrl(int $parEditalId): string
+    {
+        return $this->url("/api/v1/oportunidades/{$parEditalId}/resultado");
     }
 
     /**
@@ -145,6 +258,28 @@ class Client
         );
     }
 
+    private function read(string $token, string $path, string $refusal): ApiRead
+    {
+        $response = $this->transport->get($this->url($path), ['token' => $token]);
+        $body = $response->decoded();
+
+        return match (true) {
+            !$response->reachedServer(), $response->status >= 500 => ApiRead::unreachable($response->transportError),
+            $response->status === 200 && $body !== null => ApiRead::ok($body),
+            $response->status === 200 => ApiRead::unreachable(i::__('A resposta da API não é um JSON válido.')),
+            $response->status === 404 && $this->isCultBrNotFound($response) => ApiRead::notFound($body['detail']),
+            $response->status === 404 => ApiRead::unreachable(),
+            default => ApiRead::rejected($this->readDetail($response->json(), $response->status, $refusal)),
+        };
+    }
+
+    private function isCultBrNotFound(Response $response): bool
+    {
+        $body = $response->decoded();
+
+        return $body !== null && !array_is_list($body) && is_string($body['detail'] ?? null);
+    }
+
     private function readValidation(array $body): TokenValidation
     {
         if (($body['tipo'] ?? null) !== self::TYPE_SYSTEM) {
@@ -170,53 +305,9 @@ class Client
 
     private function readDetail(array $body, int $status, string $refusal): string
     {
-        $detail = $body['detail'] ?? null;
-
-        if (is_string($detail) && $detail !== '') {
-            return $detail;
-        }
-
-        if (is_array($detail)) {
-            $messages = array_filter(array_map(fn($error) => $this->fieldError($error), $detail));
-
-            if ($messages) {
-                return implode('; ', $messages);
-            }
-        }
-
-        return sprintf($refusal, $status);
+        return ApiErrors::fromBody($body)->summary(sprintf($refusal, $status));
     }
 
-    // o formato de `detail` é do CultBR: item fora dele não pode derrubar a leitura de nenhum dos fluxos
-    private function fieldError(mixed $error): ?string
-    {
-        $message = is_array($error) ? ($error['msg'] ?? null) : null;
-
-        if (!is_string($message) || $message === '') {
-            return null;
-        }
-
-        $field = $this->fieldName($error['loc'] ?? null);
-
-        return $field ? "{$field}: {$message}" : $message;
-    }
-
-    // só erro no corpo é campo do edital: `header` é a credencial e `query` é a rota, e nomeá-los confundiria
-    private function fieldName(mixed $loc): ?string
-    {
-        if (!is_array($loc) || ($loc[0] ?? null) !== 'body') {
-            return null;
-        }
-
-        $path = array_slice($loc, 1);
-
-        return $path ? implode('.', $path) : null;
-    }
-
-    /**
-     * O contrato não declara `servers`: os caminhos dele são absolutos a partir da origem,
-     * e `/health` fica fora de `/api/v1`. Por isso o host configurado é só a origem.
-     */
     private function url(string $path): string
     {
         return rtrim($this->host, '/') . $path;

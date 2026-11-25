@@ -29,12 +29,12 @@ enum OpportunityStatus: int
     }
 
     /**
-     * Status no formato do contrato: id e nome.
+     * Status no formato do contrato: id e label.
      *
-     * @return array{id: int, nome: string}
+     * @return array{id: int, label: string}
      */
     public function toPayload(): array
     {
-        return ['id' => $this->value, 'nome' => $this->text()];
+        return ['id' => $this->value, 'label' => $this->text()];
     }
 }

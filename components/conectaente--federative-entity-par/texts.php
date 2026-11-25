@@ -17,4 +17,5 @@ return [
     'errorGoal' => i::__('O campo Meta é obrigatório.'),
     'errorAction' => i::__('O campo Ação é obrigatório.'),
     'errorActivity' => i::__('O campo Atividade é obrigatório.'),
+    'exerciseOfSameYear' => i::__('{year} (PAR {id})'),
 ];

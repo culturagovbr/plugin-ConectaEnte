@@ -30,6 +30,19 @@ class ParInformationServiceTest extends TestCase
         $this->assertNull(Plugin::instance()->parInformationService()->getForOpportunity($opportunity));
     }
 
+    function testANotFoundOutsideTheCultBrFormatStaysOutOfTheCache()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);
+        $federativeEntity = $this->resolveFederativeEntity($opportunity);
+        $this->app->mscache->delete(ParInformationService::cacheKey($federativeEntity));
+        Plugin::instance()->transport = FakeTransport::replying(404, '<html>404 Not Found</html>');
+
+        $result = Plugin::instance()->parInformationService()->fetch($federativeEntity);
+
+        $this->assertTrue($result->unreachable);
+        $this->assertFalse($this->app->mscache->contains(ParInformationService::cacheKey($federativeEntity)), 'Guardar faria a tela dizer "sem PAR" por dez minutos por causa de um proxy.');
+    }
+
     function testReadsTheTreeTheJobLeftInTheCache()
     {
         $opportunity = $this->sealedOpportunity(Opportunity::STATUS_DRAFT);

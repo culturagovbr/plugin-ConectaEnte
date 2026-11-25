@@ -5,7 +5,9 @@ namespace ConectaEnte\Services;
 use ConectaEnte\Entities\Log;
 use ConectaEnte\Entities\LogAttempt;
 use ConectaEnte\Http\HttpExchange;
+use ConectaEnte\Http\SendAcceptance;
 use DateTime;
+use Doctrine\DBAL\LockMode;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\User;
@@ -19,6 +21,10 @@ use Throwable;
 class SendLogger
 {
     const MAX_STORED_BYTES = 65536;
+    // contado do início do job, ou da abertura do envelope se o job ainda não começou
+    const RESULT_LOCK_SECONDS = 600;
+    // menor que a trava: o POST dura até um minuto e não pode estar em voo quando ela vence
+    const RESULT_POST_DEADLINE_SECONDS = 480;
     const MAX_REQUEST_ID_BYTES = 255;
 
     private const JSON_FLAGS = JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
@@ -54,7 +60,7 @@ class SendLogger
             $app->em->flush();
 
             // só depois de o novo existir: abandonar antes deixaria a oportunidade sem envio em curso se o insert falhasse
-            $this->abandonPendingOf((int) $opportunity->id, (int) $log->id);
+            $this->abandonPendingOpportunitySendsOf((int) $opportunity->id, (int) $log->id);
 
             return $log;
         } catch (Throwable $error) {
@@ -79,7 +85,7 @@ class SendLogger
             $logAttempt->httpStatus = $exchange->status;
             $logAttempt->requestId = $this->sanitized($exchange->requestId, self::MAX_REQUEST_ID_BYTES);
             $logAttempt->requestPayload = $this->encoded($exchange->requestPayload);
-            $logAttempt->responseBody = $this->sanitized($exchange->responseBody);
+            $logAttempt->responseBody = $this->sanitized($log->action === Log::ACTION_RESULT ? $this->withoutReceivedValues($exchange->responseBody) : $exchange->responseBody);
             $logAttempt->responseHeaders = $this->encoded($exchange->responseHeaders);
             $logAttempt->errorMessage = $this->sanitized($exchange->errorMessage);
             $logAttempt->outcome = $outcome;
@@ -97,12 +103,16 @@ class SendLogger
         }
     }
 
-    // o mesmo corte que o cliente faz com a resposta: aceite é 200 exato, e faixa mais larga faria a tentativa discordar do envio
-    private function outcomeOf(HttpExchange $exchange, string $sendOutcome): string
+    // a régua do cliente; aceite com envio em erro é o id recusado depois da resposta, e a tentativa acompanha
+    private function outcomeOf(Log $log, HttpExchange $exchange, string $sendOutcome): string
     {
+        $operation = $log->action === Log::ACTION_RESULT ? SendAcceptance::RESULT : SendAcceptance::OPPORTUNITY;
+
         return match (true) {
             $exchange->status === null => $sendOutcome,
-            $exchange->status === 200 => SendOutcome::SUCCESS,
+            SendAcceptance::isAccepted($operation, $exchange->status, $exchange->responseBody)
+                => $sendOutcome === SendOutcome::ERROR ? SendOutcome::ERROR : SendOutcome::SUCCESS,
+            $operation === SendAcceptance::OPPORTUNITY && $exchange->status === 200 => SendOutcome::ERROR,
             $exchange->status >= 500 => SendOutcome::ERROR,
             default => SendOutcome::REJECTED,
         };
@@ -132,7 +142,7 @@ class SendLogger
         $stored = [];
 
         foreach ($exchanges as $exchange) {
-            $recorded = $this->recordAttempt($log, $exchange, $this->outcomeOf($exchange, $outcome), $attempt, $maxAttempts);
+            $recorded = $this->recordAttempt($log, $exchange, $this->outcomeOf($log, $exchange, $outcome), $attempt, $maxAttempts);
 
             if ($recorded) {
                 $stored[] = $recorded;
@@ -192,25 +202,181 @@ class SendLogger
     }
 
     // UPDATE condicional, nunca ler-alterar-gravar: dois workers leriam o mesmo conjunto pendente e o flush levaria o que estivesse em memória
-    private function abandonPendingOf(int $opportunityId, int $currentLogId): void
+    private function abandonPendingOpportunitySendsOf(int $opportunityId, int $currentLogId): void
     {
         try {
             App::i()->em->createQuery(
                 'UPDATE ' . Log::class . ' l
                     SET l.outcome = :abandoned, l.updateTimestamp = :now
                   WHERE l.opportunityId = :opportunityId
+                    AND l.action = :action
                     AND l.outcome = :pending
                     AND l.id <> :currentLogId'
             )->execute([
                 'abandoned' => SendOutcome::ABANDONED,
                 'now' => new DateTime,
                 'opportunityId' => $opportunityId,
+                'action' => Log::ACTION_OPPORTUNITY,
                 'pending' => SendOutcome::PENDING,
                 'currentLogId' => $currentLogId,
             ]);
         } catch (Throwable $error) {
             $this->report($opportunityId, $error);
         }
+    }
+
+    /**
+     * Abre o envelope do envio de resultado, ou null quando outro do mesmo edital ainda está no prazo.
+     */
+    public function openResultSend(Opportunity $opportunity): ?Log
+    {
+        try {
+            return $this->openResultSendOrYield($opportunity);
+        } catch (Throwable $error) {
+            $this->report($opportunity->id, $error);
+
+            return null;
+        }
+    }
+
+    private function openResultSendOrYield(Opportunity $opportunity): ?Log
+    {
+        // o resultado não é upsert: o envelope pendente não é abandonado por outro, ele trava o seguinte
+        if ($this->pendingResultSend($opportunity)) {
+            return null;
+        }
+
+        $app = App::i();
+        $log = new Log;
+        $log->uuid = $this->newUuid();
+        $log->opportunityId = $opportunity->id;
+        $log->action = Log::ACTION_RESULT;
+        $log->outcome = SendOutcome::PENDING;
+        $log->triggeredByUser = $this->authorOfTheRequest();
+        $app->em->persist($log);
+        $app->em->flush();
+
+        // dois cliques no mesmo instante abrem dois envelopes: o mais novo cede ao mais antigo
+        $oldest = $this->oldestPendingResultSend((int) $opportunity->id);
+        $yielded = $oldest && $oldest->id < $log->id
+            && $this->changePending($log, fn() => true, fn() => $log->outcome = SendOutcome::ABANDONED);
+
+        return $yielded ? null : $log;
+    }
+
+    /** O envio de resultado do edital que ainda está em andamento, se houver; o que passou do prazo é fechado antes. */
+    public function pendingResultSend(Opportunity $opportunity): ?Log
+    {
+        $this->expireStaleResultSends((int) $opportunity->id);
+
+        return $this->oldestPendingResultSend((int) $opportunity->id);
+    }
+
+    /** O último envio de resultado, se venceu sem chegar a tentar o POST. */
+    public function expiredResultSend(Opportunity $opportunity): ?Log
+    {
+        $this->expireStaleResultSends((int) $opportunity->id);
+        $log = App::i()->repo(Log::class)->findOneBy(['opportunityId' => $opportunity->id, 'action' => Log::ACTION_RESULT], ['id' => 'DESC']);
+        $expired = $log && $log->outcome === SendOutcome::ERROR && !$log->posted
+            && !App::i()->repo(LogAttempt::class)->count(['log' => $log]);
+
+        return $expired ? $log : null;
+    }
+
+    /** Marca o início do job no envelope; false se ele já não está pendente ou já foi começado. */
+    public function claimResultSend(Log $log): bool
+    {
+        return $this->changePending($log, fn() => $log->startedAt === null, fn() => $log->startedAt = new DateTime);
+    }
+
+    /** Imediatamente antes do POST: confirma que o envelope segue pendente e no prazo de postar, e o marca como enviado. */
+    public function confirmResultPost(Log $log): bool
+    {
+        $limit = $this->secondsAgo(self::RESULT_POST_DEADLINE_SECONDS);
+
+        return $this->changePending($log, fn() => $log->startedAt !== null && $log->startedAt >= $limit, fn() => $log->posted = true);
+    }
+
+    /** Guarda no envelope o que o envio de resultado precisa para a conciliação do seguinte. */
+    public function keepResultContext(Log $log, ?int $seenResultId, bool $seenResultRead, string $contentHash, int $resultType, string $publicationDate): void
+    {
+        try {
+            $log->seenResultId = $seenResultId;
+            $log->seenResultRead = $seenResultRead;
+            $log->contentHash = $contentHash;
+            $log->resultType = $resultType;
+            $log->publicationDate = $publicationDate;
+            App::i()->em->flush();
+        } catch (Throwable $error) {
+            $this->report($log->opportunityId, $error);
+        }
+    }
+
+    private function oldestPendingResultSend(int $opportunityId): ?Log
+    {
+        return App::i()->repo(Log::class)->findOneBy($this->pendingResultSendsOf($opportunityId), ['id' => 'ASC']);
+    }
+
+    private function pendingResultSendsOf(int $opportunityId): array
+    {
+        return ['opportunityId' => $opportunityId, 'action' => Log::ACTION_RESULT, 'outcome' => SendOutcome::PENDING];
+    }
+
+    // a condição é conferida com a linha bloqueada e relida: de dois processos, só um a vê valer
+    private function changePending(Log $log, callable $allowed, callable $change): bool
+    {
+        $em = App::i()->em;
+        $em->beginTransaction();
+
+        try {
+            $em->find(Log::class, $log->id, LockMode::PESSIMISTIC_WRITE);
+            $changes = $log->outcome === SendOutcome::PENDING && $allowed();
+
+            if ($changes) {
+                $change();
+                $log->updateTimestamp = new DateTime;
+                // só o envelope: o flush geral levaria o que mais estivesse em memória
+                $em->flush($log);
+            }
+
+            $em->commit();
+
+            return $changes;
+        } catch (Throwable $error) {
+            $em->rollback();
+            $this->report($log->opportunityId, $error);
+
+            return false;
+        }
+    }
+
+    // vencido não é abandonado: fecha em erro, sem desfecho conhecido, e o envio seguinte passa pela conciliação
+    private function expireStaleResultSends(int $opportunityId): void
+    {
+        $limit = $this->secondsAgo(self::RESULT_LOCK_SECONDS);
+
+        foreach (App::i()->repo(Log::class)->findBy($this->pendingResultSendsOf($opportunityId)) as $log) {
+            $this->changePending($log, fn() => ($log->startedAt ?? $log->createTimestamp) < $limit, fn() => $log->outcome = SendOutcome::ERROR);
+        }
+    }
+
+    private function secondsAgo(int $seconds): DateTime
+    {
+        return new DateTime("-{$seconds} seconds");
+    }
+
+    // o valor recebido de uma linha recusada pode ser o CPF de um contemplado
+    private function withoutReceivedValues(?string $body): ?string
+    {
+        $decoded = $body === null ? null : json_decode($body, true);
+
+        if (!is_array($decoded) || !isset($decoded['inconsistencias']) || !is_array($decoded['inconsistencias'])) {
+            return $body;
+        }
+
+        $decoded['inconsistencias'] = array_map(fn($item) => is_array($item) ? array_diff_key($item, ['valor_recebido' => true]) : $item, $decoded['inconsistencias']);
+
+        return json_encode($decoded, self::JSON_FLAGS);
     }
 
     // consulta direta, não $log->attempts: a coleção inversa não enxerga a tentativa gravada na mesma sessão
@@ -232,7 +398,8 @@ class SendLogger
     {
         $user = App::i()->user;
 
-        return $user instanceof User ? $user : null;
+        // referência, não a instância: depois de um clear do EntityManager ela está destacada e o flush recusa
+        return $user instanceof User ? App::i()->em->getReference(User::class, $user->id) : null;
     }
 
     private function sanitized(?string $value, int $maxBytes = self::MAX_STORED_BYTES): ?string

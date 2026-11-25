@@ -37,11 +37,11 @@ class OpportunityPayloadScalarTest extends TestCase
         $this->assertSame(ExecutionType::CULTURAL_EXECUTION->text(), $this->payloadOf($opportunity)['forma_de_execucao']);
     }
 
-    function testStatusGoesAsIdAndName()
+    function testStatusGoesAsIdAndLabel()
     {
         $payload = $this->payloadOf($this->sealed(Opportunity::STATUS_ENABLED));
 
-        $this->assertSame(['id' => 1, 'nome' => 'Ativado'], $payload['status']);
+        $this->assertSame(['id' => 1, 'label' => 'Ativado'], $payload['status']);
     }
 
     function testDatesGoInRfc3339WithTheInstallationTimezone()

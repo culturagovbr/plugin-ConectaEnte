@@ -3,6 +3,7 @@
 namespace Tests\ConectaEnte;
 
 use ConectaEnte\Http\Client;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 
@@ -17,7 +18,63 @@ class ClientSendOpportunityTest extends TestCase
         $result = (new Client(self::HOST, $transport))->sendOpportunity('um-token', ['id' => 7]);
 
         $this->assertTrue($result->accepted);
+        $this->assertFalse($result->failed);
         $this->assertSame(42, $result->response['id_par_edital']);
+    }
+
+    public static function bodiesThatAreNotJson(): array
+    {
+        return [
+            'html' => ['<html>Bad Gateway</html>'],
+            'vazio' => [''],
+            'null' => ['null'],
+            'texto JSON' => ['"ok"'],
+        ];
+    }
+
+    #[DataProvider('bodiesThatAreNotJson')]
+    function testATwoHundredWithoutJsonIsAFailureInsteadOfAnAcceptance(string $body)
+    {
+        $result = (new Client(self::HOST, FakeTransport::replying(200, $body)))->sendOpportunity('um-token', []);
+
+        $this->assertFalse($result->accepted, 'Sem JSON não há como ler o id do edital.');
+        $this->assertTrue($result->failed);
+        $this->assertFalse($result->unreachable, 'O CultBR respondeu: retentar não traria o corpo de volta.');
+        $this->assertSame('A Plataforma CultBR respondeu ao envio do edital sem um JSON válido (HTTP 200).', $result->message);
+    }
+
+    public static function jsonBodiesWithoutAUsableId(): array
+    {
+        return [
+            'objeto vazio' => ['{}'],
+            'lista vazia' => ['[]'],
+            'lista com o id' => ['[{"id_par_edital": 1}]'],
+            'sem a chave' => ['{"status": "aberto"}'],
+            'id nulo' => ['{"id_par_edital": null}'],
+            'id em texto' => ['{"id_par_edital": "1"}'],
+            'id zero' => ['{"id_par_edital": 0}'],
+            'id negativo' => ['{"id_par_edital": -5}'],
+            'id fracionário' => ['{"id_par_edital": 1.5}'],
+        ];
+    }
+
+    #[DataProvider('jsonBodiesWithoutAUsableId')]
+    function testATwoHundredWithoutAPositiveIntegerIdIsAFailure(string $body)
+    {
+        $result = (new Client(self::HOST, FakeTransport::replying(200, $body)))->sendOpportunity('um-token', []);
+
+        $this->assertFalse($result->accepted, 'Sem o id, o resultado do edital não teria para onde ir.');
+        $this->assertTrue($result->failed);
+        $this->assertFalse($result->unreachable, 'O CultBR respondeu: retentar não traria o id de volta.');
+        $this->assertSame('A Plataforma CultBR respondeu ao envio do edital sem o id do edital (id_par_edital).', $result->message);
+        $this->assertNull($result->parEditalId());
+    }
+
+    function testAnAcceptedSendExposesTheParEditalId()
+    {
+        $result = (new Client(self::HOST, FakeTransport::replying(200, '{"id_par_edital": 53781}')))->sendOpportunity('um-token', []);
+
+        $this->assertSame(53781, $result->parEditalId());
     }
 
     function testSendsTheBodyAsJsonWithTheTokenHeader()
@@ -55,6 +112,7 @@ class ClientSendOpportunityTest extends TestCase
 
             $this->assertFalse($result->accepted);
             $this->assertFalse($result->unreachable, "status {$status} não pode virar unreachable");
+            $this->assertFalse($result->failed, "status {$status} é recusa, não falha");
             $this->assertSame('motivo', $result->message);
         }
     }
@@ -158,6 +216,7 @@ class ClientSendOpportunityTest extends TestCase
 
         $this->assertTrue($result->unreachable);
         $this->assertFalse($result->accepted);
+        $this->assertFalse($result->failed, 'O 5xx segue retentável: não é a falha definitiva do 200 sem JSON.');
     }
 
     function testTransportFailureIsUnreachable()

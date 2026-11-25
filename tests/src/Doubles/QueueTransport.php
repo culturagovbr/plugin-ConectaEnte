@@ -23,7 +23,7 @@ class QueueTransport implements TransportInterface
         return new self($queue);
     }
 
-    public function get(string $url, array $headers = []): Response
+    public function get(string $url, array $headers = [], bool $queued = false): Response
     {
         $this->requestedUrls[] = $url;
 
@@ -38,6 +38,11 @@ class QueueTransport implements TransportInterface
     public function post(string $url, array $body, array $headers = []): Response
     {
         return $this->recorded($url, $body);
+    }
+
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response
+    {
+        return $this->recorded($url, ['fields' => $fields, 'files' => $files]);
     }
 
     private function recorded(string $url, array $body): Response

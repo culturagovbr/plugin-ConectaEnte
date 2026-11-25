@@ -2,6 +2,7 @@
 
 namespace ConectaEnte\Services;
 
+use ConectaEnte\Entities\FederativeEntity;
 use ConectaEnte\Entities\Log;
 use ConectaEnte\Http\HttpExchange;
 use ConectaEnte\Http\SendResult;
@@ -60,14 +61,20 @@ class OpportunitySender
         // o cliente precisa sobreviver à chamada: é dele que saem as trocas que viram tentativas
         $client = $this->plugin->client();
         $result = $client->sendOpportunity($federativeEntity->token, $payload);
+        $owner = $result->accepted ? $this->ownerOfParEdital($result->parEditalId(), $opportunity) : null;
 
         $outcome = match (true) {
             $result->unreachable => SendOutcome::unavailable($this->unavailableReason($result)),
+            $owner !== null => SendOutcome::error($this->ownedElsewhereReason($result->parEditalId(), $owner, $opportunity)),
             $result->accepted => SendOutcome::success(),
+            $result->failed => SendOutcome::error($result->message),
             default => SendOutcome::rejected($result->message ?? i::__('A Plataforma CultBR recusou o envio.')),
         };
 
-        $this->keepParEditalId($opportunity, $result, $log);
+        if ($outcome->status === SendOutcome::SUCCESS) {
+            $this->keepParEditalId($opportunity, $result, $federativeEntity, $log);
+        }
+
         $this->recordAttempts($log, $client->exchanges(), $outcome, $attempt);
 
         // indisponível não é desfecho final: quem decide reenfileirar é o job, que sabe a tentativa atual
@@ -121,33 +128,43 @@ class OpportunitySender
         return trim(implode(' ', $shown) . ($rest > 0 ? ' ' . sprintf(i::__('E outros %d campos.'), $rest) : ''));
     }
 
-    // a resposta aceita traz o id do edital no CultBR: guardá-lo é o que permite correlacionar os dois lados
-    private function keepParEditalId(Opportunity $opportunity, SendResult $result, ?Log $log): void
+    private function keepParEditalId(Opportunity $opportunity, SendResult $result, FederativeEntity $federativeEntity, ?Log $log): void
     {
-        $id = $result->response['id_par_edital'] ?? null;
+        $id = $result->parEditalId();
 
-        if ($id === null) {
-            return;
-        }
-
-        if ($owner = $this->opportunityOwningParEdital((string) $id, $opportunity)) {
-            App::i()->log->error("ConectaEnte: o edital {$id} do CultBR já é da oportunidade {$owner}; o id não foi gravado na {$opportunity->id}.");
-
-            return;
+        // o resultado enviado era do edital antigo: com outro id, o estado dele não vale para o novo
+        if ((string) $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID) !== (string) $id) {
+            foreach (CultBrMetadata::RESULT_STATE_KEYS as $key) {
+                $opportunity->{$key} = null;
+            }
         }
 
         $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_ID, (string) $id);
+        $opportunity->setMetadata(CultBrMetadata::PAR_EDITAL_FEDERATIVE_ENTITY_DOCUMENT, $federativeEntity->document);
+
+        // eco sem a ação não apaga o tipo que um envio anterior trouxe
+        if ($actionType = $result->parActionTypeId()) {
+            $opportunity->setMetadata(CultBrMetadata::PAR_ACTION_TYPE_ID, (string) $actionType);
+        }
+
         $opportunity->saveMetadata();
 
         if ($log) {
-            $this->plugin->sendLogger()->keepParEdital($log, (int) $id);
+            $this->plugin->sendLogger()->keepParEdital($log, $id);
         }
     }
 
-    // um edital do CultBR pertence a uma oportunidade só: gravar o id de outra é pior do que não gravar
-    private function opportunityOwningParEdital(string $id, Opportunity $opportunity): ?int
+    private function ownedElsewhereReason(int $id, int $owner, Opportunity $opportunity): string
     {
-        $rows = App::i()->repo(OpportunityMeta::class)->findBy(['key' => CultBrMetadata::PAR_EDITAL_ID, 'value' => $id]);
+        App::i()->log->error("ConectaEnte: o edital {$id} do CultBR já é da oportunidade {$owner}; o id não foi gravado na {$opportunity->id}.");
+
+        return sprintf(i::__('O CultBR devolveu o edital %d, que já pertence à oportunidade %d. O id não foi gravado.'), $id, $owner);
+    }
+
+    /** A outra oportunidade que já guarda este edital do CultBR, se houver: o edital tem uma dona só. */
+    public function ownerOfParEdital(int $id, Opportunity $opportunity): ?int
+    {
+        $rows = App::i()->repo(OpportunityMeta::class)->findBy(['key' => CultBrMetadata::PAR_EDITAL_ID, 'value' => (string) $id]);
 
         foreach ($rows as $row) {
             if ($row->owner && $row->owner->id !== $opportunity->id) {

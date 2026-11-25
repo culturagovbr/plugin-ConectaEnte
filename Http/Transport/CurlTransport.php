@@ -14,14 +14,14 @@ class CurlTransport implements TransportInterface
     const QUEUED_CONNECT_TIMEOUT = 30;
     const QUEUED_TIMEOUT = 60;
 
-    public function get(string $url, array $headers = []): Response
+    public function get(string $url, array $headers = [], bool $queued = false): Response
     {
         $curl = curl_init($url);
 
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => self::INTERACTIVE_CONNECT_TIMEOUT,
-            CURLOPT_TIMEOUT => self::INTERACTIVE_TIMEOUT,
+            CURLOPT_CONNECTTIMEOUT => $queued ? self::QUEUED_CONNECT_TIMEOUT : self::INTERACTIVE_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => $queued ? self::QUEUED_TIMEOUT : self::INTERACTIVE_TIMEOUT,
             CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
         ]);
 
@@ -36,6 +36,37 @@ class CurlTransport implements TransportInterface
     public function post(string $url, array $body, array $headers = []): Response
     {
         return $this->write('POST', $url, $body, $headers);
+    }
+
+    // a API recebe `arquivos` repetido, e o array de campos do curl não repete nome: o corpo é montado aqui
+    public function postMultipart(string $url, array $fields, array $files, array $headers = []): Response
+    {
+        $boundary = 'conectaente' . bin2hex(random_bytes(12));
+        $body = '';
+
+        foreach ($fields as [$name, $value]) {
+            $body .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$name}\"\r\n\r\n{$value}\r\n";
+        }
+
+        foreach ($files as $file) {
+            $filename = str_replace('"', '', $file['filename']);
+            $body .= "--{$boundary}\r\nContent-Disposition: form-data; name=\"{$file['name']}\"; filename=\"{$filename}\"\r\nContent-Type: {$file['mime']}\r\n\r\n" . file_get_contents($file['path']) . "\r\n";
+        }
+
+        $body .= "--{$boundary}--\r\n";
+        $headers['Content-Type'] = "multipart/form-data; boundary={$boundary}";
+
+        $curl = curl_init($url);
+        curl_setopt_array($curl, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => self::QUEUED_CONNECT_TIMEOUT,
+            CURLOPT_TIMEOUT => self::QUEUED_TIMEOUT,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => array_map(fn($name, $value) => "$name: $value", array_keys($headers), $headers),
+        ]);
+
+        return $this->execute($curl);
     }
 
     private function write(string $verb, string $url, array $body, array $headers): Response
