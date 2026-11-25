@@ -60,6 +60,10 @@ final class ResultRows
         $context ??= $this->context($opportunity);
         $pending = 0;
 
+        if (!$context['hasSpreadsheet']) {
+            return 0;
+        }
+
         foreach ($this->batches($opportunity) as $registrations) {
             foreach ($this->build($opportunity, $registrations, $context) as $row) {
                 $pending += $row['pending'] ? 1 : 0;

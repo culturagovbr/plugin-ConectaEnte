@@ -226,6 +226,28 @@ class ResultRowsTest extends TestCase
         $this->assertSame(0, json_decode($this->app->response->getHeaderLine('API-Metadata'), true)['count']);
     }
 
+    function testWithoutSpreadsheetTheRegistrationsAreNotReadToCountThePending()
+    {
+        $opportunity = $this->edital();
+        $this->awarded($opportunity, 2);
+        Plugin::instance()->transport = \Tests\ConectaEnte\Doubles\FakeTransport::replying(200, ['possui_planilha' => false, 'campos' => []]);
+        $this->app->mscache->deleteAll();
+        $opportunity = $this->reloaded($opportunity);
+        $opportunity->lastPhase;
+        $logger = new \Doctrine\DBAL\Logging\DebugStack;
+        $configuration = $this->app->em->getConnection()->getConfiguration();
+        $configuration->setSQLLogger($logger);
+
+        try {
+            $pending = $this->rows()->pendingRowCount($opportunity);
+        } finally {
+            $configuration->setSQLLogger(null);
+        }
+
+        $this->assertSame(0, $pending);
+        $this->assertSame([], array_filter($logger->queries, fn($query) => preg_match('/FROM registration\b/i', $query['sql'])));
+    }
+
     function testTheApiRouteRefusesWhoDoesNotControlTheEdital()
     {
         $opportunity = $this->edital();
