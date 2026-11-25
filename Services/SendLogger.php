@@ -7,6 +7,7 @@ use ConectaEnte\Entities\LogAttempt;
 use ConectaEnte\Http\HttpExchange;
 use ConectaEnte\Http\SendAcceptance;
 use DateTime;
+use Doctrine\DBAL\LockMode;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\User;
@@ -256,20 +257,9 @@ class SendLogger
         $app->em->flush();
 
         // dois cliques no mesmo instante abrem dois envelopes: o mais novo cede ao mais antigo
-        $yielded = (int) $app->em->createQuery(
-            'UPDATE ' . Log::class . ' l
-                SET l.outcome = :abandoned, l.updateTimestamp = :now
-              WHERE l.id = :id AND l.outcome = :pending
-                AND EXISTS (SELECT o.id FROM ' . Log::class . ' o
-                             WHERE o.opportunityId = :opportunityId AND o.action = :action AND o.outcome = :pending AND o.id < :id)'
-        )->execute([
-            'abandoned' => SendOutcome::ABANDONED,
-            'now' => new DateTime,
-            'id' => $log->id,
-            'pending' => SendOutcome::PENDING,
-            'opportunityId' => $opportunity->id,
-            'action' => Log::ACTION_RESULT,
-        ]);
+        $oldest = $this->oldestPendingResultSend((int) $opportunity->id);
+        $yielded = $oldest && $oldest->id < $log->id
+            && $this->changePending($log, fn() => true, fn() => $log->outcome = SendOutcome::ABANDONED);
 
         return $yielded ? null : $log;
     }
@@ -279,19 +269,21 @@ class SendLogger
     {
         $this->expireStaleResultSends((int) $opportunity->id);
 
-        return App::i()->repo(Log::class)->findOneBy(['opportunityId' => $opportunity->id, 'action' => Log::ACTION_RESULT, 'outcome' => SendOutcome::PENDING], ['id' => 'ASC']);
+        return $this->oldestPendingResultSend((int) $opportunity->id);
     }
 
     /** Marca o início do job no envelope; false se ele já não está pendente ou já foi começado. */
     public function claimResultSend(Log $log): bool
     {
-        return $this->conditionalUpdate($log, 'l.startedAt = :now', 'l.startedAt IS NULL', ['now' => new DateTime]);
+        return $this->changePending($log, fn() => $log->startedAt === null, fn() => $log->startedAt = new DateTime);
     }
 
     /** Imediatamente antes do POST: confirma que o envelope segue pendente e no prazo de postar, e o marca como enviado. */
     public function confirmResultPost(Log $log): bool
     {
-        return $this->conditionalUpdate($log, 'l.posted = true', 'l.startedAt >= :limit', ['limit' => $this->secondsAgo(self::RESULT_POST_DEADLINE_SECONDS)]);
+        $limit = $this->secondsAgo(self::RESULT_POST_DEADLINE_SECONDS);
+
+        return $this->changePending($log, fn() => $log->startedAt !== null && $log->startedAt >= $limit, fn() => $log->posted = true);
     }
 
     /** Guarda no envelope o que o envio de resultado precisa para a conciliação do seguinte. */
@@ -309,41 +301,52 @@ class SendLogger
         }
     }
 
-    private function conditionalUpdate(Log $log, string $set, string $condition, array $parameters): bool
+    private function oldestPendingResultSend(int $opportunityId): ?Log
     {
+        return App::i()->repo(Log::class)->findOneBy($this->pendingResultSendsOf($opportunityId), ['id' => 'ASC']);
+    }
+
+    private function pendingResultSendsOf(int $opportunityId): array
+    {
+        return ['opportunityId' => $opportunityId, 'action' => Log::ACTION_RESULT, 'outcome' => SendOutcome::PENDING];
+    }
+
+    // a condição é conferida com a linha bloqueada e relida: de dois processos, só um a vê valer
+    private function changePending(Log $log, callable $allowed, callable $change): bool
+    {
+        $em = App::i()->em;
+        $em->beginTransaction();
+
         try {
-            $updated = (int) App::i()->em->createQuery(
-                'UPDATE ' . Log::class . " l SET {$set}, l.updateTimestamp = :touched WHERE l.id = :id AND l.outcome = :pending AND {$condition}"
-            )->execute($parameters + ['touched' => new DateTime, 'id' => $log->id, 'pending' => SendOutcome::PENDING]);
+            $em->find(Log::class, $log->id, LockMode::PESSIMISTIC_WRITE);
+            $changes = $log->outcome === SendOutcome::PENDING && $allowed();
+
+            if ($changes) {
+                $change();
+                $log->updateTimestamp = new DateTime;
+                // só o envelope: o flush geral levaria o que mais estivesse em memória
+                $em->flush($log);
+            }
+
+            $em->commit();
+
+            return $changes;
         } catch (Throwable $error) {
+            $em->rollback();
             $this->report($log->opportunityId, $error);
 
             return false;
         }
-
-        if ($updated === 1) {
-            App::i()->em->refresh($log);
-        }
-
-        return $updated === 1;
     }
 
     // vencido não é abandonado: fecha em erro, sem desfecho conhecido, e o envio seguinte passa pela conciliação
     private function expireStaleResultSends(int $opportunityId): void
     {
-        App::i()->em->createQuery(
-            'UPDATE ' . Log::class . ' l
-                SET l.outcome = :error, l.updateTimestamp = :now
-              WHERE l.opportunityId = :opportunityId AND l.action = :action AND l.outcome = :pending
-                AND ((l.startedAt IS NULL AND l.createTimestamp < :limit) OR l.startedAt < :limit)'
-        )->execute([
-            'error' => SendOutcome::ERROR,
-            'now' => new DateTime,
-            'opportunityId' => $opportunityId,
-            'action' => Log::ACTION_RESULT,
-            'pending' => SendOutcome::PENDING,
-            'limit' => $this->secondsAgo(self::RESULT_LOCK_SECONDS),
-        ]);
+        $limit = $this->secondsAgo(self::RESULT_LOCK_SECONDS);
+
+        foreach (App::i()->repo(Log::class)->findBy($this->pendingResultSendsOf($opportunityId)) as $log) {
+            $this->changePending($log, fn() => ($log->startedAt ?? $log->createTimestamp) < $limit, fn() => $log->outcome = SendOutcome::ERROR);
+        }
     }
 
     private function secondsAgo(int $seconds): DateTime

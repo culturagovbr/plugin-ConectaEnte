@@ -73,6 +73,43 @@ class ResultSendLogTest extends TestCase
         $this->assertFalse($this->logger()->claimResultSend($log));
     }
 
+    function testAnEnvelopeClosedByAnotherProcessIsNotClaimed()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->logger()->openResultSend($this->createOpportunity());
+        $this->app->em->getConnection()->update('conectaente_log', ['outcome' => SendOutcome::ABANDONED], ['id' => $log->id]);
+
+        $this->assertFalse($this->logger()->claimResultSend($log), 'O que vale é a linha no banco, não a cópia em memória.');
+    }
+
+    function testOfTwoEnvelopesOpenedTogetherTheNewerYields()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $opportunity = $this->createOpportunity();
+        $events = $this->app->em->getEventManager();
+        $concurrent = new class ($this->app->em->getConnection(), $opportunity->id) {
+            public function __construct(private $connection, private int $opportunityId)
+            {
+            }
+
+            public function prePersist(): void
+            {
+                $this->connection->executeStatement(
+                    "INSERT INTO conectaente_log (id, uuid, opportunity_id, action, outcome, posted, seen_result_read, create_timestamp) VALUES (nextval('conectaente_log_id_seq'), 'concorrente', ?, 'result', 'pending', false, false, now())",
+                    [$this->opportunityId]
+                );
+            }
+        };
+        $events->addEventListener('prePersist', $concurrent);
+
+        $mine = $this->logger()->openResultSend($opportunity);
+
+        $events->removeEventListener('prePersist', $concurrent);
+        $pending = $this->app->repo(Log::class)->findBy(['opportunityId' => $opportunity->id, 'outcome' => SendOutcome::PENDING]);
+        $this->assertNull($mine, 'Dois cliques no mesmo instante não publicam dois resultados.');
+        $this->assertSame(['concorrente'], array_map(fn($log) => $log->uuid, $pending));
+    }
+
     function testThePostIsRefusedAfterTheLockExpires()
     {
         $this->loginAsSaasSuperAdmin();
