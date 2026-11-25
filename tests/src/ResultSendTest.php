@@ -19,6 +19,7 @@ use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Doubles\RoutedTransport;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
+use Tests\Traits\RegistrationFieldBuilder;
 use Tests\Traits\RequestFactory;
 
 /**
@@ -27,6 +28,7 @@ use Tests\Traits\RequestFactory;
 class ResultSendTest extends TestCase
 {
     use PublicationRequirementsFixtures;
+    use RegistrationFieldBuilder;
     use RequestFactory;
 
     const STRUCTURE = ['id_formulario' => 109, 'id_formulario_versao' => 541, 'versao' => 12, 'secoes' => []];
@@ -534,6 +536,19 @@ class ResultSendTest extends TestCase
 
         $errors = json_decode(json_encode($this->reloaded($opportunity)->{CultBrMetadata::RESULT_SEND_ERRORS}), true);
         $this->assertArrayNotHasKey('edited', $errors['rows'][0]);
+    }
+
+    function testChangingTheMappingOfTheColumnSettlesItsRefusals()
+    {
+        $opportunity = $this->refusedEdital(['rows' => [['registrationId' => 31, 'coluna' => 'cnpj', 'linha' => 2], ['registrationId' => 32, 'coluna' => 'cpf', 'linha' => 3]]]);
+        $this->app->mscache->save('conectaente:result-spreadsheet:' . $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID), ['possui_planilha' => true, 'campos' => [['coluna' => 'cnpj', 'tipo' => 'cnpj'], ['coluna' => 'cpf', 'tipo' => 'cpf']]], 60);
+        $field = $this->registrationFieldBuilder->reset($opportunity, 'cnpj', uniqid('campo-'))->fillRequiredProperties()->save()->getInstance();
+
+        $this->assertSame([], $this->resultService()->saveMapping($this->reloaded($opportunity), ['documents' => ['MEI' => ['cnpj' => $field->id]]]));
+
+        $errors = json_decode(json_encode($this->reloaded($opportunity)->{CultBrMetadata::RESULT_SEND_ERRORS}), true);
+        $this->assertTrue($errors['rows'][0]['edited']);
+        $this->assertArrayNotHasKey('edited', $errors['rows'][1], 'A coluna que não mudou segue marcada.');
     }
 
     function testAnExpiredSendIsToldInTheTab()

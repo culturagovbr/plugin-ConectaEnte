@@ -260,6 +260,25 @@ final class ResultService
         return $error;
     }
 
+    /** Grava o de/para; a recusa do CultBR nas colunas que mudaram deixa de ser marcada. */
+    public function saveMapping(Opportunity $opportunity, array $input): array
+    {
+        $spreadsheet = $this->plugin->resultSpreadsheet();
+        $kinds = array_column((array) ($spreadsheet->model($opportunity)->body['campos'] ?? []), 'tipo', 'coluna');
+        $sourceOf = fn(array $mapping, string $column) => [
+            $mapping['columns'][$column] ?? null,
+            $mapping['equivalences'][$column] ?? [],
+            array_column($mapping['documents'], $kinds[$column] ?? ''),
+        ];
+
+        $before = $spreadsheet->mapping($opportunity);
+        $errors = $spreadsheet->save($opportunity, $input);
+        $after = $spreadsheet->mapping($opportunity);
+        $this->settleRefusals($opportunity, 'rows', fn($row) => isset($row['coluna']) && $sourceOf($before, $row['coluna']) !== $sourceOf($after, $row['coluna']));
+
+        return $errors;
+    }
+
     private function settleRefusals(Opportunity $opportunity, string $kind, callable $isSettled): void
     {
         $errors = json_decode(json_encode($opportunity->{CultBrMetadata::RESULT_SEND_ERRORS}), true);

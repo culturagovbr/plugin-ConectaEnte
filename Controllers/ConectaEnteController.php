@@ -377,7 +377,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
     function POST_resultMapping()
     {
         $opportunity = $this->controlledOpportunity();
-        $errors = Plugin::instance()->resultSpreadsheet()->save($opportunity, (array) $this->postData);
+        $errors = Plugin::instance()->resultService()->saveMapping($opportunity, (array) $this->postData);
 
         $this->json(['errors' => (object) $errors, 'mapping' => Plugin::instance()->resultSpreadsheet()->mappingView($opportunity)]);
     }
