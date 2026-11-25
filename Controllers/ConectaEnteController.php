@@ -353,7 +353,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
     }
 
     /**
-     * Grava o formulário de resultado inteiro: aplica as respostas válidas e devolve o erro das recusadas.
+     * Grava as respostas recebidas do formulário de resultado: aplica as válidas e devolve o erro das recusadas.
      */
     function POST_resultAnswers()
     {
