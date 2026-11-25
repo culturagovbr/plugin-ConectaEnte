@@ -42,14 +42,25 @@
 
 // a situação acompanha a leitura do formulário, que é longo
 .conectaente-result-tab__aside .mc-card {
+    --conectaente-card-padding: 1.5rem;
     max-height: calc(100vh - 8rem);
     overflow-y: auto;
     position: sticky;
     top: 1rem;
 }
 
+.conectaente-result-tab__actions {
+    background: var(--mc-white);
+    bottom: calc(-1 * var(--conectaente-card-padding));
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: calc(-1 * var(--conectaente-card-padding));
+    padding: 1rem 0 var(--conectaente-card-padding);
+    position: sticky;
+}
+
 .conectaente-result-tab__send {
-    margin-top: 1rem;
     width: 100%;
 
     // o :hover do botão do tema pintaria o desabilitado

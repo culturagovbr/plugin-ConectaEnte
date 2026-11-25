@@ -233,13 +233,14 @@ $this->import('
                         <p v-if="result.lastSend.resultId" class="conectaente-result-tab__current">{{ text('resultado_vigente', { id: result.lastSend.resultId, tipo: text('tipo_' + result.lastSend.type) }) }}</p>
                     </section>
 
-                    <small v-if="isSaving" class="field__description"><?php i::_e('Salvando...') ?></small>
-                    <mc-alert v-if="saveFailure" type="danger" small>{{ saveFailure }}</mc-alert>
-                    <mc-alert v-if="sendRefusal" type="danger" small>{{ sendRefusal }}</mc-alert>
-
-                    <button v-if="result.sendButton || isSending" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="isSending || isSaving || refused.length > 0 || refusedCells > 0" :aria-busy="isSending" @click="send()">
-                        {{ sendLabel }}
-                    </button>
+                    <div class="conectaente-result-tab__actions">
+                        <small v-if="isSaving" class="field__description"><?php i::_e('Salvando...') ?></small>
+                        <mc-alert v-if="saveFailure" type="danger" small>{{ saveFailure }}</mc-alert>
+                        <mc-alert v-if="sendRefusal" type="danger" small>{{ sendRefusal }}</mc-alert>
+                        <button v-if="result.sendButton || isSending" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="isSending || isSaving || refused.length > 0 || refusedCells > 0" :aria-busy="isSending" @click="send()">
+                            {{ sendLabel }}
+                        </button>
+                    </div>
                 </template>
             </mc-card>
         </aside>
