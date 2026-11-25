@@ -377,6 +377,34 @@ class ResultSendTest extends TestCase
         $this->assertCount(1, $this->transport->posts, 'O 20073 já estava lá antes: é resultado de outro envio.');
     }
 
+    // o CultBR pode concluir depois de o POST estourar o tempo
+    function testTheSamePublishedIdRightAfterThePostIsStillUncertain()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20073])]);
+        $log = $this->unansweredSend($opportunity, seenResultId: 20073, age: '-4 minutes');
+
+        $this->assertSame(ResultState::UNCERTAIN, $this->resultService()->stateOf($this->reloaded($opportunity))->state);
+        $this->assertFalse($this->resultService()->requestSend($this->reloaded($opportunity))['queued'], 'Um novo clique publicaria um segundo resultado.');
+        $this->assertNull($this->reloadedLog($log)->reconciledAt);
+    }
+
+    function testTheSamePublishedIdAfterTheWaitGivesTheButtonBack()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20073])]);
+        $this->unansweredSend($opportunity, seenResultId: 20073, age: '-6 minutes');
+
+        $this->assertTrue($this->resultService()->stateOf($this->reloaded($opportunity))->hasSendButton());
+    }
+
+    function testANewPublishedIdRightAfterThePostIsAdoptedWithoutWaiting()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20074])]);
+        $this->unansweredSend($opportunity, seenResultId: 20073, age: 'now');
+
+        $this->assertSame(ResultState::SENT, $this->resultService()->stateOf($this->reloaded($opportunity))->state);
+        $this->assertSame('20074', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::RESULT_ID));
+    }
+
     function testAnIndeterminatePreviousReadingIsNeverAdopted()
     {
         $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20074])]);
@@ -715,7 +743,7 @@ class ResultSendTest extends TestCase
         return $log;
     }
 
-    private function unansweredSend(Opportunity $opportunity, ?int $seenResultId, bool $seenResultRead = true, bool $posted = true): Log
+    private function unansweredSend(Opportunity $opportunity, ?int $seenResultId, bool $seenResultRead = true, bool $posted = true, string $age = '-11 minutes'): Log
     {
         $logger = Plugin::instance()->sendLogger();
         $log = $logger->openResultSend($this->reloaded($opportunity));
@@ -728,8 +756,18 @@ class ResultSendTest extends TestCase
 
         $logger->recordAttempts($log, [new HttpExchange(endpoint: 'https://cultbr.example/resultado', errorMessage: 'timeout')], SendOutcome::ERROR, 1, 1);
         $logger->finish($log, SendOutcome::ERROR);
+        $this->backdateAttempts($log, $age);
 
         return $log;
+    }
+
+    private function backdateAttempts(Log $log, string $age): void
+    {
+        foreach ($this->app->repo(\ConectaEnte\Entities\LogAttempt::class)->findBy(['log' => $log]) as $attempt) {
+            $attempt->sentAt = new \DateTime($age);
+        }
+
+        $this->app->em->flush();
     }
 
     private function postedSendWithoutOutcome(Opportunity $opportunity, int $seenResultId): Log

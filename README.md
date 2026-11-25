@@ -113,7 +113,7 @@ As respostas se gravam sozinhas, 1,5 s depois da última alteração. Inscritos,
 
 **Um envio por vez.** Enquanto há envio em andamento, o segundo clique é recusado e a aba acompanha o estado até o job terminar. O envio que passa de 10 minutos sem desfecho fecha como erro na leitura seguinte do estado, e o botão volta; se o POST já tinha saído, o edital passa antes pela conferência do `/publicado`. O POST só sai nos 8 primeiros minutos do job, para nunca estar em voo quando o prazo vence.
 
-**Desfecho incerto.** Se o POST ficou sem resposta (timeout ou 5xx), não há como saber se ele chegou. A aba pede conferência no CultBR, e o botão só volta depois de uma leitura determinada do `/publicado`: se apareceu um id novo, o envio chegou e é reconhecido sem reenviar; se o id é o mesmo de antes do POST, ele não chegou.
+**Desfecho incerto.** Se o POST ficou sem resposta (timeout ou 5xx), não há como saber se ele chegou. A aba pede para esperar, e o botão só volta depois de uma leitura determinada do `/publicado`: se apareceu um id novo, o envio chegou e é reconhecido sem reenviar; se o id é o mesmo de antes do POST e já se passaram 5 minutos, ele não chegou.
 
 **O que a aba mostra.** A situação do último envio (aceito, recusado, não enviado, sem resposta ou simulado), com a data, e o resultado vigente no CultBR. A recusa aparece em lista: as questões pelo texto da estrutura, as linhas pela linha, pela coluna e pela inscrição. O `valor_recebido` das linhas recusadas nunca é guardado, porque pode ser o CPF de um contemplado. O histórico de envio separa o edital do resultado, e no resultado guarda só o total e o hash das linhas, nunca o conteúdo; o documento das tabelas (comissão e contratados) sai como `***`.
 

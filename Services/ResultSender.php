@@ -28,6 +28,7 @@ final class ResultSender
     const STATUS_UNCERTAIN = 'uncertain';
     const MAX_STORED_ERRORS = 200;
     const DOCUMENT_KEYS = ['cpf', 'cnpj', 'documento', 'numero_documento'];
+    const LATE_ARRIVAL_SECONDS = 300;
 
     public function __construct(private Plugin $plugin)
     {
@@ -73,6 +74,8 @@ final class ResultSender
         // apareceu um id novo depois do POST sem resposta: é o envio que chegou
         if ($published->resultId !== $unsettled->seenResultId) {
             $this->recordSuccess($opportunity, $published->resultId, (string) $unsettled->contentHash, (int) $unsettled->resultType);
+        } elseif ($this->mayStillArrive($unsettled)) {
+            return null;
         } else {
             $this->recordStatus($opportunity, self::STATUS_ERROR, i::__('O envio anterior não chegou ao CultBR.'));
         }
@@ -81,6 +84,14 @@ final class ResultSender
         App::i()->em->flush();
 
         return $published;
+    }
+
+    // o CultBR pode concluir depois de o POST estourar o tempo: dar por perdido cedo publicaria duas vezes
+    private function mayStillArrive(Log $log): bool
+    {
+        $sentAt = App::i()->repo(LogAttempt::class)->findOneBy(['log' => $log], ['id' => 'DESC'])?->sentAt ?? $log->startedAt;
+
+        return $sentAt !== null && $sentAt > new DateTime('-' . self::LATE_ARRIVAL_SECONDS . ' seconds');
     }
 
     private function sendClaimed(Opportunity $opportunity, Log $log): void

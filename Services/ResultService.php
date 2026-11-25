@@ -168,7 +168,7 @@ final class ResultService
         $message = match ($state->state) {
             ResultState::COMPLETE, ResultState::SENT => null,
             ResultState::SENDING => i::__('Um envio deste resultado já está em andamento.'),
-            ResultState::UNCERTAIN => i::__('O último envio pode ter chegado ao CultBR. Confira lá antes de enviar de novo.'),
+            ResultState::UNCERTAIN => i::__('O último envio ficou sem resposta e pode ter chegado ao CultBR. Recarregue a página em alguns minutos para conferir antes de enviar de novo.'),
             ResultState::PENDING => i::__('O resultado tem pendências. Complete o formulário e a planilha antes de enviar.'),
             default => i::__('O resultado deste edital não pode ser enviado agora.'),
         };
