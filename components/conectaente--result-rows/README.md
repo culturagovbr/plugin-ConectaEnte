@@ -5,6 +5,11 @@ Card "Grade de contemplados" da aba de resultado: uma linha por inscrição apro
 ### Propriedades
 
 - *entity **Entity*** : a oportunidade.
+- *mappingVersion **Number** = 0* : muda a cada gravação do de/para e refaz a grade.
+
+### Eventos
+
+- *saved* : depois de cada célula gravada.
 
 ### Comportamento
 

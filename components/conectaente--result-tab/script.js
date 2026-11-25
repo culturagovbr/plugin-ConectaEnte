@@ -53,6 +53,7 @@
                 uploading: {},
                 currencyVersions: {},
                 touchedComplements: {},
+                mappingVersion: 0,
             };
         },
 
@@ -170,6 +171,11 @@
                 if (response?.ok) {
                     this.result = { ...(await response.json()), answers: this.result.answers };
                 }
+            },
+
+            mappingSaved() {
+                this.mappingVersion++;
+                this.refresh();
             },
 
             formatDate(value) {

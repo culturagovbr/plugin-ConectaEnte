@@ -5,6 +5,8 @@
     app.component('conectaente--result-mapping', {
         template: $TEMPLATES['conectaente--result-mapping'],
 
+        emits: ['saved'],
+
         props: {
             entity: {
                 type: Entity,
@@ -80,6 +82,7 @@
 
                         this.errors = body.errors || {};
                         this.view = body.mapping;
+                        this.$emit('saved');
                     } catch (error) {
                         this.messages.error(this.text('erro_salvar'));
                     } finally {

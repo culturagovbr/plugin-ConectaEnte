@@ -32,6 +32,7 @@ $this->import('
             </p>
 
             <entity-table
+                :key="mappingVersion"
                 type="registration"
                 controller="conectaente"
                 endpoint="resultRows"

@@ -7,10 +7,17 @@
     app.component('conectaente--result-rows', {
         template: $TEMPLATES['conectaente--result-rows'],
 
+        emits: ['saved'],
+
         props: {
             entity: {
                 type: Entity,
                 required: true,
+            },
+            // muda a cada gravação do de/para, que refaz as células vindas da ficha
+            mappingVersion: {
+                type: Number,
+                default: 0,
             },
         },
 
@@ -46,6 +53,12 @@
 
             query() {
                 return { opportunity: this.entity.id };
+            },
+        },
+
+        watch: {
+            mappingVersion() {
+                this.loadSummary();
             },
         },
 
@@ -94,6 +107,7 @@
                         delete this.errors[key];
                         refresh();
                         this.loadSummary();
+                        this.$emit('saved');
                         return;
                     }
 

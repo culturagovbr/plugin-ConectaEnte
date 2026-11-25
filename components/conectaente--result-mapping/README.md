@@ -6,6 +6,10 @@ Card "Planilha de contemplados" dentro da aba de resultado: o modelo de planilha
 
 - *entity **Entity*** : a oportunidade.
 
+### Eventos
+
+- *saved* : depois de cada gravação, para a grade refazer as células.
+
 ### Comportamento
 
 Lê `GET conectaente/resultMapping/{id}`. Sem planilha (`hasSpreadsheet: false`), mostra o motivo que o CultBR devolve, e o resultado sai sem linhas. Com planilha:
