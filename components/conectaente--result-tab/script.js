@@ -53,6 +53,7 @@
                 pollTimer: null,
                 uploading: {},
                 currencyVersions: {},
+                suggestedCommittee: {},
                 touchedComplements: {},
                 mappingVersion: 0,
             };
@@ -141,6 +142,7 @@
                     }
 
                     this.result = await response.json();
+                    this.suggestedCommittee = { ...(this.result.committee || {}) };
                     this.answers = JSON.parse(JSON.stringify({ ...(this.result.answers || {}), ...(this.result.committee || {}) }));
                 } catch (error) {
                     this.loadFailed = true;
@@ -160,7 +162,7 @@
                 this.saveFailed = false;
 
                 try {
-                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultAnswers', [this.entity.id]), { answers: this.answers });
+                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultAnswers', [this.entity.id]), { answers: this.answersToSave() });
 
                     if (!response.ok) {
                         throw new Error(response.status);
@@ -179,6 +181,17 @@
                         this.save();
                     }
                 }
+            },
+
+            // a comissão sugerida só é gravada depois de mexerem nela
+            answersToSave() {
+                for (const [id, rows] of Object.entries(this.suggestedCommittee)) {
+                    if (JSON.stringify(rows) !== JSON.stringify(this.answers[id])) {
+                        delete this.suggestedCommittee[id];
+                    }
+                }
+
+                return Object.fromEntries(Object.entries(this.answers).filter(([id]) => !this.suggestedCommittee[id]));
             },
 
             // só o estado: as respostas em edição ficam como estão
