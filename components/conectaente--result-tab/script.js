@@ -15,6 +15,14 @@
     const rowKeys = new WeakMap();
     let lastRowKey = 0;
 
+    function asJson(value) {
+        return JSON.stringify(value ?? null);
+    }
+
+    function jsonByQuestion(answers) {
+        return Object.fromEntries(Object.entries(answers || {}).map(([id, value]) => [id, asJson(value)]));
+    }
+
     function choiceId(choice) {
         return choice && typeof choice === 'object' ? choice.id : choice;
     }
@@ -41,19 +49,21 @@
             return {
                 result: null,
                 answers: {},
+                // json por questão: o que esta tela já gravou e o que o servidor tem
+                saved: {},
+                stored: {},
                 errors: {},
                 loading: true,
                 loadFailed: false,
                 saving: false,
-                saveAgain: false,
                 saveTimer: null,
+                saveQueue: Promise.resolve(),
                 saveFailed: false,
                 requestingSend: false,
                 sendRefusal: null,
                 pollTimer: null,
                 uploading: {},
                 currencyVersions: {},
-                suggestedCommittee: {},
                 touchedComplements: {},
                 mappingVersion: 0,
             };
@@ -70,6 +80,17 @@
 
             questionsById() {
                 return Object.fromEntries(this.steps.flatMap((step) => step.questoes || []).map((question) => [question.id_questao_etapa, question]));
+            },
+
+            unsavedIds() {
+                return Object.keys(this.answers).filter((id) => this.isAnswerable(id) && asJson(this.answers[id]) !== (id in this.saved ? this.saved[id] : asJson(null)));
+            },
+
+            // em versão nova do formulário tudo volta ao validador
+            idsToSave() {
+                const outdated = this.result.stale ? Object.keys(this.stored).filter((id) => this.isAnswerable(id)) : [];
+
+                return [...new Set([...outdated, ...this.unsavedIds])];
             },
 
             known() {
@@ -110,11 +131,12 @@
             answers: {
                 deep: true,
                 handler() {
-                    if (this.loading) {
+                    clearTimeout(this.saveTimer);
+
+                    if (this.loading || !this.unsavedIds.length) {
                         return;
                     }
 
-                    clearTimeout(this.saveTimer);
                     this.saveTimer = setTimeout(() => this.save(), AUTOSAVE_DELAY);
                 },
             },
@@ -142,8 +164,10 @@
                     }
 
                     this.result = await response.json();
-                    this.suggestedCommittee = { ...(this.result.committee || {}) };
+                    // a comissão sugerida conta como gravada até mexerem nela
                     this.answers = JSON.parse(JSON.stringify({ ...(this.result.answers || {}), ...(this.result.committee || {}) }));
+                    this.saved = jsonByQuestion(this.answers);
+                    this.stored = jsonByQuestion(this.result.answers);
                 } catch (error) {
                     this.loadFailed = true;
                 } finally {
@@ -152,17 +176,22 @@
             },
 
             // uma gravação por vez: a segunda espera a primeira e leva o formulário como estiver
-            async save() {
-                if (this.saving) {
-                    this.saveAgain = true;
-                    return;
-                }
+            save() {
+                clearTimeout(this.saveTimer);
+                this.saveQueue = this.saveQueue.then(() => (this.unsavedIds.length ? this.saveEdited() : null));
+
+                return this.saveQueue;
+            },
+
+            // só o que mudou: o formulário inteiro passaria por cima da edição de outra guia
+            async saveEdited() {
+                const edited = JSON.parse(JSON.stringify(Object.fromEntries(this.idsToSave.map((id) => [id, this.answers[id] ?? null]))));
 
                 this.saving = true;
                 this.saveFailed = false;
 
                 try {
-                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultAnswers', [this.entity.id]), { answers: this.answersToSave() });
+                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultAnswers', [this.entity.id]), { answers: edited });
 
                     if (!response.ok) {
                         throw new Error(response.status);
@@ -170,36 +199,46 @@
 
                     const body = await response.json();
                     this.errors = body.errors || {};
-                    this.result = { ...body.result, answers: this.result.answers };
+
+                    for (const id of Object.keys(edited)) {
+                        this.saved[id] = this.errors[id] ? null : asJson(edited[id]);
+                    }
+
+                    this.receive(body.result, edited);
                 } catch (error) {
                     this.saveFailed = true;
                 } finally {
                     this.saving = false;
-
-                    if (this.saveAgain) {
-                        this.saveAgain = false;
-                        this.save();
-                    }
                 }
             },
 
-            // a comissão sugerida só é gravada depois de mexerem nela
-            answersToSave() {
-                for (const [id, rows] of Object.entries(this.suggestedCommittee)) {
-                    if (JSON.stringify(rows) !== JSON.stringify(this.answers[id])) {
-                        delete this.suggestedCommittee[id];
+            // traz o que mudou em outra guia, menos o que está em edição aqui
+            receive(result, edited = {}) {
+                const unsaved = this.unsavedIds;
+                const stored = jsonByQuestion(result.answers);
+
+                for (const id of Object.keys({ ...this.stored, ...stored })) {
+                    if (stored[id] !== this.stored[id] && !(id in edited) && !unsaved.includes(id)) {
+                        this.adopt(id, result.answers[id]);
                     }
                 }
 
-                return Object.fromEntries(Object.entries(this.answers).filter(([id]) => !this.suggestedCommittee[id]));
+                this.stored = stored;
+                this.result = result;
             },
 
-            // só o estado: as respostas em edição ficam como estão
+            adopt(id, value) {
+                this.saved[id] = asJson(value);
+                this.answers[id] = JSON.parse(this.saved[id]);
+                this.renewCurrency(id);
+            },
+
+            // as respostas em edição ficam como estão
             async refresh() {
                 const response = await this.api.GET(Utils.createUrl('conectaente', 'result', [this.entity.id]), {}, { cache: 'no-store' }).catch(() => null);
 
                 if (response?.ok) {
-                    this.result = { ...(await response.json()), answers: this.result.answers };
+                    this.receive(await response.json());
                 }
             },
 
@@ -232,7 +271,7 @@
                         return;
                     }
 
-                    this.result = { ...body.result, answers: this.result.answers };
+                    this.receive(body.result);
                 } catch (error) {
                     this.sendRefusal = this.text('erro_envio');
                 } finally {
@@ -351,6 +390,12 @@
 
             suggestion(question) {
                 return this.result?.suggested?.[question.id_questao_etapa];
+            },
+
+            isAnswerable(id) {
+                const question = this.questionsById[id];
+
+                return !!question && this.isEditable(question) && this.isVisible(question);
             },
 
             isVisible(question) {
@@ -501,8 +546,12 @@
 
             useSuggestion(question) {
                 this.answers[question.id_questao_etapa] = this.suggestion(question);
-                // o campo de moeda não relê o valor que muda por fora
-                this.currencyVersions = { ...this.currencyVersions, [question.id_questao_etapa]: (this.currencyVersions[question.id_questao_etapa] || 0) + 1 };
+                this.renewCurrency(question.id_questao_etapa);
+            },
+
+            // o campo de moeda não relê o valor que muda por fora
+            renewCurrency(id) {
+                this.currencyVersions = { ...this.currencyVersions, [id]: (this.currencyVersions[id] || 0) + 1 };
             },
 
             maxFileSize(question) {
@@ -565,8 +614,7 @@
 
                 const { [question.id_questao_etapa]: removed, ...others } = this.errors;
                 this.errors = others;
-                this.result = body;
-                this.answers[question.id_questao_etapa] = body.answers?.[question.id_questao_etapa] ?? null;
+                this.receive(body);
             },
 
             goTo(question) {
