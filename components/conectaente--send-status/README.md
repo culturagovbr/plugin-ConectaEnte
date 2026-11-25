@@ -8,7 +8,7 @@ Mostra, no cabeçalho da edição da oportunidade, a situação do último envio
 
 ### Comportamento
 
-Lê `conectaente_sendStatus` e `conectaente_sendAt` — dois dos metadados que o `OpportunitySender` grava a cada envio — direto da entidade, sem requisição. São metadados públicos, então já chegam no payload da página.
+Ao carregar, lê `conectaente_sendStatus` e `conectaente_sendAt` direto da entidade. Depois de salvar ou publicar, e enquanto o edital aguarda o envio, consulta a rota `conectaente/sendStatus` por até 30 segundos, até o desfecho mudar.
 
 O indicador é um badge discreto, logo abaixo do título, e distingue sete situações:
 

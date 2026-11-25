@@ -255,6 +255,22 @@ class ConectaEnteController extends \MapasCulturais\Controller
     }
 
     /**
+     * A situação do envio do edital, para o selo do cabeçalho acompanhar o que saiu depois de carregar a página.
+     */
+    function GET_sendStatus()
+    {
+        $this->requireAuthentication();
+
+        $opportunity = $this->requestedOpportunity();
+        $opportunity->checkPermission('modify');
+
+        $this->json(Plugin::instance()->sendStatusView()->of($opportunity) + [
+            'status' => $opportunity->getMetadata(CultBrMetadata::SEND_STATUS),
+            'at' => $opportunity->getMetadata(CultBrMetadata::SEND_AT),
+        ]);
+    }
+
+    /**
      * A árvore do PAR do ente ligado à oportunidade pelo selo, para a cascata da aba.
      */
     function GET_parInformation()
