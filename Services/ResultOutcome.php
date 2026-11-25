@@ -9,8 +9,11 @@ use MapasCulturais\i;
  */
 final class ResultOutcome
 {
-    /** @param array<string, string> $columnLabels o nome de cada coluna do modelo de planilha */
-    public function __construct(private ?ResultForm $form = null, private array $columnLabels = [])
+    /**
+     * @param array<string, string> $columnLabels o nome de cada coluna do modelo de planilha
+     * @param array<int, string> $registrationNumbers o número que a grade mostra, por inscrição
+     */
+    public function __construct(private ?ResultForm $form = null, private array $columnLabels = [], private array $registrationNumbers = [])
     {
     }
 
@@ -123,7 +126,7 @@ final class ResultOutcome
         return array_map(function ($row) {
             $column = $row['coluna'] ?? null;
             $columnName = $column === null ? i::__('linha inteira') : ($this->columnLabels[$column] ?? $column);
-            $registration = isset($row['registrationId']) ? sprintf(i::__(' (inscrição %d)'), $row['registrationId']) : '';
+            $registration = isset($row['registrationId']) ? sprintf(i::__(' (inscrição %s)'), $this->registrationNumbers[$row['registrationId']] ?? $row['registrationId']) : '';
 
             return sprintf(i::__('Linha %d%s, %s: %s'), (int) ($row['linha'] ?? 0), $registration, $columnName, $row['descricao'] ?? $row['regra'] ?? '');
         }, $rows);

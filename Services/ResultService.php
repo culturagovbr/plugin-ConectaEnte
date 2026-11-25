@@ -11,6 +11,7 @@ use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
 use MapasCulturais\App;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\Registration;
 use MapasCulturais\i;
 
 final class ResultService
@@ -219,9 +220,21 @@ final class ResultService
             'errors' => json_decode(json_encode($opportunity->{CultBrMetadata::RESULT_SEND_ERRORS}), true),
         ];
 
-        $columnLabels = empty($sent['errors']['rows']) ? [] : $this->columnLabels($opportunity);
+        $rows = $sent['errors']['rows'] ?? [];
+        $outcome = $rows ? new ResultOutcome($form, $this->columnLabels($opportunity), $this->registrationNumbers($rows)) : new ResultOutcome($form);
 
-        return $sent + ['outcome' => (new ResultOutcome($form, $columnLabels))->describe($sent)];
+        return $sent + ['outcome' => $outcome->describe($sent)];
+    }
+
+    private function registrationNumbers(array $rows): array
+    {
+        $numbers = [];
+
+        foreach (App::i()->repo(Registration::class)->findBy(['id' => array_filter(array_column($rows, 'registrationId'))]) as $registration) {
+            $numbers[$registration->id] = $registration->number;
+        }
+
+        return $numbers;
     }
 
     private function columnLabels(Opportunity $opportunity): array

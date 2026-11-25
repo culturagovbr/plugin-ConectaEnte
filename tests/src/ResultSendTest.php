@@ -19,6 +19,7 @@ use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
 use Tests\ConectaEnte\Doubles\RoutedTransport;
 use Tests\ConectaEnte\Traits\PublicationRequirementsFixtures;
+use Tests\Traits\RegistrationDirector;
 use Tests\Traits\RegistrationFieldBuilder;
 use Tests\Traits\RequestFactory;
 
@@ -28,6 +29,7 @@ use Tests\Traits\RequestFactory;
 class ResultSendTest extends TestCase
 {
     use PublicationRequirementsFixtures;
+    use RegistrationDirector;
     use RegistrationFieldBuilder;
     use RequestFactory;
 
@@ -549,6 +551,19 @@ class ResultSendTest extends TestCase
         $errors = json_decode(json_encode($this->reloaded($opportunity)->{CultBrMetadata::RESULT_SEND_ERRORS}), true);
         $this->assertTrue($errors['rows'][0]['edited']);
         $this->assertArrayNotHasKey('edited', $errors['rows'][1], 'A coluna que não mudou segue marcada.');
+    }
+
+    function testTheRefusedRowIsNamedByTheNumberOfTheRegistration()
+    {
+        $opportunity = $this->refusedEdital([]);
+        $registration = $this->registrationDirector->createSentRegistrations($opportunity, 1, proponent_type: 'Pessoa Física')[0];
+        $opportunity = $this->reloaded($opportunity);
+        $opportunity->{CultBrMetadata::RESULT_SEND_ERRORS} = ['status' => 422, 'rows' => [['registrationId' => $registration->id, 'coluna' => 'cnpj', 'linha' => 2, 'descricao' => 'Recusada.']]];
+        $opportunity->saveMetadata();
+
+        $items = $this->resultService()->lastSend($this->reloaded($opportunity))['outcome']['items'];
+
+        $this->assertStringContainsString("(inscrição {$registration->number})", $items[0]);
     }
 
     function testAnExpiredSendIsToldInTheTab()
