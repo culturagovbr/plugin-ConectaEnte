@@ -272,6 +272,17 @@ class SendLogger
         return $this->oldestPendingResultSend((int) $opportunity->id);
     }
 
+    /** O último envio de resultado, se venceu sem chegar a tentar o POST. */
+    public function expiredResultSend(Opportunity $opportunity): ?Log
+    {
+        $this->expireStaleResultSends((int) $opportunity->id);
+        $log = App::i()->repo(Log::class)->findOneBy(['opportunityId' => $opportunity->id, 'action' => Log::ACTION_RESULT], ['id' => 'DESC']);
+        $expired = $log && $log->outcome === SendOutcome::ERROR && !$log->posted
+            && !App::i()->repo(LogAttempt::class)->count(['log' => $log]);
+
+        return $expired ? $log : null;
+    }
+
     /** Marca o início do job no envelope; false se ele já não está pendente ou já foi começado. */
     public function claimResultSend(Log $log): bool
     {

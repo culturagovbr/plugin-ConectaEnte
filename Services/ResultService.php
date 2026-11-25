@@ -201,15 +201,16 @@ final class ResultService
     public function lastSend(Opportunity $opportunity, ?ResultForm $form = null): ?array
     {
         $status = $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_STATUS);
+        $expired = $this->plugin->sendLogger()->expiredResultSend($opportunity);
 
-        if (!$status) {
+        if (!$status && !$expired) {
             return null;
         }
 
         $sent = [
-            'status' => $status,
-            'at' => $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_AT),
-            'reason' => $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_REASON),
+            'status' => $expired ? ResultSender::STATUS_ERROR : $status,
+            'at' => $expired ? $expired->updateTimestamp->format('Y-m-d H:i:s') : $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_AT),
+            'reason' => $expired ? i::__('O último pedido de envio não saiu no prazo e foi cancelado. Nada foi enviado; peça o envio de novo.') : $opportunity->getMetadata(CultBrMetadata::RESULT_SEND_REASON),
             'resultId' => $opportunity->getMetadata(CultBrMetadata::RESULT_ID),
             'type' => $opportunity->getMetadata(CultBrMetadata::RESULT_TYPE),
             // só a propriedade passa pelo tipo json

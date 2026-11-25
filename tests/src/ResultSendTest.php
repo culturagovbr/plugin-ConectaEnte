@@ -503,6 +503,34 @@ class ResultSendTest extends TestCase
         $this->assertNull($reloaded->getMetadata(CultBrMetadata::RESULT_SEND_STATUS));
     }
 
+    function testAnExpiredSendIsToldInTheTab()
+    {
+        $opportunity = $this->readyEdital();
+        $log = Plugin::instance()->sendLogger()->openResultSend($this->reloaded($opportunity));
+        $this->backdate($log, 'create_timestamp');
+
+        $lastSend = $this->resultService()->lastSend($this->reloaded($opportunity));
+
+        $this->assertSame(ResultSender::STATUS_ERROR, $lastSend['status']);
+        $this->assertStringContainsString('não saiu no prazo', $lastSend['outcome']['message']);
+    }
+
+    function testASendStillInTimeIsNotTold()
+    {
+        $opportunity = $this->readyEdital();
+        Plugin::instance()->sendLogger()->openResultSend($this->reloaded($opportunity));
+
+        $this->assertNull($this->resultService()->lastSend($this->reloaded($opportunity)));
+    }
+
+    function testAnExpiredSendThatMayHaveReachedTheCultBrIsNotCalledUnsent()
+    {
+        $opportunity = $this->readyEdital();
+        $this->backdate($this->postedSendWithoutOutcome($opportunity, 20073), 'started_at');
+
+        $this->assertStringNotContainsString('Nada foi enviado', (string) ($this->resultService()->lastSend($this->reloaded($opportunity))['outcome']['message'] ?? ''));
+    }
+
     private function readyEdital(int $status = Opportunity::STATUS_ENABLED, ?array $structure = null, array $publishedReplies = []): Opportunity
     {
         $opportunity = $this->sealedOpportunity($status);
