@@ -31,7 +31,7 @@ final class ResultPayload
     public function build(Opportunity $opportunity, ResultForm $form, int $type): array
     {
         $answers = $this->plugin->resultAnswers();
-        $known = $answers->computed($opportunity, $form) + $answers->saved($opportunity)['answers'];
+        $known = $answers->computed($opportunity, $form) + $answers->toSend($opportunity, $form);
         $files = $this->plugin->resultAttachments()->files($opportunity);
         $model = $this->plugin->resultSpreadsheet()->model($opportunity)->body;
 

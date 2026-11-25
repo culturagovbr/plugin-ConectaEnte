@@ -22,6 +22,10 @@ final class ResultAnswers
         Registration::STATUS_APPROVED,
     ];
 
+    public function __construct(private ResultCommittee $committee)
+    {
+    }
+
     /**
      * As calculadas e só leitura, por questão; a que não tem fonte fica de fora e volta ao gestor.
      *
@@ -97,6 +101,8 @@ final class ResultAnswers
     {
         $computed = $this->computed($opportunity, $form);
         $kept = array_intersect_key($this->saved($opportunity)['answers'], $form->questions());
+        $answers = $this->committee->toStore($opportunity, $form, $answers, $kept);
+        $complete = $this->committee->complete($answers, $form);
         $errors = [];
 
         $validator = new ResultValidator($form);
@@ -107,7 +113,7 @@ final class ResultAnswers
                 continue;
             }
 
-            $error = $this->refusal($form, $computed, (int) $id) ?? $validator->error($form->question((int) $id), $value);
+            $error = $this->refusal($form, $computed, (int) $id) ?? $validator->error($form->question((int) $id), $complete[$id]);
 
             if ($error) {
                 $errors[(int) $id] = $error;
@@ -128,6 +134,24 @@ final class ResultAnswers
     public function missing(Opportunity $opportunity, ResultForm $form): array
     {
         return (new ResultValidator($form))->missing($this->saved($opportunity)['answers'], $this->computed($opportunity, $form));
+    }
+
+    /** @return array<int, mixed> as respostas gravadas como a tela as mostra */
+    public function forScreen(Opportunity $opportunity, ResultForm $form): array
+    {
+        return $this->committee->forScreen($this->saved($opportunity)['answers'], $form);
+    }
+
+    /** @return array<int, mixed> as respostas gravadas como vão ao CultBR */
+    public function toSend(Opportunity $opportunity, ResultForm $form): array
+    {
+        return $this->committee->complete($this->saved($opportunity)['answers'], $form);
+    }
+
+    /** @return array<int, list<array>> a comissão do edital, nas questões ainda sem resposta */
+    public function committee(Opportunity $opportunity, ResultForm $form): array
+    {
+        return $this->committee->suggested($opportunity, $form, $this->saved($opportunity)['answers']);
     }
 
     /** Se as respostas gravadas são de outra versão do formulário. */

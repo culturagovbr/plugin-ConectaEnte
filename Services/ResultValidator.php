@@ -10,6 +10,7 @@ use MapasCulturais\i;
  */
 final class ResultValidator
 {
+    const TABLE_TYPES = ['tabela', 'Tabela Dinâmica'];
     const ATTACHMENT_TYPES = ['anexo', 'múltiplos anexos'];
     const CHOICE_LIST_TYPES = ['múltipla escolha', 'checkbox'];
     const DOCUMENT_COLUMNS = ['cpf', 'cnpj'];

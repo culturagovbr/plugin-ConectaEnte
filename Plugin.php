@@ -29,6 +29,7 @@ use ConectaEnte\Services\CoreFieldsDescription;
 use ConectaEnte\Services\ModelSeal;
 use ConectaEnte\Services\ResultAnswers;
 use ConectaEnte\Services\ResultAttachments;
+use ConectaEnte\Services\ResultCommittee;
 use ConectaEnte\Services\ResultRows;
 use ConectaEnte\Services\ResultSender;
 use ConectaEnte\Services\ResultService;
@@ -147,7 +148,12 @@ class Plugin extends \MapasCulturais\Plugin
 
     function resultAnswers(): ResultAnswers
     {
-        return new ResultAnswers();
+        return new ResultAnswers($this->resultCommittee());
+    }
+
+    function resultCommittee(): ResultCommittee
+    {
+        return new ResultCommittee();
     }
 
     function resultSender(): ResultSender

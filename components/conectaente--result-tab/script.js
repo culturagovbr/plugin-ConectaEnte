@@ -141,7 +141,7 @@
                     }
 
                     this.result = await response.json();
-                    this.answers = JSON.parse(JSON.stringify(this.result.answers || {}));
+                    this.answers = JSON.parse(JSON.stringify({ ...(this.result.answers || {}), ...(this.result.committee || {}) }));
                 } catch (error) {
                     this.loadFailed = true;
                 } finally {
@@ -456,6 +456,14 @@
             addRow(question) {
                 const row = Object.fromEntries(this.columns(question).map((column) => [column.key, '']));
                 this.answers[question.id_questao_etapa] = [...this.rows(question), row];
+            },
+
+            hasValuers(question) {
+                return this.rows(question).some((row) => row.agentId);
+            },
+
+            isMaskedCell(row, column) {
+                return !!row.agentId && String(row[column.key] ?? '').startsWith('***');
             },
 
             removeRow(question, index) {

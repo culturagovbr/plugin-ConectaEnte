@@ -15,6 +15,7 @@ final class ResultForm
     const TRANSFERRED_PREFIX = 'valor_total_repassado';
     // a única tabela de categorias que vai como linha única quando o edital não tem faixas
     const SINGLE_ROW_CATEGORY_TAG = 'dados_por_categoria_resultado_1_1';
+    const COMMITTEE_TAG = 'comissao_avaliadora';
     const SPREADSHEET_TAG = 'planilha_de_resultados_conforme_padrao_de_dados';
     const SPREADSHEET_UPLOAD_PREFIX = 'upload_planilha_csv';
     // as duas tags de anexo que o contrato dispensa
@@ -82,6 +83,12 @@ final class ResultForm
     public function filledByLinesIds(): array
     {
         return $this->idsWhere($this->isFilledByLines(...));
+    }
+
+    /** @return int[] as tabelas da comissão avaliadora */
+    public function committeeIds(): array
+    {
+        return $this->idsWhere(fn($question) => str_contains((string) ($question['tag'] ?? ''), self::COMMITTEE_TAG) && in_array($question['tipo_questao'] ?? null, ResultValidator::TABLE_TYPES, true));
     }
 
     /** @return int[] */

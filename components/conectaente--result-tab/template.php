@@ -124,6 +124,7 @@ $this->import('
                                     </div>
 
                                     <template v-else-if="isTable(question)">
+                                        <small v-if="hasValuers(question)" class="field__description"><?php i::_e('Avaliadores da comissão do edital. Escolha o vínculo de cada um; o CPF mascarado vai completo ao CultBR.') ?></small>
                                         <div v-for="(row, index) in rows(question)" :key="rowKey(row, index)" class="conectaente-result-row" :class="{ 'conectaente-result-row--error': errorOf(question) }">
                                             <div class="grid-12">
                                                 <div v-for="column in columns(question)" :key="column.key" class="field col-6 sm:col-12">
@@ -134,6 +135,7 @@ $this->import('
                                                             <option v-for="option in column.options" :key="option" :value="option">{{ option }}</option>
                                                         </select>
                                                         <mc-currency-input v-else-if="column.kind === 'currency'" :id="cellId(question, row, index, column)" v-model.lazy="row[column.key]" :disabled="column.readOnly"></mc-currency-input>
+                                                        <input v-else-if="isMaskedCell(row, column)" :id="cellId(question, row, index, column)" type="text" :value="row[column.key]" disabled>
                                                         <input v-else-if="column.mask" v-maska :data-maska="column.mask" :id="cellId(question, row, index, column)" type="text" v-model="row[column.key]" :disabled="column.readOnly" autocomplete="off">
                                                         <input v-else-if="column.kind === 'number'" :id="cellId(question, row, index, column)" type="number" v-model.number="row[column.key]" :disabled="column.readOnly">
                                                         <input v-else :id="cellId(question, row, index, column)" type="text" v-model="row[column.key]" :maxlength="column.max || null" :disabled="column.readOnly" autocomplete="off">
