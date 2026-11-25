@@ -24,7 +24,7 @@ final class ResultPayload
     }
 
     /**
-     * Monta o envio; devolve o motivo em `error` quando a planilha tem linha incompleta.
+     * Monta o envio, ou devolve em `error` o motivo de não poder montá-lo.
      *
      * @return array{payload: ?array, files: array, hash: ?string, linesHash: ?string, totalLines: int, lineRegistrationIds: int[], error: ?string}
      */
@@ -33,17 +33,24 @@ final class ResultPayload
         $answers = $this->plugin->resultAnswers();
         $known = $answers->computed($opportunity, $form) + $answers->saved($opportunity)['answers'];
         $files = $this->plugin->resultAttachments()->files($opportunity);
-        $linesByRegistration = $this->lines($opportunity);
+        $model = $this->plugin->resultSpreadsheet()->model($opportunity)->body;
+
+        // sem o modelo não se sabe se há planilha, e o resultado sairia sem os contemplados
+        if ($model === null) {
+            return $this->refused(i::__('Não foi possível ler o modelo de planilha no CultBR. Nada foi enviado; tente de novo em alguns minutos.'));
+        }
+
+        $linesByRegistration = empty($model['possui_planilha']) ? null : ($this->plugin->resultRows()->completeRowsByRegistration($opportunity) ?? false);
 
         if ($linesByRegistration === false) {
-            return ['payload' => null, 'files' => [], 'hash' => null, 'linesHash' => null, 'totalLines' => 0, 'lineRegistrationIds' => [], 'error' => i::__('A planilha de contemplados tem linhas com pendência. Complete a grade antes de enviar.')];
+            return $this->refused(i::__('A planilha de contemplados tem linhas com pendência. Complete a grade antes de enviar.'));
         }
 
         $lines = $linesByRegistration === null ? null : array_values($linesByRegistration);
 
         // o contrato só aceita linhas no corpo JSON, e o envio com arquivo é multipart
         if ($lines && $files) {
-            return ['payload' => null, 'files' => [], 'hash' => null, 'linesHash' => null, 'totalLines' => 0, 'lineRegistrationIds' => [], 'error' => i::__('O CultBR não recebe arquivos junto com a planilha de contemplados. Remova os anexos e envie de novo.')];
+            return $this->refused(i::__('O CultBR não recebe arquivos junto com a planilha de contemplados. Remova os anexos e envie de novo.'));
         }
 
         $content = ['respostas' => $this->responses($form, $known, $files)];
@@ -96,16 +103,9 @@ final class ResultPayload
         return array_map(fn($item) => $this->sorted($item), $value);
     }
 
-    /** @return array|false|null as linhas, false quando alguma tem pendência, null sem planilha */
-    private function lines(Opportunity $opportunity): array|false|null
+    private function refused(string $error): array
     {
-        $model = $this->plugin->resultSpreadsheet()->model($opportunity)->body ?? [];
-
-        if (empty($model['possui_planilha'])) {
-            return null;
-        }
-
-        return $this->plugin->resultRows()->completeRowsByRegistration($opportunity) ?? false;
+        return ['payload' => null, 'files' => [], 'hash' => null, 'linesHash' => null, 'totalLines' => 0, 'lineRegistrationIds' => [], 'error' => $error];
     }
 
     private function responses(ResultForm $form, array $known, array $files): array

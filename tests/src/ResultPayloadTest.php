@@ -106,6 +106,18 @@ class ResultPayloadTest extends TestCase
         $this->assertNotNull($built['error']);
     }
 
+    function testAnUnreadModelBlocksTheBody()
+    {
+        $opportunity = $this->answeredEdital();
+        Plugin::instance()->transport = FakeTransport::replying(500, ['detail' => 'indisponível']);
+        $this->app->mscache->delete('conectaente:result-spreadsheet:' . $opportunity->getMetadata(CultBrMetadata::PAR_EDITAL_ID));
+
+        $built = $this->build($opportunity);
+
+        $this->assertNull($built['payload'], 'Sem saber se há planilha, o resultado sairia sem os contemplados.');
+        $this->assertStringContainsString('modelo de planilha', (string) $built['error']);
+    }
+
     function testAnAttachmentGoesByTheFileNameWithTheFile()
     {
         $opportunity = $this->answeredEdital([13915 => 'fe_bolsa']);
