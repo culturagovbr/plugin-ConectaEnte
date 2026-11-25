@@ -39,6 +39,8 @@
             return {
                 summary: null,
                 errors: {},
+                // o que foi digitado e recusado, por célula
+                drafts: {},
                 loading: true,
                 loadFailed: false,
                 cellsSaving: 0,
@@ -121,7 +123,7 @@
                     });
 
                     if (response.ok) {
-                        delete this.errors[key];
+                        this.forget(key);
                         refresh();
                         this.loadSummary();
                         this.$emit('saved');
@@ -129,12 +131,28 @@
                     }
 
                     const body = await response.json().catch(() => null);
-                    this.errors[key] = body?.data?.value?.[0] || this.text('erro_salvar');
+                    this.refuse(key, value, body?.data?.value?.[0]);
                 } catch (error) {
-                    this.messages.error(this.text('erro_salvar'));
+                    this.refuse(key, value);
                 } finally {
                     this.cellsSaving--;
                 }
+            },
+
+            refuse(key, value, reason) {
+                this.drafts[key] = value;
+                this.errors[key] = reason || this.text('erro_salvar');
+            },
+
+            forget(key) {
+                delete this.drafts[key];
+                delete this.errors[key];
+            },
+
+            shownValue(row, column) {
+                const key = `${row.registrationId}:${column.coluna}`;
+
+                return (key in this.drafts ? this.drafts[key] : row.cells[column.coluna].value) ?? '';
             },
 
             currencyOf(row, column) {
@@ -152,9 +170,12 @@
 
             // o campo de moeda também avisa ao montar: só o valor diferente é gravado
             saveCurrency(row, column, value, refresh) {
-                if (value !== this.currencyOf(row, column)) {
-                    this.saveCell(row, column, value === null ? null : String(value), refresh);
+                if (value === this.currencyOf(row, column)) {
+                    this.forget(`${row.registrationId}:${column.coluna}`);
+                    return;
                 }
+
+                this.saveCell(row, column, value === null ? null : String(value), refresh);
             },
 
             maskOf(column) {
