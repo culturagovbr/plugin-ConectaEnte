@@ -21,8 +21,10 @@ final class ResultSpreadsheet
     const MODEL_CACHE_SECONDS = 300;
     const DOCUMENT_KINDS = ['cpf', 'cnpj'];
     // tipos de campo que guardam mais de um valor: nenhum deles cabe numa célula
-    const MULTI_VALUE_FIELD_TYPES = ['checkboxes', 'multiselect', 'checklist', 'file', 'persons', 'links', 'section', self::COMPOSITE];
+    const MULTI_VALUE_FIELD_TYPES = ['file', 'persons', 'links', 'section', self::COMPOSITE];
     const COMPOSITE = 'composite';
+    // guardam uma lista, que só a coluna de lista recebe, pela equivalência
+    const LIST_FIELD_TYPES = ['checkboxes', 'multiselect', 'checklist'];
     const ENTITY_FIELDS = ['agent-owner-field' => [Agent::class, 1], 'agent-collective-field' => [Agent::class, 2], 'space-field' => [Space::class, null]];
     const FIELD_TYPES_BY_COLUMN = [
         'cpf' => ['cpf', 'text'],
@@ -206,6 +208,21 @@ final class ResultSpreadsheet
         return array_values(array_map('strval', App::i()->config['registration.proponentTypes'] ?? []));
     }
 
+    /** O valor gravado na ficha como texto; a lista vira um texto só, sempre na mesma ordem. */
+    public static function textOf(mixed $value): ?string
+    {
+        $items = is_string($value) && str_starts_with($value, '[') ? json_decode($value, true) : null;
+
+        if (!is_array($items)) {
+            return is_scalar($value) ? trim((string) $value) : null;
+        }
+
+        $texts = array_unique(array_filter(array_map(fn($item) => is_scalar($item) ? trim((string) $item) : '', $items)));
+        sort($texts);
+
+        return $texts ? implode(', ', $texts) : null;
+    }
+
     // o campo de agente ou espaço vale pelo dado que traz
     private function typeOf(RegistrationFieldConfiguration $field): string
     {
@@ -230,6 +247,10 @@ final class ResultSpreadsheet
     {
         if (in_array($field['fieldType'], self::MULTI_VALUE_FIELD_TYPES, true)) {
             return false;
+        }
+
+        if (in_array($field['fieldType'], self::LIST_FIELD_TYPES, true)) {
+            return ($column['tipo'] ?? null) === 'lista';
         }
 
         $types = self::FIELD_TYPES_BY_COLUMN[$column['tipo'] ?? ''] ?? null;
@@ -288,7 +309,7 @@ final class ResultSpreadsheet
         }
 
         return array_unique(array_filter(array_map(
-            fn($meta) => is_scalar($meta->value) ? trim((string) $meta->value) : null,
+            fn($meta) => self::textOf($meta->value),
             App::i()->repo(RegistrationMeta::class)->findBy(['key' => "field_{$fieldId}"]),
         )));
     }

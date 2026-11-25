@@ -307,7 +307,7 @@ final class ResultRows
             $keys = array_map(fn($id) => "field_{$id}", array_keys(array_filter($phaseOf, fn($phase) => $phase === $phaseId)));
 
             foreach ($phaseRegistrations ? App::i()->repo(RegistrationMeta::class)->findBy(['owner' => $phaseRegistrations, 'key' => $keys]) : [] as $meta) {
-                $values[$meta->owner->number][(int) substr($meta->key, 6)] = is_scalar($meta->value) ? $meta->value : null;
+                $values[$meta->owner->number][(int) substr($meta->key, 6)] = ResultSpreadsheet::textOf($meta->value);
             }
         }
 

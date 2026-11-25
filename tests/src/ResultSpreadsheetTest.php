@@ -4,7 +4,9 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Metadata\CultBrMetadata;
 use ConectaEnte\Plugin;
+use ConectaEnte\Services\ResultSpreadsheet;
 use MapasCulturais\Entities\Opportunity;
+use MapasCulturais\Entities\Registration;
 use MapasCulturais\Entities\RegistrationFieldConfiguration;
 use Tests\Abstract\TestCase;
 use Tests\ConectaEnte\Doubles\FakeTransport;
@@ -130,7 +132,32 @@ class ResultSpreadsheetTest extends TestCase
             'documents' => ['MEI' => ['cpf' => $cpf->id, 'cnpj' => $race->id]],
         ]);
 
-        $this->assertSame(['columns.pessoa_com_deficiencia', 'columns.segmento_cultural', 'columns.nome_contemplado', 'documents.MEI.cnpj'], array_keys($errors), 'Lista de vários valores e endereço não cabem na célula.');
+        $this->assertSame(['columns.segmento_cultural', 'columns.nome_contemplado', 'documents.MEI.cnpj'], array_keys($errors), 'Endereço não cabe na célula, e a lista só cabe na coluna de lista.');
+    }
+
+    function testTheListOfTheFichaBecomesOneTextInTheEquivalence()
+    {
+        $opportunity = $this->editalWith($this->modelWithSpreadsheet());
+        $registrations = $this->registrationDirector->createSentRegistrations($this->reloaded($opportunity), 3, proponent_type: 'Pessoa Física');
+        $field = $this->field($opportunity, 'checkboxes', 'Pessoa com deficiência');
+
+        foreach (['["Visual","Auditiva"]', '["Não","Não "]', '[]'] as $index => $value) {
+            $this->answer($registrations[$index], $field, $value);
+        }
+
+        $this->assertSame([], $this->spreadsheet()->save($this->reloaded($opportunity), ['columns' => ['pessoa_com_deficiencia' => $field->id]]));
+
+        $this->assertSame(['Auditiva, Visual'], $this->pendingEquivalences($opportunity)['pessoa_com_deficiencia']);
+    }
+
+    function testTheTextOfAValueOfTheFicha()
+    {
+        $this->assertSame('Auditiva, Visual', ResultSpreadsheet::textOf('["Visual","Auditiva"]'));
+        $this->assertSame('Não', ResultSpreadsheet::textOf('["Não","Não "]'));
+        $this->assertNull(ResultSpreadsheet::textOf('[]'));
+        $this->assertSame('[sem fechar', ResultSpreadsheet::textOf('[sem fechar'));
+        $this->assertSame('70040-010', ResultSpreadsheet::textOf('70040-010'));
+        $this->assertNull(ResultSpreadsheet::textOf(null));
     }
 
     function testTheNameOfTheAgentIsText()
@@ -169,10 +196,7 @@ class ResultSpreadsheetTest extends TestCase
         $opportunity = $this->editalWith($this->modelWithSpreadsheet());
         $registration = $this->registrationDirector->createSentRegistrations($this->reloaded($opportunity), 1, proponent_type: 'Pessoa Física')[0];
         $race = $this->field($opportunity, 'select', 'Raça ou cor');
-        $this->app->em->getConnection()->executeStatement(
-            "INSERT INTO registration_meta (id, object_id, key, value) VALUES (nextval('registration_meta_id_seq'), ?, ?, ?)",
-            [$registration->id, "field_{$race->id}", 'Negra'],
-        );
+        $this->answer($registration, $race, 'Negra');
         $this->spreadsheet()->save($this->reloaded($opportunity), ['columns' => ['raca_etnia' => $race->id]]);
 
         $this->assertSame(['Negra'], $this->pendingEquivalences($opportunity)['raca_etnia']);
@@ -234,6 +258,14 @@ class ResultSpreadsheetTest extends TestCase
             ->setTitle($title)
             ->save()
             ->getInstance();
+    }
+
+    private function answer(Registration $registration, RegistrationFieldConfiguration $field, string $value): void
+    {
+        $this->app->em->getConnection()->executeStatement(
+            "INSERT INTO registration_meta (id, object_id, key, value) VALUES (nextval('registration_meta_id_seq'), ?, ?, ?)",
+            [$registration->id, "field_{$field->id}", $value],
+        );
     }
 
     private function agentField(Opportunity $opportunity, string $type, string $property): RegistrationFieldConfiguration

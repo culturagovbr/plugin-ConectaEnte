@@ -89,6 +89,18 @@ class ResultRowsTest extends TestCase
         $this->assertSame(['value' => self::VALID_CPF, 'source' => 'ficha'], $this->rows()->page($this->reloaded($opportunity))['rows'][0]['cells']['cpf']);
     }
 
+    function testTheListOfTheFichaGoesThroughTheEquivalence()
+    {
+        $opportunity = $this->edital();
+        $registration = $this->awarded($opportunity, 1)[0];
+        $field = $this->field($this->reloaded($opportunity)->lastPhase, 'checkboxes', 'Deficiência');
+        $this->fichaAnswer($registration, $field->id, '["Visual","Auditiva"]');
+        $column = 'pessoa_com_deficiencia';
+        Plugin::instance()->resultSpreadsheet()->save($this->reloaded($opportunity), ['columns' => [$column => $field->id], 'equivalences' => [$column => ['Auditiva, Visual' => 'Sim, múltipla']]]);
+
+        $this->assertSame(['value' => 'Sim, múltipla', 'source' => 'ficha'], $this->rows()->page($this->reloaded($opportunity))['rows'][0]['cells'][$column]);
+    }
+
     function testAnEmptyManagerCellIsADecisionAndNullGivesTheCellBack()
     {
         $opportunity = $this->edital();
