@@ -55,11 +55,13 @@ $this->import('
                                         <div class="field__input">
                                             <select :id="fieldId('coluna', column.coluna)" :value="view.mapping.columns[column.coluna] ?? ''" @change="chooseColumn(column, $event)">
                                                 <option value=""><?php i::_e('Não se aplica') ?></option>
+                                                <option v-if="isGone(view.mapping.columns[column.coluna])" :value="view.mapping.columns[column.coluna]"><?php i::_e('Campo que não existe mais na ficha') ?></option>
                                                 <optgroup v-for="group in fieldGroups" :key="group.label" :label="group.label">
                                                     <option v-for="field in group.fields" :key="field.id" :value="field.id">{{ field.title }}</option>
                                                 </optgroup>
                                             </select>
                                         </div>
+                                        <small v-if="isGone(view.mapping.columns[column.coluna])" class="field__error" role="alert"><?php i::_e('O campo ligado não existe mais na ficha. Escolha outro.') ?></small>
                                         <small v-if="suggested(column)" class="field__description"><?php i::_e('Sugestão:') ?> {{ suggested(column).title }}</small>
                                         <small v-if="errors['columns.' + column.coluna]" class="field__error" role="alert">{{ errors['columns.' + column.coluna] }}</small>
                                     </div>
@@ -87,11 +89,13 @@ $this->import('
                                         <div class="field__input">
                                             <select :value="view.mapping.documents[type]?.[kind.key] ?? ''" :aria-label="kind.label + ', ' + type" @change="chooseDocument(type, kind.key, $event)">
                                                 <option value=""><?php i::_e('Não se aplica') ?></option>
+                                                <option v-if="isGone(view.mapping.documents[type]?.[kind.key])" :value="view.mapping.documents[type]?.[kind.key]"><?php i::_e('Campo que não existe mais na ficha') ?></option>
                                                 <optgroup v-for="group in fieldGroups" :key="group.label" :label="group.label">
                                                     <option v-for="field in group.fields" :key="field.id" :value="field.id">{{ field.title }}</option>
                                                 </optgroup>
                                             </select>
                                         </div>
+                                        <small v-if="isGone(view.mapping.documents[type]?.[kind.key])" class="field__error" role="alert"><?php i::_e('O campo ligado não existe mais na ficha. Escolha outro.') ?></small>
                                         <small v-if="errors['documents.' + type + '.' + kind.key]" class="field__error" role="alert">{{ errors['documents.' + type + '.' + kind.key] }}</small>
                                     </div>
                                     <span v-else>—</span>

@@ -56,6 +56,14 @@
                 return [...groups].map(([label, fields]) => ({ label, fields }));
             },
 
+            // ligados no de/para e fora da ficha de agora
+            goneIds() {
+                const { columns, documents } = this.view.mapping;
+                const ids = [...Object.values(columns), ...Object.values(documents).flatMap((kinds) => Object.values(kinds || {}))];
+
+                return ids.filter((id) => id && !this.fieldsById[id]);
+            },
+
             hasSuggestion() {
                 return Object.keys(this.view?.suggestion || {}).some((column) => !this.view.mapping.columns[column]);
             },
@@ -143,6 +151,10 @@
 
             confirmSuggestion() {
                 this.save({ confirmSuggestion: true });
+            },
+
+            isGone(id) {
+                return this.goneIds.includes(id);
             },
 
             hasCnpj(type) {
