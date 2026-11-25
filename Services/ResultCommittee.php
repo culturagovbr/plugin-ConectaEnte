@@ -75,7 +75,7 @@ final class ResultCommittee
         $members = [];
 
         foreach ($opportunity->allPhases as $phase) {
-            if (!$phase->evaluationMethodConfiguration) {
+            if ($phase->isReportingPhase || !$phase->evaluationMethodConfiguration) {
                 continue;
             }
 

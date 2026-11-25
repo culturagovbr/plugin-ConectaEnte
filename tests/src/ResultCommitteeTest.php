@@ -155,6 +155,17 @@ class ResultCommitteeTest extends TestCase
         $this->assertEquals([$typed], $this->answers()->toSend($opportunity, $this->form())[self::COMMITTEE], 'A linha digitada vai como foi digitada.');
     }
 
+    function testTheValuersOfTheReportingPhaseStayOut()
+    {
+        $opportunity = $this->editalWithPhase();
+        $this->valuer($opportunity);
+        $opportunity = $this->reloaded($opportunity);
+        $opportunity->setMetadata('isReportingPhase', '1');
+        $opportunity->saveMetadata();
+
+        $this->assertSame([], $this->answers()->committee($this->reloaded($opportunity), $this->form()));
+    }
+
     function testWithoutValuersNothingIsSuggested()
     {
         $this->assertSame([], $this->answers()->committee($this->editalWithPhase(), $this->form()));
