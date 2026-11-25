@@ -7,7 +7,7 @@
     app.component('conectaente--result-rows', {
         template: $TEMPLATES['conectaente--result-rows'],
 
-        emits: ['saved', 'saving'],
+        emits: ['saved', 'saving', 'refused'],
 
         props: {
             entity: {
@@ -69,6 +69,13 @@
                 this.loadSummary();
             },
 
+            errors: {
+                deep: true,
+                handler() {
+                    this.$emit('refused', Object.keys(this.errors).length);
+                },
+            },
+
             cellsSaving(total) {
                 this.$emit('saving', total > 0);
             },
@@ -81,6 +88,7 @@
         // trocar de aba desmonta a grade
         beforeUnmount() {
             this.$emit('saving', false);
+            this.$emit('refused', 0);
         },
 
         methods: {

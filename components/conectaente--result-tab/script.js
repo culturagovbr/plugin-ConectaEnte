@@ -61,6 +61,7 @@
                 saveFailure: null,
                 mappingSaving: false,
                 rowsSaving: false,
+                refusedCells: 0,
                 requestingSend: false,
                 sendRefusal: null,
                 pollTimer: null,
@@ -198,7 +199,7 @@
             },
 
             saveBeforeLeaving(event) {
-                if (this.unsavedIds.length || this.isSaving) {
+                if (this.unsavedIds.length || this.refusedCells || this.isSaving) {
                     this.save();
                     event.preventDefault();
                 }
