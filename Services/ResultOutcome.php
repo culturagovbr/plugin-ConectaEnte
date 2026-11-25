@@ -66,7 +66,8 @@ final class ResultOutcome
     // as três causas do contrato chegam no `detail`; só a do tipo de ação tem frase fixa
     private function badRequest(string $detail): string
     {
-        $lower = mb_strtolower($detail);
+        // o nome do arquivo recusado vem entre aspas e não diz a causa
+        $lower = mb_strtolower((string) preg_replace("/'.*'/s", '', $detail));
 
         return match (true) {
             str_contains($lower, 'não permite resultados') => i::__('O CultBR não aceita resultado para a ação deste edital.'),

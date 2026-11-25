@@ -66,6 +66,19 @@ class ResultOutcomeTest extends TestCase
         ];
     }
 
+    /** @dataProvider fileNames */
+    function testTheNameOfTheRefusedFileDoesNotChooseTheMessage(string $fileName)
+    {
+        $detail = "Erro ao enviar anexo '{$fileName}' para o storage";
+
+        $this->assertSame($detail, $this->describe(400, ['detail' => $detail])['message']);
+    }
+
+    static function fileNames(): array
+    {
+        return [['planilha.csv'], ['comprovacao.pdf'], ['publicação.pdf'], ['questao-1.pdf'], ["lista d'ação.pdf"]];
+    }
+
     /** @dataProvider statusesWithTheirOwnMessage */
     function testAuthorizationAndMissingEditalHaveTheirOwnMessage(int $status, string $expected)
     {
