@@ -171,7 +171,7 @@ app.component('conectaente--federative-entity-par', {
         readonlyExerciseLabel() {
             const exercise = this.nodeById(this.exercises, this.normalizedModel.conectaente_parExercicioId);
 
-            return this.readonlyLabel(this.normalizedModel.conectaente_parExercicioId, exercise?.ano);
+            return this.readonlyLabel(this.normalizedModel.conectaente_parExercicioId, exercise && this.exerciseLabel(exercise));
         },
 
         readonlyGoalLabel() {
@@ -194,6 +194,17 @@ app.component('conectaente--federative-entity-par', {
     },
 
     methods: {
+        // o CultBR pode ter mais de um PAR no mesmo ano
+        exerciseLabel(exercise) {
+            if (!exercise.ano) {
+                return exercise.id;
+            }
+
+            const sameYear = this.exercises.filter((other) => other.ano === exercise.ano);
+
+            return sameYear.length > 1 ? this.text('exerciseOfSameYear', { year: exercise.ano, id: exercise.id }) : exercise.ano;
+        },
+
         // os ids da árvore chegam como número ou texto, e a comparação é sempre entre strings
         nodeById(nodes, id) {
             return nodes.find((node) => String(node.id) === String(id));

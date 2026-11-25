@@ -39,7 +39,7 @@
                 <div class="field__input">
                     <select v-model="exerciseId" required>
                         <option value="">{{ text('select') }}</option>
-                        <option v-for="exercise in exercises" :key="exercise.id" :value="exercise.id">{{ exercise.ano ?? exercise.id }}</option>
+                        <option v-for="exercise in exercises" :key="exercise.id" :value="exercise.id">{{ exerciseLabel(exercise) }}</option>
                     </select>
                 </div>
                 <small v-if="(showFieldErrors && fieldErrors.exercise) || serverErrorMessage('exercise')" class="field__error">{{ serverErrorMessage('exercise') || fieldErrorMessage('exercise') }}</small>
