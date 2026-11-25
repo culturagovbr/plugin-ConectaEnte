@@ -52,6 +52,12 @@ final class ResultSpreadsheet
         return $read;
     }
 
+    /** A coluna que, sem campo ligado, vem do tipo de proponente da inscrição. */
+    public static function isAgentTypeColumn(array $column): bool
+    {
+        return str_contains((string) ($column['coluna'] ?? ''), 'tipo_agente');
+    }
+
     /** Se o edital leva planilha de contemplados no resultado. */
     public function isRequired(Opportunity $opportunity): bool
     {
@@ -247,17 +253,11 @@ final class ResultSpreadsheet
         $pending = [];
 
         foreach ($columns as $column) {
-            $fieldId = $mapping['columns'][$column['coluna']] ?? null;
-
-            if (($column['tipo'] ?? null) !== 'lista' || !$fieldId) {
+            if (($column['tipo'] ?? null) !== 'lista') {
                 continue;
             }
 
-            $values = array_unique(array_filter(array_map(
-                fn($meta) => is_scalar($meta->value) ? trim((string) $meta->value) : null,
-                App::i()->repo(RegistrationMeta::class)->findBy(['key' => "field_{$fieldId}"]),
-            )));
-
+            $values = $this->valuesOf($opportunity, $column, $mapping['columns'][$column['coluna']] ?? null);
             $known = array_merge((array) ($column['opcoes'] ?? []), array_keys((array) ($mapping['equivalences'][$column['coluna']] ?? [])));
             $missing = array_values(array_diff($values, $known));
 
@@ -267,6 +267,19 @@ final class ResultSpreadsheet
         }
 
         return $pending;
+    }
+
+    // sem campo ligado, o tipo de agente vem do tipo de proponente, cujos rótulos são do Mapas
+    private function valuesOf(Opportunity $opportunity, array $column, ?int $fieldId): array
+    {
+        if (!$fieldId) {
+            return self::isAgentTypeColumn($column) ? (array) $opportunity->registrationProponentTypes : [];
+        }
+
+        return array_unique(array_filter(array_map(
+            fn($meta) => is_scalar($meta->value) ? trim((string) $meta->value) : null,
+            App::i()->repo(RegistrationMeta::class)->findBy(['key' => "field_{$fieldId}"]),
+        )));
     }
 
     private function columnError(?array $column, ?array $field, mixed $fieldId): ?string

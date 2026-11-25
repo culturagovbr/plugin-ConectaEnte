@@ -137,11 +137,11 @@ class ResultSpreadsheetTest extends TestCase
         );
         $this->spreadsheet()->save($this->reloaded($opportunity), ['columns' => ['raca_etnia' => $race->id]]);
 
-        $this->assertSame(['raca_etnia' => ['Negra']], (array) $this->spreadsheet()->mappingView($this->reloaded($opportunity))['pendingEquivalences']);
+        $this->assertSame(['Negra'], $this->pendingEquivalences($opportunity)['raca_etnia']);
 
         $this->spreadsheet()->save($this->reloaded($opportunity), ['equivalences' => ['raca_etnia' => ['Negra' => 'Preta']]]);
 
-        $this->assertSame([], (array) $this->spreadsheet()->mappingView($this->reloaded($opportunity))['pendingEquivalences']);
+        $this->assertArrayNotHasKey('raca_etnia', $this->pendingEquivalences($opportunity));
     }
 
     function testTheMappingStaysPrivateAndOutOfTheCoreApi()
@@ -157,6 +157,24 @@ class ResultSpreadsheetTest extends TestCase
         $this->login($this->userDirector->createUser());
 
         $this->assertSame(403, $this->send($this->requestFactory->GET('conectaente', 'resultMapping', [$opportunity->id], ajax: true)));
+    }
+
+    function testTheAgentTypeAsksForTheEquivalenceOfEachProponentType()
+    {
+        $opportunity = $this->editalWith($this->modelWithSpreadsheet());
+        $opportunity->registrationProponentTypes = ['MEI', 'Coletivo'];
+        $opportunity->save(true);
+
+        $this->assertSame(['MEI', 'Coletivo'], $this->pendingEquivalences($opportunity)['tipo_agente']);
+
+        $this->spreadsheet()->save($this->reloaded($opportunity), ['equivalences' => ['tipo_agente' => ['MEI' => 'Microempreendedor individual - MEI']]]);
+
+        $this->assertSame(['Coletivo'], $this->pendingEquivalences($opportunity)['tipo_agente']);
+    }
+
+    private function pendingEquivalences(Opportunity $opportunity): array
+    {
+        return (array) $this->spreadsheet()->mappingView($this->reloaded($opportunity))['pendingEquivalences'];
     }
 
     private function editalWith(array $model): Opportunity

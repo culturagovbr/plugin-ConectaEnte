@@ -207,7 +207,7 @@ final class ResultRows
         $key = $column['coluna'];
 
         return match (true) {
-            str_contains($key, 'tipo_agente') => $registration->proponentType ?: null,
+            ResultSpreadsheet::isAgentTypeColumn($column) => $registration->proponentType ?: null,
             ($column['tipo'] ?? null) === 'monetario' && isset($ranges[$registration->range]) => number_format($ranges[$registration->range], 2, '.', ''),
             str_starts_with($key, 'nome') => $registration->owner?->name,
             default => null,
