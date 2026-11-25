@@ -109,7 +109,7 @@ As respostas se gravam sozinhas, 1,5 s depois da última alteração. Inscritos,
 
 **Guarda por hash.** O conteúdo enviado (respostas, linhas e arquivos, sem tipo nem data) tem um hash gravado com o `parEditalId` em que foi aceito. O mesmo conteúdo para o mesmo id é recusado com "nada mudou"; com outro id, segue. Quando o edital muda de id no CultBR, o estado do resultado é apagado.
 
-**Um envio por vez.** Enquanto há envio em andamento, o segundo clique é recusado e a aba acompanha o estado até o job terminar. O envio que passa de 10 minutos sem desfecho fecha como erro.
+**Um envio por vez.** Enquanto há envio em andamento, o segundo clique é recusado e a aba acompanha o estado até o job terminar. O envio que passa de 10 minutos sem desfecho fecha como erro. O POST só sai nos 8 primeiros minutos do job, para nunca estar em voo quando o prazo vence.
 
 **Desfecho incerto.** Se o POST ficou sem resposta (timeout ou 5xx), não há como saber se ele chegou. A aba pede conferência no CultBR, e o botão só volta depois de uma leitura determinada do `/publicado`: se apareceu um id novo, o envio chegou e é reconhecido sem reenviar; se o id é o mesmo de antes do POST, ele não chegou.
 

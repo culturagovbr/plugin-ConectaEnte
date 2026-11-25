@@ -4,6 +4,7 @@ namespace Tests\ConectaEnte;
 
 use ConectaEnte\Entities\Log;
 use ConectaEnte\Http\HttpExchange;
+use ConectaEnte\Http\Transport\CurlTransport;
 use ConectaEnte\Plugin;
 use ConectaEnte\Services\SendLogger;
 use ConectaEnte\Services\SendOutcome;
@@ -82,6 +83,27 @@ class ResultSendLogTest extends TestCase
         $this->assertFalse($this->logger()->confirmResultPost($this->reloadedLog($log)), 'O job atrasado não posta depois de o prazo vencer.');
     }
 
+    function testThePostIsRefusedCloseToTheEndOfTheLock()
+    {
+        $this->loginAsSaasSuperAdmin();
+        $log = $this->startedSend('-9 minutes');
+
+        $this->assertFalse($this->logger()->confirmResultPost($log), 'O POST ainda estaria em voo quando a leitura da aba fechasse o envio.');
+        $this->assertFalse($this->reloadedLog($log)->posted);
+    }
+
+    function testThePostIsConfirmedWhileItCanFinishInsideTheLock()
+    {
+        $this->loginAsSaasSuperAdmin();
+
+        $this->assertTrue($this->logger()->confirmResultPost($this->startedSend('-7 minutes')));
+    }
+
+    function testThePostAlwaysFinishesBeforeTheLockExpires()
+    {
+        $this->assertLessThan(SendLogger::RESULT_LOCK_SECONDS, SendLogger::RESULT_POST_DEADLINE_SECONDS + CurlTransport::QUEUED_TIMEOUT);
+    }
+
     function testAConfirmedPostIsMarkedAsPosted()
     {
         $this->loginAsSaasSuperAdmin();
@@ -144,6 +166,15 @@ class ResultSendLogTest extends TestCase
         $this->assertSame(1, $results['total']);
         $this->assertSame(Log::ACTION_RESULT, $results['sends'][0]['action']);
         $this->assertSame(2, Plugin::instance()->sendHistory()->of($opportunity)['total']);
+    }
+
+    private function startedSend(string $age): Log
+    {
+        $log = $this->logger()->openResultSend($this->createOpportunity());
+        $this->logger()->claimResultSend($log);
+        $this->app->em->getConnection()->update('conectaente_log', ['started_at' => (new \DateTime($age))->format('Y-m-d H:i:s')], ['id' => $log->id]);
+
+        return $this->reloadedLog($log);
     }
 
     private function logger(): SendLogger

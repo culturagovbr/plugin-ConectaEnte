@@ -22,6 +22,8 @@ class SendLogger
     const MAX_STORED_BYTES = 65536;
     // contado do início do job, ou da abertura do envelope se o job ainda não começou
     const RESULT_LOCK_SECONDS = 600;
+    // menor que a trava: o POST dura até um minuto e não pode estar em voo quando ela vence
+    const RESULT_POST_DEADLINE_SECONDS = 480;
     const MAX_REQUEST_ID_BYTES = 255;
 
     private const JSON_FLAGS = JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
@@ -286,10 +288,10 @@ class SendLogger
         return $this->conditionalUpdate($log, 'l.startedAt = :now', 'l.startedAt IS NULL', ['now' => new DateTime]);
     }
 
-    /** Imediatamente antes do POST: confirma que o envelope segue pendente e no prazo, e o marca como enviado. */
+    /** Imediatamente antes do POST: confirma que o envelope segue pendente e no prazo de postar, e o marca como enviado. */
     public function confirmResultPost(Log $log): bool
     {
-        return $this->conditionalUpdate($log, 'l.posted = true', 'l.startedAt >= :limit', ['limit' => $this->lockLimit()]);
+        return $this->conditionalUpdate($log, 'l.posted = true', 'l.startedAt >= :limit', ['limit' => $this->secondsAgo(self::RESULT_POST_DEADLINE_SECONDS)]);
     }
 
     /** Guarda no envelope o que o envio de resultado precisa para a conciliação do seguinte. */
@@ -340,13 +342,13 @@ class SendLogger
             'opportunityId' => $opportunityId,
             'action' => Log::ACTION_RESULT,
             'pending' => SendOutcome::PENDING,
-            'limit' => $this->lockLimit(),
+            'limit' => $this->secondsAgo(self::RESULT_LOCK_SECONDS),
         ]);
     }
 
-    private function lockLimit(): DateTime
+    private function secondsAgo(int $seconds): DateTime
     {
-        return new DateTime('-' . self::RESULT_LOCK_SECONDS . ' seconds');
+        return new DateTime("-{$seconds} seconds");
     }
 
     // o valor recebido de uma linha recusada pode ser o CPF de um contemplado
