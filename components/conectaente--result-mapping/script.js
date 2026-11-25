@@ -16,7 +16,10 @@
             const api = new API('conectaente');
             const text = Utils.getTexts('conectaente--result-mapping');
 
-            return { api, text };
+            const messages = useMessages();
+            const documentKinds = [{ key: 'cpf', label: 'CPF' }, { key: 'cnpj', label: 'CNPJ' }];
+
+            return { api, text, messages, documentKinds };
         },
 
         data() {
@@ -68,12 +71,17 @@
 
                     try {
                         const response = await this.api.POST(Utils.createUrl('conectaente', 'resultMapping', [this.entity.id]), changes);
+
+                        if (!response.ok) {
+                            throw new Error(response.status);
+                        }
+
                         const body = await response.json();
 
                         this.errors = body.errors || {};
                         this.view = body.mapping;
                     } catch (error) {
-                        this.errors = { geral: this.text('erro_salvar') };
+                        this.messages.error(this.text('erro_salvar'));
                     } finally {
                         this.saving = false;
                     }
@@ -94,6 +102,10 @@
                 }
 
                 return groups;
+            },
+
+            fieldId(...parts) {
+                return ['conectaente-result-mapping', ...parts].join('-').replace(/\s+/g, '-');
             },
 
             allFieldIds() {

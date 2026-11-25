@@ -2,6 +2,7 @@
 (() => {
     const PAGE_SIZE = 50;
     const REGISTRATION_SLUG = 'conectaente_inscricao';
+    const MASKS = { cpf: '###.###.###-##', cnpj: '##.###.###/####-##', cep: '#####-###' };
 
     app.component('conectaente--result-rows', {
         template: $TEMPLATES['conectaente--result-rows'],
@@ -17,7 +18,9 @@
             const api = new API('conectaente');
             const text = Utils.getTexts('conectaente--result-rows');
 
-            return { api, text, pageSize: PAGE_SIZE, registrationSlug: REGISTRATION_SLUG };
+            const messages = useMessages();
+
+            return { api, text, messages, pageSize: PAGE_SIZE, registrationSlug: REGISTRATION_SLUG };
         },
 
         data() {
@@ -36,7 +39,7 @@
 
             headers() {
                 return [
-                    { text: this.text('inscricao'), value: 'number', slug: REGISTRATION_SLUG },
+                    { text: this.text('inscricao'), value: 'number', slug: REGISTRATION_SLUG, sticky: true, width: '180px' },
                     ...this.columns.map((column) => ({ text: column.nome, value: column.coluna, slug: column.coluna })),
                 ];
             },
@@ -79,21 +82,47 @@
 
             async saveCell(row, column, value, refresh) {
                 const key = `${row.registrationId}:${column.coluna}`;
-                const response = await this.api.POST(Utils.createUrl('conectaente', 'resultRows', [this.entity.id]), {
-                    registrationId: row.registrationId,
-                    column: column.coluna,
-                    value,
-                });
 
-                if (response.ok) {
-                    delete this.errors[key];
-                    refresh();
-                    this.loadSummary();
-                    return;
+                try {
+                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultRows', [this.entity.id]), {
+                        registrationId: row.registrationId,
+                        column: column.coluna,
+                        value,
+                    });
+
+                    if (response.ok) {
+                        delete this.errors[key];
+                        refresh();
+                        this.loadSummary();
+                        return;
+                    }
+
+                    const body = await response.json().catch(() => null);
+                    this.errors[key] = body?.data?.value?.[0] || this.text('erro_salvar');
+                } catch (error) {
+                    this.messages.error(this.text('erro_salvar'));
                 }
+            },
 
-                const body = await response.json().catch(() => null);
-                this.errors[key] = body?.data?.value?.[0] || this.text('erro_salvar');
+            currencyOf(row, column) {
+                const value = row.cells[column.coluna].value;
+
+                return value === null || value === '' ? null : Number(value);
+            },
+
+            // o campo de moeda também avisa ao montar: só o valor diferente é gravado
+            saveCurrency(row, column, value, refresh) {
+                if (value !== this.currencyOf(row, column)) {
+                    this.saveCell(row, column, value === null ? null : String(value), refresh);
+                }
+            },
+
+            maskOf(column) {
+                return MASKS[column.tipo] || null;
+            },
+
+            cellLabel(row, column) {
+                return `${column.nome}, ${row.number}`;
             },
 
             cellError(row, column) {
