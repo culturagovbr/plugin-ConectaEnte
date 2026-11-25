@@ -492,6 +492,13 @@
                 this.answers[question.id_questao_etapa] = raw === '' ? null : Number(raw);
             },
 
+            // o campo de moeda lê texto sem dígito como zero
+            refuseText(event) {
+                if (!/\d/.test(event.target.value)) {
+                    event.target.value = '';
+                }
+            },
+
             useSuggestion(question) {
                 this.answers[question.id_questao_etapa] = this.suggestion(question);
                 // o campo de moeda não relê o valor que muda por fora

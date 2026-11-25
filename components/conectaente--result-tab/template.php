@@ -84,7 +84,7 @@ $this->import('
 
                                     <template v-else-if="question.tipo_questao === 'moeda'">
                                         <div class="field__input">
-                                            <mc-currency-input :key="'moeda-' + (currencyVersions[question.id_questao_etapa] || 0)" :id="fieldId(question)" v-model.lazy="answers[question.id_questao_etapa]"></mc-currency-input>
+                                            <mc-currency-input :key="'moeda-' + (currencyVersions[question.id_questao_etapa] || 0)" :id="fieldId(question)" v-model.lazy="answers[question.id_questao_etapa]" @input="refuseText"></mc-currency-input>
                                         </div>
                                         <small v-if="suggestion(question) !== undefined" class="field__description conectaente-result-question__suggestion">
                                             <?php i::_e('Sugestão do Mapas:') ?> {{ formatCurrency(suggestion(question)) }}
@@ -134,7 +134,7 @@ $this->import('
                                                             <option value=""><?php i::_e('Selecione') ?></option>
                                                             <option v-for="option in column.options" :key="option" :value="option">{{ option }}</option>
                                                         </select>
-                                                        <mc-currency-input v-else-if="column.kind === 'currency'" :id="cellId(question, row, index, column)" v-model.lazy="row[column.key]" :disabled="column.readOnly"></mc-currency-input>
+                                                        <mc-currency-input v-else-if="column.kind === 'currency'" :id="cellId(question, row, index, column)" v-model.lazy="row[column.key]" :disabled="column.readOnly" @input="refuseText"></mc-currency-input>
                                                         <input v-else-if="isMaskedCell(row, column)" :id="cellId(question, row, index, column)" type="text" :value="row[column.key]" disabled>
                                                         <input v-else-if="column.mask" v-maska :data-maska="column.mask" :id="cellId(question, row, index, column)" type="text" v-model="row[column.key]" :disabled="column.readOnly" autocomplete="off">
                                                         <input v-else-if="column.kind === 'number'" :id="cellId(question, row, index, column)" type="number" v-model.number="row[column.key]" :disabled="column.readOnly">

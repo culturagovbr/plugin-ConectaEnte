@@ -129,6 +129,13 @@
                 return value === null || value === '' ? null : Number(value);
             },
 
+            // o campo de moeda lê texto sem dígito como zero
+            refuseText(event) {
+                if (!/\d/.test(event.target.value)) {
+                    event.target.value = '';
+                }
+            },
+
             // o campo de moeda também avisa ao montar: só o valor diferente é gravado
             saveCurrency(row, column, value, refresh) {
                 if (value !== this.currencyOf(row, column)) {

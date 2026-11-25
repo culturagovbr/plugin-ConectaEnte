@@ -62,7 +62,7 @@ $this->import('
                                 <option v-for="option in column.opcoes" :key="option" :value="option">{{ option }}</option>
                                 <option v-if="row.cells[column.coluna].value && !column.opcoes.includes(row.cells[column.coluna].value)" :value="row.cells[column.coluna].value">{{ row.cells[column.coluna].value }}</option>
                             </select>
-                            <mc-currency-input v-else-if="column.tipo === 'monetario'" :key="'moeda-' + row.cells[column.coluna].value" :model-value="currencyOf(row, column)" :model-modifiers="{ lazy: true }" :aria-label="cellLabel(row, column)" @update:model-value="saveCurrency(row, column, $event, refresh)"></mc-currency-input>
+                            <mc-currency-input v-else-if="column.tipo === 'monetario'" :key="'moeda-' + row.cells[column.coluna].value" :model-value="currencyOf(row, column)" :model-modifiers="{ lazy: true }" :aria-label="cellLabel(row, column)" @input="refuseText" @update:model-value="saveCurrency(row, column, $event, refresh)"></mc-currency-input>
                             <input v-else-if="maskOf(column)" v-maska :data-maska="maskOf(column)" type="text" :value="row.cells[column.coluna].value ?? ''" :aria-label="cellLabel(row, column)" autocomplete="off" @change="saveCell(row, column, $event.target.value === '' ? null : $event.target.value, refresh)">
                             <input v-else type="text" :value="row.cells[column.coluna].value ?? ''" :aria-label="cellLabel(row, column)" autocomplete="off" @change="saveCell(row, column, $event.target.value === '' ? null : $event.target.value, refresh)">
                         </div>
