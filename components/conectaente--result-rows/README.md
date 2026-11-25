@@ -6,6 +6,7 @@ Card "Grade de contemplados" da aba de resultado: uma linha por inscrição apro
 
 - *entity **Entity*** : a oportunidade.
 - *mappingVersion **Number** = 0* : muda a cada gravação do de/para e refaz a grade.
+- *refusals **Object** = {}* : o motivo de cada célula recusada pelo CultBR, por `inscrição:coluna`.
 
 ### Eventos
 

@@ -239,7 +239,41 @@ final class ResultService
             return ['_' => sprintf(i::__('O formulário de resultado não está disponível (%s).'), $state->state)];
         }
 
-        return $this->plugin->resultAnswers()->save($opportunity, $this->formOf($opportunity, $state->structure), $answers);
+        $before = $this->plugin->resultAnswers()->saved($opportunity)['answers'];
+        $errors = $this->plugin->resultAnswers()->save($opportunity, $this->formOf($opportunity, $state->structure), $answers);
+        $after = $this->plugin->resultAnswers()->saved($opportunity)['answers'];
+        $this->settleRefusals($opportunity, 'fields', fn($field) => isset($field['questionId']) && json_encode($before[$field['questionId']] ?? null) !== json_encode($after[$field['questionId']] ?? null));
+
+        return $errors;
+    }
+
+    /** Grava a célula da grade; a recusa do CultBR naquela célula deixa de ser marcada. */
+    public function saveCell(Opportunity $opportunity, int $registrationId, string $columnKey, mixed $value): ?string
+    {
+        $error = $this->plugin->resultRows()->saveCell($opportunity, $registrationId, $columnKey, $value);
+
+        if ($error === null) {
+            $this->settleRefusals($opportunity, 'rows', fn($row) => (int) ($row['registrationId'] ?? 0) === $registrationId && ($row['coluna'] ?? null) === $columnKey);
+        }
+
+        return $error;
+    }
+
+    private function settleRefusals(Opportunity $opportunity, string $kind, callable $isSettled): void
+    {
+        $errors = json_decode(json_encode($opportunity->{CultBrMetadata::RESULT_SEND_ERRORS}), true);
+
+        if (empty($errors[$kind])) {
+            return;
+        }
+
+        $settled = array_map(fn($refusal) => $isSettled($refusal) ? ['edited' => true] + $refusal : $refusal, $errors[$kind]);
+
+        if ($settled !== $errors[$kind]) {
+            $opportunity->{CultBrMetadata::RESULT_SEND_ERRORS} = [$kind => $settled] + $errors;
+            // saveMetadata, nunca save: salvar a oportunidade selada a reenviaria
+            $opportunity->saveMetadata();
+        }
     }
 
     /** Anexa o arquivo enviado à questão de anexo, na estrutura que vale agora. */
@@ -247,9 +281,17 @@ final class ResultService
     {
         $state = $this->stateOf($opportunity);
 
-        return $state->structure
-            ? $this->plugin->resultAttachments()->attach($opportunity, $this->formOf($opportunity, $state->structure), $questionId, $upload)
-            : sprintf(i::__('O formulário de resultado não está disponível (%s).'), $state->state);
+        if (!$state->structure) {
+            return sprintf(i::__('O formulário de resultado não está disponível (%s).'), $state->state);
+        }
+
+        $error = $this->plugin->resultAttachments()->attach($opportunity, $this->formOf($opportunity, $state->structure), $questionId, $upload);
+
+        if ($error === null) {
+            $this->settleRefusals($opportunity, 'fields', fn($field) => (int) ($field['questionId'] ?? 0) === $questionId);
+        }
+
+        return $error;
     }
 
     /** Tira o arquivo da questão de anexo. */

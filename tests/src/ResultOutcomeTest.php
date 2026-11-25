@@ -98,6 +98,35 @@ class ResultOutcomeTest extends TestCase
         $this->assertStringContainsString('? A data é anterior', (new ResultOutcome($this->form()))->describe($this->rejected(422, $errors))['items'][0]);
     }
 
+    function testTheRefusedQuestionIsMarkedUntilItsAnswerChanges()
+    {
+        $field = ['questionId' => 13924, 'field' => 'questao:13924', 'message' => 'Data inválida.'];
+
+        $this->assertSame([13924 => 'Data inválida.'], (array) $this->refused(['fields' => [$field]])['refusedQuestions']);
+        $this->assertSame([], (array) $this->refused(['fields' => [['edited' => true] + $field]])['refusedQuestions']);
+    }
+
+    function testTheRefusedCellIsMarkedByRegistrationAndColumn()
+    {
+        $row = ['linha' => 2, 'coluna' => 'cnpj', 'descricao' => 'Campo obrigatório não preenchido', 'registrationId' => 1731];
+
+        $this->assertSame(['1731:cnpj' => 'Campo obrigatório não preenchido'], (array) $this->refused(['rows' => [$row]])['refusedCells']);
+        $this->assertSame([], (array) $this->refused(['rows' => [['edited' => true] + $row]])['refusedCells']);
+        $this->assertSame([], (array) $this->refused(['rows' => [array_diff_key($row, ['registrationId' => true])]])['refusedCells']);
+    }
+
+    function testAnAcceptedResultMarksNothing()
+    {
+        $errors = ['status' => 422, 'fields' => [['questionId' => 13924, 'field' => 'questao:13924', 'message' => 'Data inválida.']]];
+
+        $this->assertSame([], (array) (new ResultOutcome($this->form()))->describe(['status' => ResultSender::STATUS_SUCCESS, 'errors' => $errors])['refusedQuestions']);
+    }
+
+    private function refused(array $errors): array
+    {
+        return (new ResultOutcome($this->form()))->describe($this->rejected(422, $errors));
+    }
+
     private function describe(int $status, array $body): array
     {
         $errors = ApiErrors::fromBody($body);

@@ -74,6 +74,10 @@
                 return { ...(this.result?.computed || {}), ...this.answers };
             },
 
+            refusedQuestions() {
+                return this.result?.lastSend?.outcome?.refusedQuestions || {};
+            },
+
             missing() {
                 return (this.result?.missing || []).map((id) => this.questionsById[id]).filter(Boolean);
             },
@@ -267,7 +271,7 @@
                     return null;
                 }
 
-                return this.errors[question.id_questao_etapa] || null;
+                return this.errors[question.id_questao_etapa] || this.refusedQuestions[question.id_questao_etapa] || null;
             },
 
             // na tabela a marca é da tabela: no campo ela pintaria todas as células

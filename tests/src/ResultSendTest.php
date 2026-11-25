@@ -503,6 +503,39 @@ class ResultSendTest extends TestCase
         $this->assertNull($reloaded->getMetadata(CultBrMetadata::RESULT_SEND_STATUS));
     }
 
+    function testChangingTheRefusedAnswerSettlesItsRefusal()
+    {
+        $opportunity = $this->refusedEdital(['fields' => [['questionId' => 5, 'field' => 'questao:5', 'message' => 'Recusada.'], ['questionId' => 6, 'field' => 'questao:6', 'message' => 'Recusada.']]]);
+
+        $this->resultService()->saveAnswers($opportunity, [5 => 'outra', 6 => null]);
+
+        $errors = json_decode(json_encode($this->reloaded($opportunity)->{CultBrMetadata::RESULT_SEND_ERRORS}), true);
+        $this->assertSame([true, false], array_map(fn($field) => !empty($field['edited']), $errors['fields']), 'Só a resposta que mudou deixa de ser marcada.');
+        $this->assertSame(422, $errors['status'], 'O resto da recusa fica como estava.');
+    }
+
+    function testAttachingTheRefusedFileSettlesItsRefusal()
+    {
+        $opportunity = $this->refusedEdital(['fields' => [['questionId' => 7, 'field' => 'questao:7', 'message' => 'Esta questão é obrigatória.']]]);
+        $path = tempnam(sys_get_temp_dir(), 'anexo') . '.csv';
+        file_put_contents($path, 'a;b');
+
+        $this->assertNull($this->resultService()->attach($opportunity, 7, ['name' => 'a.csv', 'type' => 'text/csv', 'tmp_name' => $path, 'error' => UPLOAD_ERR_OK, 'size' => 3]));
+
+        $errors = json_decode(json_encode($this->reloaded($opportunity)->{CultBrMetadata::RESULT_SEND_ERRORS}), true);
+        $this->assertTrue($errors['fields'][0]['edited'] ?? false);
+    }
+
+    function testARefusedCellStaysMarkedWhileItsSaveIsRefused()
+    {
+        $opportunity = $this->refusedEdital(['rows' => [['registrationId' => 31, 'coluna' => 'cnpj', 'linha' => 2, 'descricao' => 'Recusada.']]]);
+
+        $this->assertNotNull($this->resultService()->saveCell($opportunity, 31, 'cnpj', 'x'));
+
+        $errors = json_decode(json_encode($this->reloaded($opportunity)->{CultBrMetadata::RESULT_SEND_ERRORS}), true);
+        $this->assertArrayNotHasKey('edited', $errors['rows'][0]);
+    }
+
     function testAnExpiredSendIsToldInTheTab()
     {
         $opportunity = $this->readyEdital();
@@ -529,6 +562,17 @@ class ResultSendTest extends TestCase
         $this->backdate($this->postedSendWithoutOutcome($opportunity, 20073), 'started_at');
 
         $this->assertStringNotContainsString('Nada foi enviado', (string) ($this->resultService()->lastSend($this->reloaded($opportunity))['outcome']['message'] ?? ''));
+    }
+
+    private function refusedEdital(array $errors): Opportunity
+    {
+        $text = fn(int $id) => ['id_questao_etapa' => $id, 'tipo_questao' => 'texto', 'requerida' => false];
+        $opportunity = $this->readyEdital(structure: ['secoes' => [['etapas' => [['questoes' => [$text(5), $text(6), ['tipo_questao' => 'anexo'] + $text(7)]]]]]] + self::STRUCTURE);
+        $opportunity->setMetadata(CultBrMetadata::RESULT_SEND_STATUS, ResultSender::STATUS_REJECTED);
+        $opportunity->{CultBrMetadata::RESULT_SEND_ERRORS} = ['status' => 422] + $errors;
+        $opportunity->saveMetadata();
+
+        return $this->reloaded($opportunity);
     }
 
     private function readyEdital(int $status = Opportunity::STATUS_ENABLED, ?array $structure = null, array $publishedReplies = []): Opportunity

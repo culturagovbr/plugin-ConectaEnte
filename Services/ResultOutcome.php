@@ -15,7 +15,7 @@ final class ResultOutcome
     }
 
     /**
-     * @return array{status: string, message: string, items: string[], hiddenRows: int}
+     * @return array{status: string, message: string, items: string[], hiddenRows: int, refusedQuestions: object, refusedCells: object}
      */
     public function describe(array $lastSend): array
     {
@@ -39,6 +39,8 @@ final class ResultOutcome
             'message' => $message,
             'items' => $items,
             'hiddenRows' => max(0, $totalRows - count($errors['rows'] ?? [])),
+            'refusedQuestions' => (object) $this->refusedQuestions($status, $errors),
+            'refusedCells' => (object) $this->refusedCells($status, $errors),
         ];
     }
 
@@ -87,6 +89,33 @@ final class ResultOutcome
         $separator = preg_match('/[?!.:]$/u', trim($name)) ? ' ' : ': ';
 
         return trim($name) . $separator . $message;
+    }
+
+    /** @return array<int, string> o motivo por questão, enquanto a resposta recusada não é alterada */
+    private function refusedQuestions(string $status, array $errors): array
+    {
+        return array_column($this->standing($status, $errors['fields'] ?? [], 'questionId'), 'message', 'questionId');
+    }
+
+    /** @return array<string, string> o motivo por célula, em `inscrição:coluna` */
+    private function refusedCells(string $status, array $errors): array
+    {
+        $cells = [];
+
+        foreach ($this->standing($status, $errors['rows'] ?? [], 'registrationId') as $row) {
+            if (isset($row['coluna'])) {
+                $cells["{$row['registrationId']}:{$row['coluna']}"] = (string) ($row['descricao'] ?? $row['regra'] ?? '');
+            }
+        }
+
+        return $cells;
+    }
+
+    private function standing(string $status, array $refusals, string $key): array
+    {
+        return $status === ResultSender::STATUS_REJECTED
+            ? array_filter($refusals, fn($refusal) => isset($refusal[$key]) && empty($refusal['edited']))
+            : [];
     }
 
     private function rowItems(array $rows): array

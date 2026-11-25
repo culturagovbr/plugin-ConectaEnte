@@ -19,6 +19,11 @@
                 type: Number,
                 default: 0,
             },
+            // o que o CultBR recusou, por `inscrição:coluna`
+            refusals: {
+                type: Object,
+                default: () => ({}),
+            },
         },
 
         setup() {
@@ -140,7 +145,9 @@
             },
 
             cellError(row, column) {
-                return this.errors[`${row.registrationId}:${column.coluna}`];
+                const key = `${row.registrationId}:${column.coluna}`;
+
+                return this.errors[key] || this.refusals[key];
             },
 
             isPending(row, column) {

@@ -25,7 +25,7 @@ Com o formulário aberto:
 
 As regras de visibilidade (`eq` e `includes`) são avaliadas no navegador a cada resposta, com a mesma lógica do validador do servidor.
 
-**Gravação:** o formulário inteiro vai a `POST conectaente/resultAnswers/{id}` 1,5 s depois da última alteração, uma requisição por vez. O servidor aplica as respostas válidas e devolve o erro das recusadas, que aparece sob a questão, no aspecto de erro do core. A lateral mostra as obrigatórias que faltam, com um link para cada uma.
+**Gravação:** o formulário inteiro vai a `POST conectaente/resultAnswers/{id}` 1,5 s depois da última alteração, uma requisição por vez. O servidor aplica as respostas válidas e devolve o erro das recusadas, que aparece sob a questão, no aspecto de erro do core. A resposta que o CultBR recusou ganha a mesma marca (`lastSend.outcome.refusedQuestions`), até ser alterada. A lateral mostra as obrigatórias que faltam, com um link para cada uma.
 
 **Escolhas** se gravam pelo `id` da opção; a opção com complemento, como `{id, complemento}`.
 

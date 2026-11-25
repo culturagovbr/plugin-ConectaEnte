@@ -189,7 +189,7 @@ $this->import('
                 </mc-card>
 
                 <conectaente--result-mapping :entity="entity" @saved="mappingSaved()"></conectaente--result-mapping>
-                <conectaente--result-rows :entity="entity" :mapping-version="mappingVersion" @saved="refresh()"></conectaente--result-rows>
+                <conectaente--result-rows :entity="entity" :mapping-version="mappingVersion" :refusals="result.lastSend?.outcome?.refusedCells || {}" @saved="refresh()"></conectaente--result-rows>
             </template>
         </main>
 

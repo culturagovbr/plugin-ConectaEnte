@@ -414,7 +414,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
     function POST_resultRows()
     {
         $opportunity = $this->controlledOpportunity();
-        $error = Plugin::instance()->resultRows()->saveCell($opportunity, (int) ($this->postData['registrationId'] ?? 0), (string) ($this->postData['column'] ?? ''), $this->postData['value'] ?? null);
+        $error = Plugin::instance()->resultService()->saveCell($opportunity, (int) ($this->postData['registrationId'] ?? 0), (string) ($this->postData['column'] ?? ''), $this->postData['value'] ?? null);
 
         $error ? $this->errorJson(['value' => [$error]], 400) : $this->json(true);
     }
