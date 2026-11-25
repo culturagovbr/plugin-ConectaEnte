@@ -103,6 +103,11 @@
                 return this.requestingSend || this.result?.state === 'sending';
             },
 
+            // o que está gravado é a resposta válida anterior
+            refused() {
+                return this.unsavedIds.filter((id) => this.errors[id]).map((id) => this.questionsById[id]);
+            },
+
             isSaving() {
                 return this.saving || this.mappingSaving || this.rowsSaving;
             },
@@ -267,7 +272,7 @@
                     await this.save();
 
                     if (this.unsavedIds.length) {
-                        this.sendRefusal = this.text('resposta_nao_gravada');
+                        this.sendRefusal = this.refused.length ? null : this.text('resposta_nao_gravada');
                         return;
                     }
 

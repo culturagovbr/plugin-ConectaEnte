@@ -203,11 +203,17 @@ $this->import('
                 </template>
                 <template #content>
                     <mc-alert v-if="result.state === 'uncertain'" type="warning" small><?php i::_e('O último envio pode ter chegado ao CultBR. Confira lá antes de enviar de novo.') ?></mc-alert>
-                    <p v-else-if="result.state === 'complete' || result.state === 'sent'" class="conectaente-result-badge conectaente-result-badge--success" role="status"><mc-icon name="circle-checked"></mc-icon> <?php i::_e('Formulário completo.') ?></p>
+                    <p v-else-if="!refused.length && (result.state === 'complete' || result.state === 'sent')" class="conectaente-result-badge conectaente-result-badge--success" role="status"><mc-icon name="circle-checked"></mc-icon> <?php i::_e('Formulário completo.') ?></p>
                     <template v-else-if="missing.length">
                         <mc-alert type="warning" small><?php i::_e('Faltam estas questões obrigatórias:') ?></mc-alert>
                         <ul class="conectaente-result-tab__missing">
                             <li v-for="question in missing" :key="question.id_questao_etapa"><a href="#" @click.prevent="goTo(question)">{{ questionLabel(question) }}</a></li>
+                        </ul>
+                    </template>
+                    <template v-if="refused.length">
+                        <mc-alert type="danger" small><?php i::_e('Estas respostas não estão gravadas. Corrija antes de enviar:') ?></mc-alert>
+                        <ul class="conectaente-result-tab__missing">
+                            <li v-for="question in refused" :key="question.id_questao_etapa"><a href="#" @click.prevent="goTo(question)">{{ questionLabel(question) }}</a></li>
                         </ul>
                     </template>
                     <mc-alert v-if="result.spreadsheetPending" type="warning" small>{{ text('grade_com_pendencia', { total: result.spreadsheetPending }) }}</mc-alert>
@@ -230,7 +236,7 @@ $this->import('
                     <mc-alert v-if="saveFailed" type="danger" small><?php i::_e('Não foi possível salvar agora. A próxima alteração tenta de novo.') ?></mc-alert>
                     <mc-alert v-if="sendRefusal" type="danger" small>{{ sendRefusal }}</mc-alert>
 
-                    <button v-if="result.sendButton || isSending" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="isSending || isSaving" :aria-busy="isSending" @click="send()">
+                    <button v-if="result.sendButton || isSending" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="isSending || isSaving || refused.length > 0" :aria-busy="isSending" @click="send()">
                         {{ sendLabel }}
                     </button>
                 </template>
