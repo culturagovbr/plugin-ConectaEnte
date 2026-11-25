@@ -151,6 +151,19 @@ class ResultAttachmentsTest extends TestCase
         $this->assertStringContainsString('tamanho', (string) $error);
     }
 
+    function testTheCoreApiDoesNotShowTheAttachments()
+    {
+        $opportunity = $this->edital();
+        $this->attachments()->attach($opportunity, $this->form(), self::BOLSA_SPREADSHEET, $this->upload('planilha-com-nome.csv'));
+
+        $found = (new \MapasCulturais\ApiQuery(Opportunity::class, ['@select' => 'id,files', 'id' => "EQ({$opportunity->id})"]))->find();
+        $legacy = (new \MapasCulturais\ApiQuery(Opportunity::class, ['@select' => 'id', '@files' => '(' . ResultAttachments::FILE_GROUP . '):name,url', 'id' => "EQ({$opportunity->id})"]))->find();
+
+        $this->assertCount(1, $found);
+        $this->assertStringNotContainsString('planilha-com-nome', json_encode($found));
+        $this->assertStringNotContainsString('planilha-com-nome', json_encode($legacy), 'O formato antigo da API também não.');
+    }
+
     private function edital(): Opportunity
     {
         $opportunity = $this->reloaded($this->sealedOpportunity(Opportunity::STATUS_ENABLED));

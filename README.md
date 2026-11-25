@@ -103,7 +103,7 @@ As respostas se gravam sozinhas, 1,5 s depois da última alteração. Inscritos,
 
 **Planilha de contemplados.** Só existe quando o modelo do edital no CultBR traz colunas (`possui_planilha`). O de/para liga cada coluna a um campo da ficha; a grade mostra uma linha por inscrição aprovada na fase final, e o valor preenchido na grade vale sobre o da ficha.
 
-**Anexos.** As questões de anexo recebem arquivo privado (grupo `conectaenteResultAttachment`), e o envio passa a ir em multipart. Em homologação, em 22/11/2026, o storage do CultBR ainda recusava o upload.
+**Anexos.** As questões de anexo recebem arquivo privado (grupo `conectaenteResultAttachment`), que fica fora da resposta da API do core, e o envio passa a ir em multipart. Em homologação, em 22/11/2026, o storage do CultBR ainda recusava o upload.
 
 **Enviar e Retificar.** O botão vale para o edital, não para as linhas. Com pendência, ele devolve a lista do que falta, sem enfileirar. Completo, o pedido vai para a fila, e o job lê `/resultado/publicado`: sem resultado publicado, envia o final (`id_tipo` 2); com resultado publicado, envia o retificado (3). Quando o `/publicado` tem resultado, inclusive criado por fora do plugin, o botão passa a "Retificar"; a leitura fica um minuto em cache. O envio não retenta: repetir um POST que pode ter chegado publicaria dois resultados.
 

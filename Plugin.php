@@ -485,6 +485,10 @@ class Plugin extends \MapasCulturais\Plugin
         });
         $app->hook('mapasculturais.run:after', fn() => Plugin::instance()->publicationContext()->leave());
 
+        $app->hook('ApiQuery(Opportunity).findResult', function (&$result) {
+            $result = ResultAttachments::withoutAttachments((array) $result);
+        });
+
         $app->hook('template(opportunity.edit.tabs):end', function () {
             $this->part('conectaente/opportunity-tab');
             $this->part('conectaente/result-tab');

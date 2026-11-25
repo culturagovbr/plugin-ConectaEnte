@@ -76,6 +76,18 @@ final class ResultAttachments
         return $files;
     }
 
+    /** Os anexos do resultado fora da resposta da API do core, que mostra nome e endereço até sem login. */
+    public static function withoutAttachments(array $entities): array
+    {
+        foreach ($entities as &$entity) {
+            if (is_array($entity)) {
+                unset($entity['files'][self::FILE_GROUP], $entity['@files:' . self::FILE_GROUP]);
+            }
+        }
+
+        return $entities;
+    }
+
     private function uploadError(ResultForm $form, ?array $question, array $upload, array $current): ?string
     {
         $config = $question['config'] ?? [];
