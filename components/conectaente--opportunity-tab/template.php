@@ -133,6 +133,9 @@ if ($showsSendHistory) {
     </mc-container>
 </mc-tab>
 
+<?php // entre as duas: o histórico cobre o envio do edital e o do resultado ?>
+<slot></slot>
+
 <?php if ($showsSendHistory): ?>
 <mc-tab v-if="isSealed" label="<?php i::esc_attr_e('Histórico de envio') ?>" slug="cultbr-historico" cache>
     <conectaente--send-history :entity="entity"></conectaente--send-history>

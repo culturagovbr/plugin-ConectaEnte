@@ -491,7 +491,6 @@ class Plugin extends \MapasCulturais\Plugin
 
         $app->hook('template(opportunity.edit.tabs):end', function () {
             $this->part('conectaente/opportunity-tab');
-            $this->part('conectaente/result-tab');
         });
 
         $app->hook('template(opportunity.edit.entity-header):end', function () {
