@@ -202,6 +202,16 @@ aside .conectaente-result-tab__send:disabled {
     margin-bottom: 0.5rem;
 }
 
+// o card é flex: sem o limite, a tabela cresce com as colunas e sai dele, em vez de rolar
+.conectaente-result-rows .entity-table {
+    width: 100%;
+    min-width: 0;
+}
+
+.conectaente-result-rows .entity-table__table-scroll {
+    width: 100%;
+}
+
 .conectaente-result-rows__cell {
     display: flex;
     flex-direction: column;
