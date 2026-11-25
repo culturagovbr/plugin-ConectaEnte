@@ -193,7 +193,7 @@ $this->import('
             </template>
         </main>
 
-        <aside v-if="!loading && isOpen">
+        <aside v-if="!loading && isOpen" class="conectaente-result-tab__aside">
             <mc-card>
                 <template #title>
                     <h3><?php i::_e('Situação do resultado') ?></h3>

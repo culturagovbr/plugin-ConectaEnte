@@ -40,6 +40,14 @@
     padding-left: 1.25rem;
 }
 
+// a situação acompanha a leitura do formulário, que é longo
+.conectaente-result-tab__aside .mc-card {
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+    position: sticky;
+    top: 1rem;
+}
+
 .conectaente-result-tab__send {
     margin-top: 1rem;
     width: 100%;
