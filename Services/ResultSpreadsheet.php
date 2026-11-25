@@ -85,7 +85,6 @@ final class ResultSpreadsheet
             'proponentTypes' => $this->proponentTypes(),
             'mapping' => $mapping,
             'suggestion' => (object) $this->suggestion($columns, $fields),
-            'fieldsByColumn' => (object) $this->fieldsByColumn($columns, $fields),
             'pendingEquivalences' => (object) $this->pendingEquivalences($opportunity, $columns, $mapping),
         ];
     }
@@ -212,18 +211,6 @@ final class ResultSpreadsheet
         $types = self::FIELD_TYPES_BY_COLUMN[$column['tipo'] ?? ''] ?? null;
 
         return $types === null || in_array($field['fieldType'], $types, true);
-    }
-
-    /** @return array<string, int[]> por coluna, os campos da ficha cujo tipo serve a ela */
-    private function fieldsByColumn(array $columns, array $fields): array
-    {
-        $byColumn = [];
-
-        foreach ($columns as $column) {
-            $byColumn[$column['coluna']] = array_values(array_map(fn($field) => $field['id'], array_filter($fields, fn($field) => $this->fits($column, $field))));
-        }
-
-        return $byColumn;
     }
 
     /** @return array<string, int> palpite por título e tipo; só vale depois que o gestor o confirma */

@@ -55,8 +55,8 @@ $this->import('
                                         <div class="field__input">
                                             <select :id="fieldId('coluna', column.coluna)" :value="view.mapping.columns[column.coluna] ?? ''" @change="chooseColumn(column, $event)">
                                                 <option value=""><?php i::_e('Não se aplica') ?></option>
-                                                <optgroup v-for="(fields, group) in groupsFor(view.fieldsByColumn[column.coluna] || [])" :key="group" :label="group">
-                                                    <option v-for="field in fields" :key="field.id" :value="field.id">{{ field.title }}</option>
+                                                <optgroup v-for="group in fieldGroups" :key="group.label" :label="group.label">
+                                                    <option v-for="field in group.fields" :key="field.id" :value="field.id">{{ field.title }}</option>
                                                 </optgroup>
                                             </select>
                                         </div>
@@ -87,8 +87,8 @@ $this->import('
                                         <div class="field__input">
                                             <select :value="view.mapping.documents[type]?.[kind.key] ?? ''" :aria-label="kind.label + ', ' + type" @change="chooseDocument(type, kind.key, $event)">
                                                 <option value=""><?php i::_e('Não se aplica') ?></option>
-                                                <optgroup v-for="(fields, group) in groupsFor(allFieldIds())" :key="group" :label="group">
-                                                    <option v-for="field in fields" :key="field.id" :value="field.id">{{ field.title }}</option>
+                                                <optgroup v-for="group in fieldGroups" :key="group.label" :label="group.label">
+                                                    <option v-for="field in group.fields" :key="field.id" :value="field.id">{{ field.title }}</option>
                                                 </optgroup>
                                             </select>
                                         </div>

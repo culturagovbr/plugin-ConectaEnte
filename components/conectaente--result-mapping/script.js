@@ -40,6 +40,22 @@
                 return Object.fromEntries((this.view?.fields || []).map((field) => [field.id, field]));
             },
 
+            // por etapa da ficha: o mesmo título se repete de uma etapa para outra
+            fieldGroups() {
+                const fields = this.view?.fields || [];
+                const hasManyPhases = new Set(fields.map((field) => field.phaseId)).size > 1;
+                const groups = new Map();
+
+                for (const field of fields) {
+                    const step = field.step || this.text('sem_etapa');
+                    const label = hasManyPhases && field.phase ? `${field.phase} · ${step}` : step;
+
+                    groups.set(label, [...(groups.get(label) || []), field]);
+                }
+
+                return [...groups].map(([label, fields]) => ({ label, fields }));
+            },
+
             hasSuggestion() {
                 return Object.keys(this.view?.suggestion || {}).some((column) => !this.view.mapping.columns[column]);
             },
@@ -91,28 +107,8 @@
                 });
             },
 
-            // o seletor agrupa por fase e etapa: há edital com dois campos "CNPJ"
-            groupsFor(fieldIds) {
-                const groups = {};
-
-                for (const id of fieldIds) {
-                    const field = this.fieldsById[id];
-
-                    if (field) {
-                        const label = [field.phase, field.step].filter(Boolean).join(' · ');
-                        (groups[label] = groups[label] || []).push(field);
-                    }
-                }
-
-                return groups;
-            },
-
             fieldId(...parts) {
                 return ['conectaente-result-mapping', ...parts].join('-').replace(/\s+/g, '-');
-            },
-
-            allFieldIds() {
-                return (this.view?.fields || []).map((field) => field.id);
             },
 
             suggested(column) {
