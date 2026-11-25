@@ -23,7 +23,7 @@ O valor preenchido aqui vale sobre os outros; texto vazio é a decisão de deixa
 
 Cada alteração vai a `POST conectaente/resultRows/{id}`; o servidor recusa só o que a edição quebra (CPF e CNPJ com dígito verificador, inclusive CNPJ alfanumérico, CEP, monetário, opção de lista, um valor por coluna), e a recusa aparece sob a célula. As pendências da linha (obrigatória vazia, valor inválido vindo da ficha, inscrição sem tipo de proponente) pintam a célula; `condicional` não entra, porque a condição é texto livre e quem a cobra é o 422 de linhas.
 
-Cada célula é um slot do `entity-table`, com o editor do tipo da coluna; depois de gravar, a tabela relê a página e o resumo recalcula as pendências.
+A grade mostra sempre todas as colunas (`all-headers`): sem isso, o `entity-table` mostra só as obrigatórias. Cada célula é um slot do `entity-table`, com o editor do tipo da coluna; depois de gravar, a tabela relê a página e o resumo recalcula as pendências.
 
 ### Importando componente
 

@@ -37,6 +37,7 @@ $this->import('
                 :limit="pageSize"
                 :headers="headers"
                 :required="registrationSlug"
+                all-headers
                 :raw-processor="rowOf"
                 hide-filters
                 hide-sort
