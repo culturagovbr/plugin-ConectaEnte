@@ -469,7 +469,7 @@ class ConectaEnteController extends \MapasCulturais\Controller
     function POST_resultSend()
     {
         $opportunity = $this->controlledOpportunity();
-        $request = Plugin::instance()->resultService()->requestSend($opportunity);
+        $request = Plugin::instance()->resultService()->requestSend($opportunity, isset($this->postData['revision']) ? (string) $this->postData['revision'] : null);
 
         $request['queued'] ? $this->json(['queued' => true, 'result' => Plugin::instance()->resultService()->stateOf($opportunity)]) : $this->errorJson($request, 400);
     }

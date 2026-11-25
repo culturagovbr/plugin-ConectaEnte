@@ -172,6 +172,15 @@ final class ResultAnswers
         return $this->committee->suggested($opportunity, $form, $this->saved($opportunity)['answers']);
     }
 
+    /** A marca das respostas gravadas, para a tela provar que as mostrava ao pedir o envio. */
+    public function revision(Opportunity $opportunity): string
+    {
+        $answers = $this->saved($opportunity)['answers'];
+        ksort($answers);
+
+        return md5(json_encode($answers));
+    }
+
     /** Se as respostas gravadas são de outra versão do formulário. */
     public function isStale(Opportunity $opportunity, ResultForm $form): bool
     {

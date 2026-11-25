@@ -80,6 +80,33 @@ class ResultSendTest extends TestCase
         $this->assertNoResultJob();
     }
 
+    function testASendFromAPageWithOldAnswersIsRefused()
+    {
+        $opportunity = $this->readyEdital();
+
+        $request = $this->resultService()->requestSend($opportunity, 'marca-antiga');
+
+        $this->assertFalse($request['queued']);
+        $this->assertStringContainsString('outra guia', $request['message']);
+        $this->assertNoResultJob();
+    }
+
+    function testASendFromAPageWithTheCurrentAnswersIsQueued()
+    {
+        $opportunity = $this->readyEdital();
+        $revision = $this->resultService()->stateOf($opportunity)->form['revision'];
+
+        $this->assertTrue($this->resultService()->requestSend($this->reloaded($opportunity), $revision)['queued']);
+    }
+
+    function testTheRouteChecksTheAnswersOfThePage()
+    {
+        $opportunity = $this->readyEdital();
+
+        $this->assertSame(400, $this->send($this->requestFactory->POST('conectaente', 'resultSend', [$opportunity->id], ['revision' => 'marca-antiga'], ajax: true)));
+        $this->assertNoResultJob();
+    }
+
     function testAnEditalThatIsNotPublishedIsRefused()
     {
         $opportunity = $this->readyEdital(status: Opportunity::STATUS_DRAFT);

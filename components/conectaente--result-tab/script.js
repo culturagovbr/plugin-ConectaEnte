@@ -258,7 +258,7 @@
                 this.sendRefusal = null;
 
                 try {
-                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultSend', [this.entity.id]), {});
+                    const response = await this.api.POST(Utils.createUrl('conectaente', 'resultSend', [this.entity.id]), { revision: this.result.revision });
                     const body = await response.json().catch(() => null);
 
                     if (!response.ok) {
@@ -268,7 +268,7 @@
                             this.result = { ...this.result, missing: body.data.missing };
                         }
 
-                        return;
+                        return this.refresh();
                     }
 
                     this.receive(body.result);

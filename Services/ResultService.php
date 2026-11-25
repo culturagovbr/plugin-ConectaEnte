@@ -106,6 +106,7 @@ final class ResultService
             'unavailableAttachments' => $form->unavailableAttachmentIds(),
             'lastSend' => $this->lastSend($opportunity, $form),
             'answers' => (object) $answers->forScreen($opportunity, $form),
+            'revision' => $answers->revision($opportunity),
             'committee' => (object) $answers->committee($opportunity, $form),
             'incompleteCommittee' => (object) $answers->incompleteCommittee($opportunity, $form),
             'computed' => (object) $answers->computed($opportunity, $form),
@@ -155,9 +156,10 @@ final class ResultService
     /**
      * Confere o pedido de envio e o enfileira; devolve a recusa, ou a confirmação de que foi para a fila.
      *
+     * @param ?string $revision a marca das respostas que a tela mostrava
      * @return array{queued: bool, message: ?string, missing: int[], pendingRows: int} a mensagem acompanha a fila quando a conferência ficou para o job
      */
-    public function requestSend(Opportunity $opportunity): array
+    public function requestSend(Opportunity $opportunity, ?string $revision = null): array
     {
         $startedAt = microtime(true);
         $state = $this->stateOf($opportunity);
@@ -170,6 +172,10 @@ final class ResultService
             ResultState::PENDING => i::__('O resultado tem pendências. Complete o formulário e a planilha antes de enviar.'),
             default => i::__('O resultado deste edital não pode ser enviado agora.'),
         };
+
+        if (!$message && $revision !== null && $revision !== $state->form['revision']) {
+            $message = i::__('As respostas mudaram em outra guia ou por outra pessoa, e a tela foi atualizada. Confira e envie de novo.');
+        }
 
         if ($message) {
             return $refusal($message);
