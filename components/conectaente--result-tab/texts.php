@@ -17,6 +17,7 @@ return [
     'erro_arquivo' => i::__('Não foi possível enviar o arquivo agora.'),
     'arquivo_grande' => i::__('O arquivo passa de {tamanho} MB.'),
     'remover_arquivo' => i::__('Remover o arquivo {nome}'),
+    'em_andamento' => i::__('Envio ao CultBR em andamento'),
     'grade_com_pendencia' => i::__('Linhas com pendência na grade de contemplados: {total}.'),
     'enviar' => i::__('Enviar ao CultBR'),
     'retificar' => i::__('Retificar no CultBR'),

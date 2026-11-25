@@ -74,6 +74,18 @@
                 return { ...(this.result?.computed || {}), ...this.answers };
             },
 
+            isSending() {
+                return this.requestingSend || this.result?.state === 'sending';
+            },
+
+            sendLabel() {
+                if (this.isSending) {
+                    return this.text('em_andamento');
+                }
+
+                return this.result?.published ? this.text('retificar') : this.text('enviar');
+            },
+
             refusedQuestions() {
                 return this.result?.lastSend?.outcome?.refusedQuestions || {};
             },

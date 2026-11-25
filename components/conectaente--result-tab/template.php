@@ -199,8 +199,7 @@ $this->import('
                     <h3><?php i::_e('Situação do resultado') ?></h3>
                 </template>
                 <template #content>
-                    <p v-if="result.state === 'sending'" class="conectaente-result-badge conectaente-result-badge--pending" role="status"><?php i::_e('Envio ao CultBR em andamento.') ?></p>
-                    <mc-alert v-else-if="result.state === 'uncertain'" type="warning" small><?php i::_e('O último envio pode ter chegado ao CultBR. Confira lá antes de enviar de novo.') ?></mc-alert>
+                    <mc-alert v-if="result.state === 'uncertain'" type="warning" small><?php i::_e('O último envio pode ter chegado ao CultBR. Confira lá antes de enviar de novo.') ?></mc-alert>
                     <p v-else-if="result.state === 'complete' || result.state === 'sent'" class="conectaente-result-badge conectaente-result-badge--success" role="status"><mc-icon name="circle-checked"></mc-icon> <?php i::_e('Formulário completo.') ?></p>
                     <template v-else-if="missing.length">
                         <mc-alert type="warning" small><?php i::_e('Faltam estas questões obrigatórias:') ?></mc-alert>
@@ -228,8 +227,8 @@ $this->import('
                     <mc-alert v-if="saveFailed" type="danger" small><?php i::_e('Não foi possível salvar agora. A próxima alteração tenta de novo.') ?></mc-alert>
                     <mc-alert v-if="sendRefusal" type="danger" small>{{ sendRefusal }}</mc-alert>
 
-                    <button v-if="result.sendButton" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="requestingSend || saving" @click="send()">
-                        {{ result.published ? text('retificar') : text('enviar') }}
+                    <button v-if="result.sendButton || isSending" type="button" class="button button--primary button--large conectaente-result-tab__send" :disabled="isSending || saving" :aria-busy="isSending" @click="send()">
+                        {{ sendLabel }}
                     </button>
                 </template>
             </mc-card>

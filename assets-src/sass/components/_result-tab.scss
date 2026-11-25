@@ -43,6 +43,15 @@
 .conectaente-result-tab__send {
     margin-top: 1rem;
     width: 100%;
+
+    // o :hover do botão do tema pintaria o desabilitado
+    &.button:disabled,
+    &.button:disabled:hover {
+        background-color: var(--mc-gray-300);
+        border-color: var(--mc-gray-300);
+        color: var(--mc-gray-700);
+        cursor: not-allowed;
+    }
 }
 
 .conectaente-result-tab__last-send {
