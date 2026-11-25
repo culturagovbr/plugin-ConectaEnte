@@ -133,7 +133,17 @@ final class ResultAnswers
     /** @return int[] obrigatórias visíveis e editáveis ainda sem resposta */
     public function missing(Opportunity $opportunity, ResultForm $form): array
     {
-        return (new ResultValidator($form))->missing($this->saved($opportunity)['answers'], $this->computed($opportunity, $form));
+        $answers = $this->toSend($opportunity, $form);
+        $validator = new ResultValidator($form);
+
+        // o CPF vem do cadastro, e pode ter saído de lá depois da gravação
+        foreach ($form->committeeIds() as $id) {
+            if ($validator->error($form->question($id), $answers[$id] ?? null)) {
+                unset($answers[$id]);
+            }
+        }
+
+        return $validator->missing($answers, $this->computed($opportunity, $form));
     }
 
     /** @return array<int, mixed> as respostas gravadas como a tela as mostra */

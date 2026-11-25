@@ -142,6 +142,20 @@ class ResultCommitteeTest extends TestCase
         $this->assertSame('', $this->answers()->committee($this->reloaded($opportunity), $this->form())[self::COMMITTEE][0]['cpf']);
     }
 
+    function testTheDocumentThatLeftTheRegistryMakesTheQuestionPending()
+    {
+        $opportunity = $this->editalWithPhase();
+        $valuer = $this->valuer($opportunity);
+        $this->saveCommittee($opportunity);
+        $this->assertNotContains(self::COMMITTEE, $this->answers()->missing($this->reloaded($opportunity), $this->form()));
+
+        $valuer = $this->app->repo(Agent::class)->find($valuer->id);
+        $valuer->cpf = '';
+        $valuer->save(true);
+
+        $this->assertContains(self::COMMITTEE, $this->answers()->missing($this->reloaded($opportunity), $this->form()));
+    }
+
     function testTheAnsweredQuestionIsNotFilledAgain()
     {
         $opportunity = $this->editalWithPhase();
