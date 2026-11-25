@@ -42,7 +42,7 @@ final class ResultService
         return $this->localBlock($opportunity, $federativeEntity) ?? $this->remoteState($opportunity, $federativeEntity);
     }
 
-    /** A estrutura do formulário lida agora no CultBR, sem cache: é a que vale no envio. */
+    /** A estrutura do formulário lida agora no CultBR, sem cache. */
     public function freshStructure(Opportunity $opportunity): ApiRead
     {
         $federativeEntity = $this->plugin->sealedOpportunity()->federativeEntityOf($opportunity);
