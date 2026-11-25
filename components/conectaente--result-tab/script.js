@@ -58,7 +58,7 @@
                 saving: false,
                 saveTimer: null,
                 saveQueue: Promise.resolve(),
-                saveFailed: false,
+                saveFailure: null,
                 mappingSaving: false,
                 rowsSaving: false,
                 requestingSend: false,
@@ -145,6 +145,7 @@
                     clearTimeout(this.saveTimer);
 
                     if (this.loading || !this.unsavedIds.length) {
+                        this.saveFailure = null;
                         return;
                     }
 
@@ -208,7 +209,7 @@
                 const edited = JSON.parse(JSON.stringify(Object.fromEntries(this.idsToSave.map((id) => [id, this.answers[id] ?? null]))));
 
                 this.saving = true;
-                this.saveFailed = false;
+                this.saveFailure = null;
 
                 try {
                     const response = await this.api.POST(Utils.createUrl('conectaente', 'resultAnswers', [this.entity.id]), { answers: edited });
@@ -218,6 +219,12 @@
                     }
 
                     const body = await response.json();
+
+                    if (!body.result.structure) {
+                        this.saveFailure = `${this.text('nao_gravado')} ${this.stateMessage(body.result)}`;
+                        return;
+                    }
+
                     this.errors = body.errors || {};
 
                     for (const id of Object.keys(edited)) {
@@ -226,7 +233,7 @@
 
                     this.receive(body.result, edited);
                 } catch (error) {
-                    this.saveFailed = true;
+                    this.saveFailure = this.text('erro_gravacao');
                 } finally {
                     this.saving = false;
                 }
@@ -234,6 +241,11 @@
 
             // traz o que mudou em outra guia, menos o que está em edição aqui
             receive(result, edited = {}) {
+                // sem o CultBR não há formulário a ler, e o que está na tela fica
+                if (this.isOpen && !result.structure) {
+                    return;
+                }
+
                 const unsaved = this.unsavedIds;
                 const stored = jsonByQuestion(result.answers);
 
@@ -281,7 +293,7 @@
                     await this.save();
 
                     if (this.unsavedIds.length) {
-                        this.sendRefusal = this.refused.length ? null : this.text('resposta_nao_gravada');
+                        this.sendRefusal = this.refused.length || this.saveFailure ? null : this.text('resposta_nao_gravada');
                         return;
                     }
 
@@ -648,11 +660,7 @@
                 document.getElementById(`conectaente-result-question-${question.id_questao_etapa}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             },
 
-            stateMessage() {
-                const state = this.result?.state;
-
-                const reason = this.result?.reason;
-
+            stateMessage({ state, reason } = this.result) {
                 return this.text(`estado_${state}`, { motivo: REASONS_WITH_TEXT.includes(reason) ? this.text(`motivo_${reason}`) : '' });
             },
         },
