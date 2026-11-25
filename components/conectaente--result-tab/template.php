@@ -147,6 +147,7 @@ $this->import('
                                                 <?php i::_e('Remover') ?>
                                             </button>
                                         </div>
+                                        <small v-if="incompleteCommittee(question)" class="field__description" role="status"><?php i::_e('Gravado, mas falta completar:') ?> {{ incompleteCommittee(question) }}</small>
                                         <button type="button" class="button button--primary-outline button--sm button--icon conectaente-result-question__add" @click="addRow(question)">
                                             <mc-icon name="add"></mc-icon>
                                             {{ question.config?.tabela?.textoBotaoAdicionar || question.config?.buttonLabel || '<?= i::esc_attr__('Adicionar linha') ?>' }}

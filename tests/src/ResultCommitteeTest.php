@@ -129,9 +129,58 @@ class ResultCommitteeTest extends TestCase
         $this->valuer($opportunity, cpf: null);
 
         $this->assertSame('', $this->answers()->committee($this->reloaded($opportunity), $this->form())[self::COMMITTEE][0]['cpf']);
-        $this->assertStringContainsString('CPF: preenchimento obrigatório', $this->saveCommittee($opportunity)[self::COMMITTEE]);
+        $this->saveCommittee($opportunity);
+        $this->assertStringContainsString('Linha 1, CPF: preenchimento obrigatório', $this->incomplete($opportunity));
         $this->assertSame([], $this->saveCommittee($opportunity, ['cpf' => '111.444.777-35']));
         $this->assertSame('111.444.777-35', $this->answers()->toSend($this->reloaded($opportunity), $this->form())[self::COMMITTEE][0]['cpf']);
+    }
+
+    function testTheIncompleteCommitteeIsStoredAndStaysPending()
+    {
+        $opportunity = $this->editalWithPhase();
+        $first = $this->valuer($opportunity);
+        $this->valuer($opportunity);
+        $rows = $this->answers()->committee($this->reloaded($opportunity), $this->form())[self::COMMITTEE];
+        $rows[0]['vinculo'] = 'contratado';
+
+        $this->assertSame([], $this->answers()->save($this->reloaded($opportunity), $this->form(), [self::COMMITTEE => $rows]));
+
+        $stored = $this->answers()->saved($this->reloaded($opportunity))['answers'][self::COMMITTEE];
+        $this->assertCount(2, $stored);
+        $this->assertSame([$first->id, 'contratado'], [$stored[0]['agentId'], $stored[0]['vinculo']]);
+        $this->assertContains(self::COMMITTEE, $this->answers()->missing($this->reloaded($opportunity), $this->form()));
+        $this->assertSame('Linha 2, Vínculo: preenchimento obrigatório.', $this->incomplete($opportunity));
+    }
+
+    function testOnlyTheCommitteeIsStoredIncomplete()
+    {
+        $form = new ResultForm(json_decode((string) file_get_contents(Plugin::instance()->fixturesPath() . '/estrutura.acao-9.json'), true));
+        $opportunity = $this->editalWithPhase();
+        $hired = [['nome_razao_social' => 'Contratada Teste']];
+        $member = [['nome' => 'Avaliadora Teste', 'cpf' => self::CPF, 'vinculo' => '', 'categoria_grupo' => '']];
+
+        $errors = $this->answers()->save($this->reloaded($opportunity), $form, [14784 => $hired, 14792 => $member]);
+
+        $this->assertSame([14784], array_keys($errors));
+        $this->assertSame([14792], array_keys($this->answers()->saved($this->reloaded($opportunity))['answers']));
+    }
+
+    function testTheInvalidCellIsStillRefused()
+    {
+        $opportunity = $this->editalWithPhase();
+        $this->valuer($opportunity);
+
+        $this->assertStringContainsString('escolha uma das opções', $this->saveCommittee($opportunity, ['vinculo' => 'parente'])[self::COMMITTEE]);
+        $this->assertArrayNotHasKey(self::COMMITTEE, $this->answers()->saved($this->reloaded($opportunity))['answers']);
+    }
+
+    function testTheCompleteCommitteeHasNothingToComplete()
+    {
+        $opportunity = $this->editalWithPhase();
+        $this->valuer($opportunity);
+        $this->saveCommittee($opportunity);
+
+        $this->assertNull($this->incomplete($opportunity));
     }
 
     function testTheInvalidDocumentOfTheRegistryCountsAsNone()
@@ -242,10 +291,15 @@ class ResultCommitteeTest extends TestCase
     private function saveCommittee(Opportunity $opportunity, array $cells = []): array
     {
         $opportunity = $this->reloaded($opportunity);
-        $rows = $this->answers()->committee($opportunity, $this->form())[self::COMMITTEE];
+        $rows = ($this->answers()->committee($opportunity, $this->form()) ?: $this->answers()->forScreen($opportunity, $this->form()))[self::COMMITTEE];
         $rows = array_map(fn($row) => $cells + ['vinculo' => 'contratado'] + $row, $rows);
 
         return $this->answers()->save($opportunity, $this->form(), [self::COMMITTEE => $rows]);
+    }
+
+    private function incomplete(Opportunity $opportunity): ?string
+    {
+        return $this->answers()->incompleteCommittee($this->reloaded($opportunity), $this->form())[self::COMMITTEE] ?? null;
     }
 
     private function form(): ResultForm

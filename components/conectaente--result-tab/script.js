@@ -475,6 +475,10 @@
                 return this.rows(question).some((row) => row.agentId);
             },
 
+            incompleteCommittee(question) {
+                return this.result?.incompleteCommittee?.[question.id_questao_etapa];
+            },
+
             isMaskedCell(row, column) {
                 return !!row.agentId && String(row[column.key] ?? '').startsWith('***');
             },

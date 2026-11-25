@@ -20,7 +20,7 @@ Com o formulário aberto:
 | `texto`, `textarea`, `número`, `moeda`, `data`, `booleano` | o campo do tipo no padrão do `entity-field` (moeda em `mc-currency-input`, data em `<conectaente--result-date>`, CEP com máscara), com os limites declarados |
 | `radio`, `múltipla escolha`, `checkbox` | as opções da lista; a opção com complemento abre o campo de texto, cujo erro só aparece depois de a pessoa sair dele; a exclusiva desmarca as outras |
 | `tabela`, `Tabela Dinâmica` | uma caixa por linha, com um campo por coluna declarada |
-| comissão avaliadora (`tabela` ou `Tabela Dinâmica`) | sem resposta gravada, abre com os avaliadores ativos do edital (`committee`); o CPF do cadastro vem mascarado e só leitura. A sugestão só é gravada depois de alterada |
+| comissão avaliadora (`tabela` ou `Tabela Dinâmica`) | sem resposta gravada, abre com os avaliadores ativos do edital (`committee`); o CPF do cadastro vem mascarado e só leitura. A sugestão só é gravada depois de alterada. Grava mesmo com célula vazia, e mostra o que falta (`incompleteCommittee`) |
 | `anexo`, `múltiplos anexos` | envio de arquivo pelo formato e pelo limite declarados; o arquivo fica privado na oportunidade. Com planilha no edital, a questão da planilha diz que vem da grade, e os anexos não cobrados ficam indisponíveis, com o motivo |
 | tipo desconhecido | erro visível, nunca um campo de texto genérico |
 

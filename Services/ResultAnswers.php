@@ -103,6 +103,7 @@ final class ResultAnswers
         $kept = array_intersect_key($this->saved($opportunity)['answers'], $form->questions());
         $answers = $this->committee->toStore($opportunity, $form, $answers, $kept);
         $complete = $this->committee->complete($answers, $form);
+        $committeeIds = $form->committeeIds();
         $errors = [];
 
         $validator = new ResultValidator($form);
@@ -113,7 +114,7 @@ final class ResultAnswers
                 continue;
             }
 
-            $error = $this->refusal($form, $computed, (int) $id) ?? $validator->error($form->question((int) $id), $complete[$id]);
+            $error = $this->refusal($form, $computed, (int) $id) ?? $validator->error($form->question((int) $id), $complete[$id], in_array((int) $id, $committeeIds, true));
 
             if ($error) {
                 $errors[(int) $id] = $error;
@@ -134,16 +135,23 @@ final class ResultAnswers
     public function missing(Opportunity $opportunity, ResultForm $form): array
     {
         $answers = $this->toSend($opportunity, $form);
-        $validator = new ResultValidator($form);
+        $incomplete = $this->incompleteCommittee($opportunity, $form);
 
-        // o CPF vem do cadastro, e pode ter saído de lá depois da gravação
+        return (new ResultValidator($form))->missing(array_diff_key($answers, $incomplete), $this->computed($opportunity, $form));
+    }
+
+    /** @return array<int, string> o que falta na comissão gravada, por questão; o CPF pode ter saído do cadastro depois */
+    public function incompleteCommittee(Opportunity $opportunity, ResultForm $form): array
+    {
+        $answers = $this->toSend($opportunity, $form);
+        $validator = new ResultValidator($form);
+        $errors = [];
+
         foreach ($form->committeeIds() as $id) {
-            if ($validator->error($form->question($id), $answers[$id] ?? null)) {
-                unset($answers[$id]);
-            }
+            $errors[$id] = $validator->error($form->question($id), $answers[$id] ?? null);
         }
 
-        return $validator->missing($answers, $this->computed($opportunity, $form));
+        return array_filter($errors);
     }
 
     /** @return array<int, mixed> as respostas gravadas como a tela as mostra */

@@ -58,8 +58,8 @@ final class ResultValidator
         return $missing;
     }
 
-    /** O motivo da recusa de uma resposta, ou null se ela cabe no que a questão declara. */
-    public function error(array $question, mixed $value): ?string
+    /** O motivo da recusa de uma resposta, ou null se ela cabe no que a questão declara; `$allowsEmptyCells` aceita a tabela incompleta. */
+    public function error(array $question, mixed $value, bool $allowsEmptyCells = false): ?string
     {
         if (self::isEmpty($value) || $this->isAttachment($question)) {
             return null;
@@ -73,8 +73,8 @@ final class ResultValidator
             'booleano' => is_bool($value) ? null : i::__('Responda sim ou não.'),
             'radio' => $this->choiceError($question, $value),
             'múltipla escolha', 'checkbox' => $this->choiceListError($question, $value),
-            'tabela' => $this->tableError($question, $value),
-            'Tabela Dinâmica' => $this->dynamicTableError($question, $value),
+            'tabela' => $this->tableError($question, $value, $allowsEmptyCells),
+            'Tabela Dinâmica' => $this->dynamicTableError($question, $value, $allowsEmptyCells),
             default => sprintf(i::__('O tipo de questão "%s" não é suportado nesta versão do plugin.'), (string) ($question['tipo_questao'] ?? '')),
         };
     }
@@ -257,13 +257,13 @@ final class ResultValidator
         return null;
     }
 
-    private function tableError(array $question, mixed $rows): ?string
+    private function tableError(array $question, mixed $rows, bool $allowsEmptyCells): ?string
     {
         $table = $question['config']['tabela'] ?? [];
 
         return $this->rowsError($rows, $table['minLinhas'] ?? null, $table['maxLinhas'] ?? null)
             ?? $this->cellsError($rows, $table['colunas'] ?? [], 'id', fn($column) => [
-                'required' => !empty($column['obrigatoria']),
+                'required' => !$allowsEmptyCells && !empty($column['obrigatoria']),
                 'max' => $column['maxCaracteres'] ?? null,
                 'min' => $column['minCaracteres'] ?? null,
                 'options' => $column['opcoes'] ?? null,
@@ -272,13 +272,13 @@ final class ResultValidator
             ]);
     }
 
-    private function dynamicTableError(array $question, mixed $rows): ?string
+    private function dynamicTableError(array $question, mixed $rows, bool $allowsEmptyCells): ?string
     {
         $config = $question['config'] ?? [];
 
         return $this->rowsError($rows, $config['minRows'] ?? null, $config['maxRows'] ?? null)
             ?? $this->cellsError($rows, $config['columns'] ?? [], 'key', fn($column) => [
-                'required' => !empty($column['required']),
+                'required' => !$allowsEmptyCells && !empty($column['required']),
                 'max' => ($column['type'] ?? null) === 'text' ? ($column['max'] ?? null) : null,
                 'min' => null,
                 'options' => $column['dropdownOptions']['values'] ?? null,

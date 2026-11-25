@@ -103,7 +103,7 @@ As respostas se gravam sozinhas, 1,5 s depois da última alteração. Inscritos,
 
 **Planilha de contemplados.** Só existe quando o modelo do edital no CultBR traz colunas (`possui_planilha`). O de/para liga cada coluna a um campo da ficha, entre todos os do edital, agrupados por etapa; o campo de agente ou de espaço vale pelo dado que traz, o de lista só serve à coluna de lista (os valores viram um texto só, e a equivalência o traduz), e o tipo que não serve à coluna é recusado; a grade mostra uma linha por inscrição aprovada na fase final, e o valor preenchido na grade vale sobre o da ficha.
 
-**Comissão avaliadora.** Sem resposta gravada, a questão abre com os avaliadores ativos das fases de avaliação (`Services/ResultCommittee`), fora a de prestação de contas. A resposta guarda o agente, e o CPF do cadastro sai completo só no envio; na tela, mascarado. Avaliador sem CPF válido no cadastro tem o campo aberto. O vínculo não existe no Mapas e é do gestor.
+**Comissão avaliadora.** Sem resposta gravada, a questão abre com os avaliadores ativos das fases de avaliação (`Services/ResultCommittee`), fora a de prestação de contas. A resposta guarda o agente, e o CPF do cadastro sai completo só no envio; na tela, mascarado. Avaliador sem CPF válido no cadastro tem o campo aberto. O vínculo não existe no Mapas e é do gestor. Grava mesmo incompleta, e segue pendente até completar.
 
 **Anexos.** As questões de anexo recebem arquivo privado (grupo `conectaenteResultAttachment`), que fica fora da resposta da API do core, e o envio passa a ir em multipart. Em homologação, em 22/11/2026, o storage do CultBR ainda recusava o upload.
 

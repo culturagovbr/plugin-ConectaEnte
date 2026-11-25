@@ -107,6 +107,7 @@ final class ResultService
             'lastSend' => $this->lastSend($opportunity, $form),
             'answers' => (object) $answers->forScreen($opportunity, $form),
             'committee' => (object) $answers->committee($opportunity, $form),
+            'incompleteCommittee' => (object) $answers->incompleteCommittee($opportunity, $form),
             'computed' => (object) $answers->computed($opportunity, $form),
             'suggested' => (object) $answers->suggested($opportunity, $form),
             'mirrored' => (object) $answers->mirrored($opportunity, $form),
