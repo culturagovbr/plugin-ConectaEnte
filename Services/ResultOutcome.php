@@ -29,7 +29,7 @@ final class ResultOutcome
         $message = match ($status) {
             ResultSender::STATUS_SUCCESS => i::__('Resultado aceito pelo CultBR.'),
             ResultSender::STATUS_SIMULATED => i::__('Envio simulado: em modo de desenvolvimento nada foi enviado ao CultBR.'),
-            ResultSender::STATUS_UNCERTAIN => i::__('O CultBR não respondeu ao envio. Ele pode ter chegado: confira no CultBR antes de enviar de novo.'),
+            ResultSender::STATUS_UNCERTAIN => i::__('O CultBR não respondeu ao envio. Ele pode ter chegado.'),
             ResultSender::STATUS_REJECTED => $this->rejection((int) ($errors['status'] ?? 0), $errors, $reason),
             default => $reason ?: i::__('O envio não foi concluído.'),
         };
