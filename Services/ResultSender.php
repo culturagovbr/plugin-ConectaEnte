@@ -27,7 +27,7 @@ final class ResultSender
     const STATUS_SIMULATED = 'simulated';
     const STATUS_UNCERTAIN = 'uncertain';
     const MAX_STORED_ERRORS = 200;
-    const DOCUMENT_KEYS = ['cpf', 'cnpj'];
+    const DOCUMENT_KEYS = ['cpf', 'cnpj', 'documento', 'numero_documento'];
 
     public function __construct(private Plugin $plugin)
     {
@@ -158,7 +158,7 @@ final class ResultSender
         $this->plugin->sendLogger()->finish($log, $outcome);
     }
 
-    // a tabela da comissão também traz CPF de terceiros
+    // as tabelas da comissão e dos contratados também trazem documento de terceiros
     private function withoutDocuments(array $value): array
     {
         foreach ($value as $key => $item) {

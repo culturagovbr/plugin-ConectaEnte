@@ -502,6 +502,30 @@ class ResultSendTest extends TestCase
         $this->assertSame('529.982.247-25', $this->postedBody()['respostas'][0]['resposta']['resposta'][0]['cpf']);
     }
 
+    /** @dataProvider contractorDocumentColumns */
+    function testTheContractorDocumentIsMaskedInTheHistoryButSentInFull(string $column)
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(404, self::NOT_FOUND)]);
+        $this->app->hook('conectaente.resultPayload', function ($opportunity, &$payload) use ($column) {
+            $payload['respostas'][] = ['id_par_questao' => 14001, 'resposta' => ['resposta' => [['nome' => 'Fulana de Tal Teste', 'tipo_documento' => 'CPF', $column => '529.982.247-25']]]];
+        });
+
+        try {
+            $log = $this->runSend($opportunity);
+        } finally {
+            $this->app->clearHooks('conectaente.resultPayload');
+        }
+
+        $attempt = $this->app->repo(\ConectaEnte\Entities\LogAttempt::class)->findOneBy(['log' => $log->id], ['id' => 'DESC']);
+        $this->assertStringNotContainsString('529.982.247-25', (string) $attempt->requestPayload);
+        $this->assertSame('529.982.247-25', $this->postedBody()['respostas'][0]['resposta']['resposta'][0][$column]);
+    }
+
+    static function contractorDocumentColumns(): array
+    {
+        return [['numero_documento'], ['documento']];
+    }
+
     function testInDevModeTheSendIsSimulatedWithoutKeepingTheHash()
     {
         $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(404, self::NOT_FOUND)]);
