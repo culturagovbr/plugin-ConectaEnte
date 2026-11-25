@@ -3,6 +3,7 @@
     const AUTOSAVE_DELAY = 1500;
     const SENDING_POLL_INTERVAL = 5000;
     const OPEN_STATES = ['pending', 'complete', 'sent', 'sending', 'uncertain'];
+    const COMPLETE_STATES = ['complete', 'sent'];
     const CHOICE_LIST_TYPES = ['múltipla escolha', 'checkbox'];
     const TABLE_TYPES = ['tabela', 'Tabela Dinâmica'];
     const ATTACHMENT_TYPES = ['anexo', 'múltiplos anexos'];
@@ -107,6 +108,11 @@
             // o que está gravado é a resposta válida anterior
             refused() {
                 return this.unsavedIds.filter((id) => this.errors[id]).map((id) => this.questionsById[id]);
+            },
+
+            // completo no servidor e sem nada na tela que ele não tenha aceitado
+            isComplete() {
+                return COMPLETE_STATES.includes(this.result?.state) && !this.refused.length && !this.refusedCells && !this.saveFailure;
             },
 
             isSaving() {

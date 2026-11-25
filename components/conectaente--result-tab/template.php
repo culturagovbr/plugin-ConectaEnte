@@ -203,7 +203,7 @@ $this->import('
                 </template>
                 <template #content>
                     <mc-alert v-if="result.state === 'uncertain'" type="warning" small><?php i::_e('O último envio pode ter chegado ao CultBR. Confira lá antes de enviar de novo.') ?></mc-alert>
-                    <p v-else-if="!refused.length && !refusedCells && (result.state === 'complete' || result.state === 'sent')" class="conectaente-result-badge conectaente-result-badge--success" role="status"><mc-icon name="circle-checked"></mc-icon> <?php i::_e('Formulário completo.') ?></p>
+                    <p v-else-if="isComplete" class="conectaente-result-badge conectaente-result-badge--success" role="status"><mc-icon name="circle-checked"></mc-icon> <?php i::_e('Formulário completo.') ?></p>
                     <template v-else-if="missing.length">
                         <mc-alert type="warning" small><?php i::_e('Faltam estas questões obrigatórias:') ?></mc-alert>
                         <ul class="conectaente-result-tab__missing">
