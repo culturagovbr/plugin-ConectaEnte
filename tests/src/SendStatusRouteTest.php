@@ -41,7 +41,7 @@ class SendStatusRouteTest extends TestCase
         $opportunity->setMetadata(CultBrMetadata::SEND_AT, '2026-11-25 10:15:31');
         $opportunity->saveMetadata();
 
-        $this->assertSame(['sealed' => true, 'suspended' => false, 'pendingSendState' => null, 'status' => SendOutcome::SUCCESS, 'at' => '2026-11-25 10:15:31'], $this->statusOf($opportunity));
+        $this->assertSame(['sealed' => true, 'parIsKnown' => true, 'suspended' => false, 'pendingSendState' => null, 'status' => SendOutcome::SUCCESS, 'at' => '2026-11-25 10:15:31'], $this->statusOf($opportunity));
     }
 
     private function statusOf(Opportunity $opportunity): array

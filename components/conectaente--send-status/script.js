@@ -56,6 +56,10 @@ app.component('conectaente--send-status', {
         if (this.current.pendingSendState === 'awaiting') {
             this.follow();
         }
+
+        if (this.current.sealed && !this.current.parIsKnown) {
+            this.readPar();
+        }
     },
 
     beforeUnmount() {
@@ -88,6 +92,12 @@ app.component('conectaente--send-status', {
     },
 
     methods: {
+        // sem a árvore à mão o servidor não sabe se o envio está suspenso
+        async readPar() {
+            await this.api.GET(Utils.createUrl('conectaente', 'parInformation', [this.entity.id]), {}, { cache: 'no-store' }).catch(() => null);
+            this.refresh();
+        },
+
         // acompanha até o desfecho mudar; depois do limite, quem quiser recarrega
         follow() {
             clearTimeout(this.pollTimer);

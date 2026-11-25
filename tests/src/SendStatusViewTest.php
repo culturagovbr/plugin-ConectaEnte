@@ -107,6 +107,17 @@ class SendStatusViewTest extends TestCase
         $this->assertFalse($this->view($opportunity)['suspended'], 'Sem árvore não há como afirmar que a ação saiu.');
     }
 
+    // a tela lê o PAR quando a árvore não está à mão, para o selo não depender do cache
+    function testTheScreenIsToldWhetherTheParTreeIsKnown()
+    {
+        $opportunity = $this->sealedOpportunity(Opportunity::STATUS_ENABLED);
+        $known = $this->view($opportunity)['parIsKnown'];
+        $this->app->mscache->delete(ParInformationService::cacheKey($this->resolveFederativeEntity($opportunity)));
+
+        $this->assertTrue($known);
+        $this->assertFalse($this->view($opportunity)['parIsKnown']);
+    }
+
     function testAnUnsealedOpportunityIsNeverSuspended()
     {
         $this->loginAsSaasSuperAdmin();

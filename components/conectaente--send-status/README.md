@@ -24,6 +24,8 @@ O indicador é um badge discreto, logo abaixo do título, e distingue sete situa
 
 O motivo gravado em `conectaente_sendReason` **não** é exibido aqui: por que falhou é detalhe de integração e vive na aba de histórico, do `saasSuperAdmin`. O que falta **preencher** continua no card "Campos pendentes" da aba CultBR, que é de quem edita.
 
+Se a árvore do PAR não está em cache (`parIsKnown`), o componente pede a leitura em `conectaente/parInformation`, como a aba CultBR, e relê a situação.
+
 A suspensão vem do servidor em `$MAPAS.config.conectaenteSendStatus.suspended`, pela mesma checagem de cadeia que barra o envio (`PublicationRequirements::isParChainBroken`), e prevalece sobre o desfecho gravado: o envio anterior não pode esconder que o próximo está barrado.
 
 As três situações sem envio vêm decididas do servidor, em `$MAPAS.config.conectaenteSendStatus.pendingSendState` (`awaiting`, `ineligible` ou nulo), pelo `Services\SendStatusView` — que pergunta ao mesmo `SendEligibility` do envio, em vez de repetir a regra. Com desfecho gravado o servidor devolve nulo: o desfecho manda, e as onze validações do gate não chegam a rodar.

@@ -27,6 +27,7 @@ final class SendStatusView
 
         return [
             'sealed' => $sealed,
+            'parIsKnown' => $sealed && $this->publicationRequirements->isParTreeCached($opportunity),
             'suspended' => $sealed && $this->publicationRequirements->isParChainBroken($opportunity),
             'pendingSendState' => $sealed ? $this->pendingSendState($opportunity) : null,
         ];

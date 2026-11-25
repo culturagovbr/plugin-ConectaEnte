@@ -131,6 +131,12 @@ final class PublicationRequirements
         ] : [];
     }
 
+    /** Se há árvore do PAR em cache para conferir a seleção. */
+    public function isParTreeCached(Opportunity $opportunity): bool
+    {
+        return (bool) $this->parInformationService->cachedForOpportunity($opportunity)?->tree;
+    }
+
     /** Se a seleção do PAR já feita não existe mais na árvore em cache. */
     public function isParChainBroken(Opportunity $opportunity): bool
     {
