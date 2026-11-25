@@ -155,10 +155,12 @@
 
         mounted() {
             this.load();
+            window.addEventListener('beforeunload', this.saveBeforeLeaving);
         },
 
         unmounted() {
-            clearTimeout(this.saveTimer);
+            window.removeEventListener('beforeunload', this.saveBeforeLeaving);
+            this.save();
             clearInterval(this.pollTimer);
         },
 
@@ -192,6 +194,13 @@
                 this.saveQueue = this.saveQueue.then(() => (this.unsavedIds.length ? this.saveEdited() : null));
 
                 return this.saveQueue;
+            },
+
+            saveBeforeLeaving(event) {
+                if (this.unsavedIds.length || this.isSaving) {
+                    this.save();
+                    event.preventDefault();
+                }
             },
 
             // só o que mudou: o formulário inteiro passaria por cima da edição de outra guia
