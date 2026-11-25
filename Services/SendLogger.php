@@ -240,8 +240,6 @@ class SendLogger
 
     private function openResultSendOrYield(Opportunity $opportunity): ?Log
     {
-        $this->expireStaleResultSends((int) $opportunity->id);
-
         // o resultado não é upsert: o envelope pendente não é abandonado por outro, ele trava o seguinte
         if ($this->pendingResultSend($opportunity)) {
             return null;
@@ -276,9 +274,11 @@ class SendLogger
         return $yielded ? null : $log;
     }
 
-    /** O envio de resultado do edital que ainda está em andamento, se houver. */
+    /** O envio de resultado do edital que ainda está em andamento, se houver; o que passou do prazo é fechado antes. */
     public function pendingResultSend(Opportunity $opportunity): ?Log
     {
+        $this->expireStaleResultSends((int) $opportunity->id);
+
         return App::i()->repo(Log::class)->findOneBy(['opportunityId' => $opportunity->id, 'action' => Log::ACTION_RESULT, 'outcome' => SendOutcome::PENDING], ['id' => 'ASC']);
     }
 

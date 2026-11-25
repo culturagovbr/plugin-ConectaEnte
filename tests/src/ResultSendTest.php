@@ -95,6 +95,62 @@ class ResultSendTest extends TestCase
         $this->assertNoResultJob();
     }
 
+    function testASendWhoseJobDiedBeforeThePostGivesTheButtonBack()
+    {
+        $opportunity = $this->readyEdital();
+        $stale = Plugin::instance()->sendLogger()->openResultSend($opportunity);
+        Plugin::instance()->sendLogger()->claimResultSend($stale);
+        $this->backdate($stale, 'started_at');
+
+        $state = $this->resultService()->stateOf($this->reloaded($opportunity));
+
+        $this->assertTrue($state->hasSendButton(), 'Sem isso o edital fica preso em "em envio".');
+        $this->assertSame(SendOutcome::ERROR, $this->reloadedLog($stale)->outcome);
+        $this->assertTrue($this->resultService()->requestSend($this->reloaded($opportunity))['queued']);
+    }
+
+    function testAStartedSendInsideTheDeadlineStaysInProgress()
+    {
+        $opportunity = $this->readyEdital();
+        $log = Plugin::instance()->sendLogger()->openResultSend($opportunity);
+        Plugin::instance()->sendLogger()->claimResultSend($log);
+        $this->backdate($log, 'started_at', '-9 minutes');
+
+        $this->assertSame(ResultState::SENDING, $this->resultService()->stateOf($this->reloaded($opportunity))->state);
+        $this->assertFalse($this->resultService()->requestSend($this->reloaded($opportunity))['queued']);
+        $this->assertSame(SendOutcome::PENDING, $this->reloadedLog($log)->outcome);
+        $this->assertNoResultJob();
+    }
+
+    function testASendThatNeverStartedGivesTheButtonBackAfterTheDeadline()
+    {
+        $opportunity = $this->readyEdital();
+        $stale = Plugin::instance()->sendLogger()->openResultSend($opportunity);
+        $this->backdate($stale, 'create_timestamp');
+
+        $this->assertTrue($this->resultService()->stateOf($this->reloaded($opportunity))->hasSendButton());
+    }
+
+    function testASendWhoseJobDiedAfterThePostIsReconciledBeforeTheButtonComesBack()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [RoutedTransport::json(200, ['id_par_edital_resultado' => 20074])]);
+        $this->backdate($this->postedSendWithoutOutcome($opportunity, seenResultId: 20073), 'started_at');
+
+        $state = $this->resultService()->stateOf($this->reloaded($opportunity));
+
+        $this->assertTrue($state->hasSendButton());
+        $this->assertSame('20074', $this->reloaded($opportunity)->getMetadata(CultBrMetadata::RESULT_ID), 'O POST chegou: postar de novo publicaria dois resultados.');
+    }
+
+    function testASendWhoseJobDiedAfterThePostIsUncertainWhileThePublishedCannotBeRead()
+    {
+        $opportunity = $this->readyEdital(publishedReplies: [Response::failed('timeout')]);
+        $this->backdate($this->postedSendWithoutOutcome($opportunity, seenResultId: 20073), 'started_at');
+
+        $this->assertSame(ResultState::UNCERTAIN, $this->resultService()->stateOf($this->reloaded($opportunity))->state);
+        $this->assertFalse($this->resultService()->requestSend($this->reloaded($opportunity))['queued']);
+    }
+
     function testTheSameContentAlreadySentIsRefusedWithoutQueueing()
     {
         $opportunity = $this->readyEdital();
@@ -479,6 +535,22 @@ class ResultSendTest extends TestCase
         $logger->finish($log, SendOutcome::ERROR);
 
         return $log;
+    }
+
+    private function postedSendWithoutOutcome(Opportunity $opportunity, int $seenResultId): Log
+    {
+        $logger = Plugin::instance()->sendLogger();
+        $log = $logger->openResultSend($this->reloaded($opportunity));
+        $logger->claimResultSend($log);
+        $logger->keepResultContext($log, $seenResultId, true, 'hash-da-tentativa', ResultPayload::TYPE_CORRECTED, '2026-11-22T10:00:00-03:00');
+        $logger->confirmResultPost($log);
+
+        return $log;
+    }
+
+    private function backdate(Log $log, string $column, string $age = '-11 minutes'): void
+    {
+        $this->app->em->getConnection()->update('conectaente_log', [$column => (new \DateTime($age))->format('Y-m-d H:i:s')], ['id' => $log->id]);
     }
 
     private function markAsSent(Opportunity $opportunity, string $hash, int $parEditalId): void
